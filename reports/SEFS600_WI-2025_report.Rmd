@@ -1,0 +1,394 @@
+---
+title: "Applying Hidden Markov model to raven GPS movement data"
+subtitle: "Yellowstone National Park"
+author: "Cameron Ho"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(moveHMM)
+library(data.table)
+library(readxl)
+```
+
+## Background
+Common ravens are generalist foragers that have adapted well to the presence of humans. They take advantage of various subsidies provided by humans including nesting structure and food. During the winter, ravens in Yellowstone have been observed making "long" daily commutes from roosts within the National Park to areas outside the park to exploit anthropogenic food subsidies such as hunter offal. I am interested in looking at how the availability of anthropogenic resources and its natural counterpart (predator kills) impact daily foraging decisions of territorial ravens. The hypothesis is that the presence of a local food source at a ravens territory will reduce the chances of transitioning to a travel state.
+
+## Data
+The data set is movement data collected from GPS tagged ravens in Yellowstone National Park. Ravens were captured throughout November 2019 and March 2024 both inside and outside the park boundaries using a remote net launcher. GPS tags collected positional data every 30 minutes at high battery levels or 1 hour at low battery levels. For this analysis I limited the data to only 1 hour intervals. That maximized the number of points that were at the selected time step.  
+
+```{r reading in GPS data, message=FALSE, warning=FALSE, include=FALSE}
+#reading in all raven points
+#removing columns with NA coords
+allGPS <- read_csv("data/clean/all_raven_gps_clean58.csv")
+allGPS <- subset(allGPS, !is.na(utm.easting))
+```
+
+This data set includes all captured individuals, including non-breeders. For this analysis I am only interested in the decisions of breeding ravens as they defend territories all year and therefore return to the space at night. Non-breeders are more free to stay wherever food is available and may not commute. \
+Breeders were determined by examining spatial distributions during the summer. Breeders are heavily restricted in their movements during the summer due to the need to either incubate (females) or provision chicks consistently. Non-breeders do not have this pattern, and therefore have much more variable movement patterns. We also were able to confirm all breeding individuals through direct observations of nesting attempts. \
+There are ravens that have transitioned between breeding states. The periods where the individual was considered a breeder is included.
+
+```{r subsetting territorial individuals}
+
+#importing demographic information
+#terr: territorial birds with nest inside Yellowstone
+#trans: birds that transitioned between breeder and nonbreeder
+ravenID <- read_excel("data/raw/ravens_banding_tagging.xlsx",sheet=1)
+terr <- subset(ravenID, `status (reviewed 8/1/24)` == "territorial" & 
+                 ravenID$`inside NationalPark` == "yes")$`tag-id`
+trans <- subset(ravenID, `status (reviewed 8/1/24)` %like% "Trans")
+
+
+#subsetting territorials from entire GPS df
+terrGPS <- subset(allGPS, individual.local.identifier %in% terr)
+
+
+#subsetting trans territorials into their active territorial periods from entire GPS df
+transGPS <- allGPS[allGPS$individual.local.identifier %in% trans$`tag-id`,]
+
+transGPS <- do.call("rbind", tapply(transGPS, INDEX=transGPS$individual.local.identifier, 
+                                    FUN=function(x){
+                                      ind <- trans[trans$`tag-id` == x[1,]$individual.local.identifier,]
+                                      
+                                      #has only an end date
+                                      if(is.na(ind$`start date`) & !is.na(ind$`leave date`)){
+                                        tmp <- x[as.Date(x$study.local.timestamp) < ym(ind$`leave date`),]
+                                        return(tmp)
+                                      }
+                                      
+                                      #has only a start date
+                                      if(!is.na(ind$`start date`) & is.na(ind$`leave date`)){
+                                        tmp <- x[as.Date(x$study.local.timestamp) > ym(ind$`start date`),]
+                                        return(tmp)
+                                      }
+                                      
+                                      
+                                      #should be excluded
+                                      if(is.na(ind$`start date`) & is.na(ind$`leave date`)){
+                                        return()
+                                      }
+                                    }))
+
+
+#combining trans and territorial datasets
+terrGPS <- rbind(terrGPS, transGPS)
+```
+
+Data was subset to only points between November and March as that is the winter season. It also contains the only legal hunting periods for the area.
+
+```{r winter data}
+#pulling out only winter points (subject to change the month)
+GPS_W <- terrGPS[month(terrGPS$study.local.timestamp) %in% c(10,11,12,1,2,3),]
+
+```
+
+## Covariates
+
+I created a bunch of covariates for the model. All covariates were normalized before adding them to the model. \
+\
+The first covariate is a distance from the territory. I created an 90% MCP for each territorial raven using their GPS points from May, June, and July. This is the breeding season when ravens are most closely tied to their territories. I used a 90% instead of another options because it was the largest number I could use that didn't start largely inflating the MCPs for individuals that failed during the breeding season, allowing them more free movement. \
+This covariate was added to the model as the normalized distance squared. This was done because of the bimodal foraging distances. The ravens are mostly feeding around their territories or traveling to the nearest town to forage. 
+
+```{r covariate 1: distance to territory, message=FALSE, warning=FALSE, include=FALSE}
+# covariate 1: distance to territory
+source("scripts/exploratory/Home Range (MCP).R")
+
+mcp_in <- function(){
+  ID <- mcp90$id
+  
+  for(i in 1:length(ID)){
+    tmp_data <- subset(GPS_W, individual.local.identifier == ID[i])
+    tmp_sf <- st_as_sf(tmp_data, coords=c("utm.easting", "utm.northing"), 
+                       crs="+proj=utm +zone=12")
+    
+    #in kilometers
+    tmp_data$dist_terr <- as.numeric(st_distance(tmp_sf, st_as_sf(mcp90[i,])))/1000
+    
+    if(i != 1){
+      output_df <- rbind(output_df, tmp_data)
+    } else{
+      output_df <- tmp_data
+    }
+  }
+  
+  return(output_df)
+}
+
+#adding binary metric for inside/outside territory
+dist2poly <- mcp_in()
+dist2poly$within_terr <- ifelse(dist2poly$dist_terr == 0, 1, 0)
+
+```
+
+The second covariate is kill density. This is the average number of wolf kills that occur within 3 km of a ravens territory per 30 days. This distance is subject to change, but would allow for some wiggle room around what is close enough to their territories that they would still be able to detect. This could be through local enhancement or other means. The hypothesis around this covariate is that a raven would should recognize that they live on a territory that more consistently provides food, so they won't travel in search of other food as often. \
+Right now this is calculated from the winter study periods that the Wolf Projects does purely for the purpose of kill rates and maximum detection of kills. The other periods during the winter have a lot less effort so I didn't think they were comparable. Studies that used winter kill rates from the Wolf Project also didn't attempt to calculate the kill rates using kill detections in these periods. They just interpolated kill rates between the two study periods. \
+In the future I will likely drop this method and recalculate the density using the outputs from the random forest predictive algorithm that should provide more accurate data from those unsampled periods as well. Only wolf kills are included and not cougar kills as the utilization of cat kills is negligible.
+```{r covariate 2: kill density}
+# covariate 2: kill density
+kill_data <- read.csv("data/raw/wolf_project_carcass_data.csv")
+kill_data$DOD <- mdy(kill_data$DOD)
+
+#subset to only kills from 2019 onwards to match raven GPS data
+#subset to only winter months (Nov-Mar)
+#but removing kills that are in Jan-Mar of 2019
+kill_data %>% 
+  subset(year(DOD) >= 2019 & month(DOD) %in% c(11,12,1,2,3)) %>% 
+  subset(DOD >= as.Date("2019-11-01")) -> kill_data_recent 
+
+
+#creating new column with the most accurate coords available
+#order of accuracy ground -> aerial -> estimated ground
+kill_data_recent %>% 
+  mutate(easting = case_when(!is.na(GROUND.EAST) ~ GROUND.EAST,
+                             !is.na(AERIAL.EAST) ~ AERIAL.EAST,
+                             !is.na(EST.GROUND.EAST) ~ EST.GROUND.EAST),
+         northing = case_when(!is.na(GROUND.NORTH) ~ GROUND.NORTH,
+                             !is.na(AERIAL.NORTH) ~ AERIAL.NORTH,
+                             !is.na(EST.GROUND.NORTH) ~ EST.GROUND.NORTH)) %>% 
+  subset(!is.na(easting))-> kill_data_recent
+
+
+#function to seperate out the kills that are within each territory
+#dist_from_terr: how far (m) a kill is from the territory to be counted towards that territory
+kill_freq <- function(dist_from_terr = 0){
+  ID <- mcp90$id
+  
+  #creating a list to put the kill information for kills inside each territory
+  in_terr_kill_list <- vector("list", length(ID))
+  names(in_terr_kill_list) <- ID
+  
+  #changing kill data into a format that can be used for the distance measurement
+  tmp_sf <- st_as_sf(kill_data_recent, coords=c("easting", "northing"), 
+                     crs="+proj=utm +zone=12")
+  
+  for(i in 1:length(ID)){
+    
+    #calculating distance 
+     tmp_dist <- as.numeric(st_distance(tmp_sf, st_as_sf(mcp90[i,])))
+  
+     #putting all rows with distance == 0 into the list
+     #and ordering by date
+      subset(kill_data_recent, tmp_dist <= dist_from_terr) %>% 
+        arrange(DOD) -> in_terr_kill_list[[i]]
+      
+  }
+  return(in_terr_kill_list)
+}
+
+in_terr_kill_list <- kill_freq(dist_from_terr = 3000)
+
+kill_density <- lapply(in_terr_kill_list, function(x){
+  #empty vector to attach all the values of days since previous carcass
+  days_since <- c()
+  
+  #start and end dates for each winter period
+  early_winter_start <- as.Date(paste0(seq(min(year(x$DOD)), max(year(x$DOD))),"-11-15"))
+  early_winter_end <- as.Date(paste0(seq(min(year(x$DOD)), max(year(x$DOD))),"-12-15"))
+  late_winter_start <- as.Date(paste0(seq(min(year(x$DOD)), max(year(x$DOD))),"-03-01"))
+  late_winter_end <- as.Date(paste0(seq(min(year(x$DOD)), max(year(x$DOD))),"-03-30"))
+  
+  
+  #a dataframe to put the kill density numbers for each winter sample period
+  density_df <- data.frame(year = rep(year(early_winter_start), 2), 
+                           period = rep(c("early", "late"), each = length(early_winter_start)), 
+                          density = NA)
+  
+  for(w in 1:length(early_winter_start)){
+    
+    early_winter <- subset(x, DOD >= early_winter_start[w] & 
+                           DOD <= early_winter_end[w])
+    late_winter <- subset(x, DOD >= late_winter_start[w] & 
+                             DOD <= late_winter_end[w])
+
+
+    #early winter density
+    density_df[w, "density"] <- nrow(early_winter)/30
+    
+    #late winter density
+    density_df[w+length(late_winter_start), "density"] <- nrow(late_winter)/30
+  }
+  return(density_df)
+})
+
+#am going to use average kill density for each individual
+#the kill density is calculated from winter study periods, so there isn't a number for the other months anyways
+bind_rows(kill_density, .id = "individual.local.identifier") %>% 
+  group_by(individual.local.identifier) %>% 
+  summarize(avg_density = mean(density)) -> avg_kill_density
+```
+
+The third covariate is active kill. This is a TRUE/FALSE that says if there is a kill less than 3 days old within 3 km of their territory. Again, this distance is subject to change. The age of the kill that is still considered active can also be changed. I choose 3 for now because it is a middle ground. The duration of kills is highly variable depending on the prey and the pack size. Scavenger may utilize a carcass for less than a day, or up to a week. Those other factors may be useful to add as interactions in the future. The hypothesis is that a scavenger should not travel when they have food available within their territory. 
+
+
+```{r covariate 3: active kill}
+# covariate 3: presence of an active kill within the territory
+##' active is less than 3 days old
+##' days_since is the number of days since the kill was made, including the day of the kill
+
+active_kill_fctn <- function(days_since = 3){
+  dist2poly$active_kill <- 0
+  
+  tapply(dist2poly, dist2poly$individual.local.identifier,
+       FUN = function(x){
+         ID <- unique(x$individual.local.identifier)
+         tmp_kills <- in_terr_kill_list[[ID]]
+         
+         #looping through each GPS point to see if there is a active kill
+         for(i in 1:nrow(x)){
+           tmp_GPS <- x[i,]
+           
+           time_diff <- difftime(tmp_kills$DOD, as.Date(tmp_GPS$study.local.timestamp), units = "days")
+           
+           if(sum(time_diff >= 0 & time_diff < days_since) >= 1){
+             x[i, "active_kill"] <- 1
+           }
+         }
+         return(x)
+       })
+}
+  
+dist2poly <- bind_rows(active_kill_fctn())
+```
+
+The fourth covariate is the hunting season. This the alternative resource to the on territory wolf kill. A couple of different studies in this area have showed high usage of hunters as a resource. Hunters will dress their kills in the field, leaving behind the guts, bones, and sometime hide. \
+The hunting in this region is multifaceted. The official state rifle hunting season for ungulates coordinated by MTFWP occurs between Oct 26 and Dec 1. Their are other season for bow, muzzle-loader, and youth but I am not including those. There are estimated take numbers in an annual report that are based on phone surveys done at the end of each hunting season. \
+Local tribes also have hunting rights throughout the winter which complicates things. Tribes will hunt elk throughout the winter and I have not yet found any good records of effort or take. So for now I am ignoring this portion. Tribes also hunt bison and this hunting is more restricted to late February and March. This is because bison only leave the park when they are forced to lower elevations due to snow conditions. Since its based on animal movements, the start date is flexible. I am using only march for now. There are reports of the amount of tribal bison take in the NPS bison annual report. I would also really like to try and get in contact with some of these tribes and see if I can't get more information about the elk part of the tribal hunting season as well as yearly start dates for the bison.
+```{r hunting season}
+# covariate 4: hunting season
+##'   binary covariate for if the hunting seaosn is in effect
+##'   Oct 26 - Dec 1 for general ungulate season (FWP)
+##'   march for tribal bison hunting 
+
+monthday <- format(dist2poly$study.local.timestamp, "%m-%d")
+dist2poly$hunt <- 0
+dist2poly[which(monthday >= "10-26" & monthday < "12-1" |
+                  monthday >= "03-01" & monthday <= "03-30"),]$hunt <- 1
+```
+
+## HMM Model fitting
+
+The first part of model fitting with the `moveHMM` package is preparing the data. This involved putting all of the covariates and the GPS data into a singe dataframe and running it through the `prepData()` function that calculates step and turn angles as well as recognizing the column that has the individual identifier.
+
+```{r moveHMM data prep}
+#subsetting to only relevant columns
+input_data <- dist2poly[,c("utm.easting", "utm.northing", "individual.local.identifier", 
+                           "dist_terr", "within_terr", "active_kill", "hunt")]
+
+#merging kill density within territory
+input_data <- left_join(input_data, avg_kill_density, by = "individual.local.identifier")
+
+## prepping data
+#standardize scale of all covariates
+input_data <- cbind(input_data, scale(input_data[,-c(1:3)]))
+names(input_data) <- c(c("x", "y", "ID"),
+                       names(input_data)[4:8], 
+                       paste0(names(input_data)[-c(1:8)], "_scale"))
+
+#everything in kilometers
+input_data$x <- input_data$x/1000
+input_data$y <- input_data$y/1000
+
+#adding dist_terr_scale^2
+input_data <- input_data %>% 
+  mutate(dist_terr_scale_sqrd = dist_terr_scale^2)
+
+#transform dataframe into HMM compatible 
+input_data <- prepData(input_data, type = "UTM")
+```
+
+The next step is choosing starting values for the step and turn angle parameters. This helps the model find the appropriate way to separate the movement into the 2 latent movement states (entrenched and travel).\
+\
+The first parameter is step. You need to provide the model with a mean and standard deviation. I chose starting values of 1 and 20 to capture low movement and high movement that was still within the range of actual steps taken by the birds. There are no step lengths of 0, so I don't need to do any additional setup for step.
+
+```{r step parameters}
+## fitting model (2 state: feed, travel)
+hist(input_data$step)
+stepMean0 <- c(1, 20)
+stepSD0 <- c(1, 20)
+stepPar0 <- c(stepMean0, stepSD0)
+
+
+```
+
+The second parameter is turn angle. This a bit more complicated than step. It takes a mean turn angle (in radians) and a concentration value. The the mean, a mean value close to π means a high turn angle is more associate with entrenched state. A mean value close to 0 means a more straight path between two points and is associated with travel. This is what we see with the histogram of the turn angle with peaks at + and - π and 0.\
+The concentration is a value of variance around the mean turn angle. A high concentration number means the points in that state have turn angles more tightly concentrated around the mean value. For the entrenched state turn angle should be more variable (lower concentration value). We expect a traveling individual to more often travel in a straight line with turn angles being similar (higher concentration value). 
+```{r angle parameter}
+hist(input_data$angle)
+turnMean0 <- c(pi, 0)
+#concentration: how clustered values are around the mean
+#higher number = more concentrated around mean
+turnCon0 <- c(1, 20)
+turnPar0 <- c(turnMean0, turnCon0)
+```
+
+We can now run the model itself. nbStates tells the model we only want 2 latent states.
+```{r hmm model}
+#running the model 
+model_2s <- fitHMM(input_data, nbStates = 2, stepPar0 = stepPar0,
+                   anglePar0 = turnPar0, 
+                   formula = ~active_kill_scale + avg_density_scale + 
+                     dist_terr_scale_sqrd + hunt)
+
+```
+
+```{r model 95% CI}
+CI(model_2s, alpha = 0.95)
+```
+
+These model results are a bit tough to understand because the chance of going from 1 -> 2 and from 2 -> 1 are tied together. You can only go back to entrenched if you choose to travel in the first place. In the context of the study system, this  means that you can never go back to entrenched if you never choose to travel away from your territory in the first place.\
+The model does seem to be working well as the plot of which points it determined to be entrenched (black) and travel (red) seem to be accurate. Most of the black clusters are raven territories and the cluster in the top left is the hunting area that they foraging in.
+```{r map of points, eval=FALSE, include=FALSE}
+input_data$vit <- viterbi(model_2s)
+plot(y ~ x, data = input_data, col = vit)
+```
+
+
+## Visualization
+
+An easier visualization is the probability of being in a state based on the covariates. 
+
+```{r plots}
+
+stay_probs <- function(hmmm) {
+  stay_pr <- stationary(hmmm, covs = data.frame(active_kill_scale = 0,
+                                              avg_density_scale = 0,
+                                              dist_terr_scale_sqrd = 0,
+                                              hunt = 0))
+  stay_pr <- stay_pr[[1]]
+  #data frame of the covariates (standardized)
+  stay_mu0 <- stationary(hmmm, covs = data.frame(active_kill_scale = 0,
+                                                 avg_density_scale = 0,
+                                                 dist_terr_scale_sqrd = 0,
+                                                 hunt = 0))
+  print(stay_mu0)
+  
+  #'  Plot stationary state probabilities and extract predicted estimates
+  fig <- plotStationary(hmmm)
+  stationary_probs <- list(stay_pr, fig)
+  
+  return(stationary_probs)
+}
+
+#stay_probs(MODEL NAME)
+
+stay_smr <- stay_probs(model_2s)
+
+
+```
+
+The active kill doesn't meet the expectation as it seems that birds with active kills on their territories are more likely to travel. This may have to do with the tuning of the parameter and what is considered an active kill.\
+Birds on territories that have higher kill densities are slightly more likely to be in the entrenched state. That makes sense if they are staying on their territories instead of leaving the available food in search of something else.\
+During the hunting season we can see birds are slightly more likely to be in the travel state, which makes sense if they are leaving to exploit the food available during this time.
+
+Distance to territory squared is the only covariate where the lines actually end up crossing. I am not quite sure how to interpret this with the scaled variable and the exponent. Looking at the histogram for the scaled distance before being squared, it seems like the squared value just extends the right skew. So supposedly the plot is only saying that 
+1. when you are in your territory (value of 0-1) you are more likely to be entrenched. So most of the time birds choose not to leave their territory
+2. but when they do choose to leave their territory the probability of the two states becomes more even. I would guess that is because when the leave they have to travel. Then the become entrenched again at their destination. And then they have to travel back to their territory at the end of the day. So as soon as they decide ot leave their territory they are forced into that dequence that invloves both movement states. When they are on their territory, they can just choose to not to go to travel.
+I guess that makes sense If I thought that out correctly.
+```{r}
+hist(input_data$dist_terr_scale)
+```
+
