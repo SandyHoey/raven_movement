@@ -19,8 +19,7 @@ library(readr) #extract number from string
 
 
 # All Points --------------------------------------------------------------
-data.all <- read_csv("data/raw/ravenGPS_movebank.csv")
-names(data.all) <- gsub("-", ".", names(data.all))
+data.all <- janitor::clean_names(read_csv("data/raw/ravenGPS_movebank.csv"))
 
 ##---------------------------- Fixing data ---------------------------------------
 
@@ -31,21 +30,21 @@ cleanGPS <- function(data, interval=28){
   ID <- unique(data$tag.local.identifier)
   
   #making datetime a readable format
-  data$study.local.timestamp <- as.POSIXct(data$study.local.timestamp)
-  data <- data[order(data$study.local.timestamp),]
+  data$study_local_timestamp <- as.POSIXct(data$study_local_timestamp)
+  data <- data[order(data$study_local_timestamp),]
   
   
   #removing points too close in time (foraging points)
   print("Starting cleaning loop")
   for(i in 1:length(ID)){
-    ID.tmp <- subset(data, tag.local.identifier == ID[i])
+    ID.tmp <- subset(data, tag_local_identifier == ID[i])
     
     for(j in 1:(nrow(ID.tmp)-1)){
       if(j == 0){
         j <- 1
       }
       repeat{ 
-        time.diff.tmp <- as.numeric(difftime(ID.tmp$study.local.timestamp[j+1],ID.tmp$study.local.timestamp[j], units = "mins"))
+        time.diff.tmp <- as.numeric(difftime(ID.tmp$study_local_timestamp[j+1],ID.tmp$study_local_timestamp[j], units = "mins"))
         if(time.diff.tmp < interval & j < nrow(ID.tmp)){
           ID.tmp <- ID.tmp[-(j+1),]
         }
