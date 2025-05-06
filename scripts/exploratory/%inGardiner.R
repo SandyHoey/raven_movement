@@ -3,13 +3,12 @@
 
 library(sf)
 library(tidyverse)
-library(readxl)
 library(data.table)
 
 
 #reading in all raven points
 #removing columns with NA coords
-allGPS <- read_csv("data/clean/all_raven_gps_clean29.csv")
+allGPS <- readr::read_csv("data/clean/all_raven_gps_clean29.csv")
 allGPS <- subset(allGPS, !is.na(utm.easting))
 
 
@@ -35,7 +34,7 @@ allGPS$dist2Gardiner <- as.numeric(st_distance(sf_ravens_all, Gardinerkml))
 #terr: territorial birds inside the park
 #trans: birds that transitioned between breeder and nonbreeder
 #7485 (Old Faithful) currently not included because she transitioned more than once
-ravenID <- read_excel("data/raw/ravens_banding_tagging.xlsx",sheet=1)
+ravenID <- readxl::read_excel("data/raw/ravens_banding_tagging.xlsx",sheet=1)
 terr <- subset(ravenID, `status (reviewed 8/1/24)` == "territorial" & 
                  ravenID$`inside NationalPark` == "yes")$`tag-id`
 trans <- subset(ravenID, `status (reviewed 8/1/24)` %like% "Trans")
