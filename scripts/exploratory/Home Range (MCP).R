@@ -19,12 +19,14 @@ allGPS <- subset(allGPS, !is.na(utm.easting))
 #importing demographic information
 #terr: territorial birds inside the park (inclduing interrior birds)
 #trans: birds that transitioned between breeder and nonbreeder
-#7485 (Old Faithful) currently not included because she transitioned more than once
+#7485 (Old Faithful) transitioned more than once
+  # currently using only the first breeding period (old faithful sinclair)
+  # she also went back to a different territory in 2024 (old faithful snotel)
 #have to consider interior birds commuting to West instead of Gardiner 
 ravenID <- read_excel("data/raw/ravens_banding_tagging.xlsx", sheet=1)
 terr <- subset(ravenID, `status (reviewed 8/1/24)` == "territorial" & 
                  ravenID$`inside NationalPark` == "yes")$`tag-id`
-trans <- subset(ravenID, `status (reviewed 8/1/24)` %like% "Trans")
+trans <- subset(ravenID, `status (reviewed 8/1/24)` %like% "Trans" | )
 
 
 #subsetting territorials from entire GPS df
@@ -93,3 +95,5 @@ mysf %>%
 
 
 mapview(mcp90[,1])
+
+#should remove 7495 since we never had eyes on a nest and point coverage during winter is bad
