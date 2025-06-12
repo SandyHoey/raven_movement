@@ -3,7 +3,6 @@
 library(adehabitatHR)
 library(data.table) #use of %like%
 library(tidyverse)
-library(readxl)
 library(sf)
 library(sp)
 library(mapview)
@@ -23,10 +22,10 @@ allGPS <- subset(allGPS, !is.na(utm.easting))
   # currently using only the first breeding period (old faithful sinclair)
   # she also went back to a different territory in 2024 (old faithful snotel)
 #have to consider interior birds commuting to West instead of Gardiner 
-ravenID <- read_excel("data/raw/ravens_banding_tagging.xlsx", sheet=1)
+ravenID <- readxl::read_excel("data/raw/ravens_banding_tagging.xlsx", sheet=1)
 terr <- subset(ravenID, `status (reviewed 8/1/24)` == "territorial" & 
                  ravenID$`inside NationalPark` == "yes")$`tag-id`
-trans <- subset(ravenID, `status (reviewed 8/1/24)` %like% "Trans" | )
+trans <- subset(ravenID, `status (reviewed 8/1/24)` %like% "Trans")
 
 
 #subsetting territorials from entire GPS df
@@ -95,5 +94,3 @@ mysf %>%
 
 
 mapview(mcp90[,1])
-
-#should remove 7495 since we never had eyes on a nest and point coverage during winter is bad
