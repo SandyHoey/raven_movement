@@ -159,8 +159,9 @@ clusters <- cluster_output[[2]]
 
 #transforming to sf class
 #allows a distance metric to the polygon to be calculated
-sf_cluster <- st_as_sf(clusters, coords=c("g_c_Long", "g_c_Lat"),
-                      crs="epsg:4326")
+sf_cluster <- clusters %>% 
+  st_as_sf(coords=c("g_c_Long", "g_c_Lat"),
+           crs="epsg:4326")
 
 #reading in gardiner polygon
 gardiner_poly <- st_read("data/raw/gardiner_hunt.kml") %>%
@@ -172,8 +173,86 @@ clusters$dist2Gardiner <- as.numeric(st_distance(sf_cluster, gardiner_poly))
 #subsetting to only 0 distance (in the polygon)
 cluster_hunt <- subset(clusters, dist2Gardiner == 0)
   
+#adding utm coordinates
+cluster_hunt <- cluster_hunt %>% 
+  st_as_sf(coords=c("g_c_Long", "g_c_Lat"),
+           crs="epsg:4326") %>% 
+  st_transform(crs = "+proj=utm +zone=12") %>% 
+  mutate(easting = st_coordinates(geometry)[,1], 
+         northing = st_coordinates(geometry)[,2])
+
+#combining cluster points that are the same
+  #on consecutive days
+  #within 50 meters
+combine_cluster <- function(gps_sf, datetime_col = "clus_start", 
+                                 distance_threshold = 50, day_gap = 2) {
+
+  library(igraph)
+
+  # Ensure datetime column exists
+  if (!datetime_col %in% names(gps_sf)) stop("datetime column not found.")
+  
+  # Extract date from datetime
+  gps_sf <- gps_sf %>%
+    mutate(date = as.Date(.data[[datetime_col]]))
+  
+  n <- nrow(gps_sf)
+  coords <- st_coordinates(gps_sf)
+  dates <- gps_sf$date
+  
+  # Build edge list based on distance and date proximity
+  edges <- data.frame(from = integer(), to = integer())
+  
+  for (i in 1:(n - 1)) {
+    for (j in (i + 1):n) {
+      if (abs(dates[i] - dates[j]) <= day_gap) {
+        dist_ij <- sqrt(sum((coords[i, ] - coords[j, ])^2))
+        if (dist_ij <= distance_threshold) {
+          edges <- rbind(edges, data.frame(from = i, to = j))
+        }
+      }
+    }
+  }
+  
+  # Build graph and assign connected components
+  g <- graph_from_data_frame(edges, directed = FALSE, vertices = data.frame(id = 1:n))
+  comps <- components(g)
+  
+  gps_sf$group_id <- NA_integer_
+  gps_sf$group_id[as.integer(V(g)$name)] <- comps$membership
+  
+  # Handle unconnected (isolated) points
+  missing <- which(is.na(gps_sf$group_id))
+  if (length(missing) > 0) {
+    gps_sf$group_id[missing] <- seq(max(gps_sf$group_id, na.rm = TRUE) + 1,
+                                    length.out = length(missing))
+  }
+  return(gps_sf)
+}
+
+cluster_group <- combine_cluster(cluster_hunt)
+
+#creating a new dataframe with the start and stop times for each cluster
+cluster_meta <- data.frame(group_id = unique(cluster_group$group_id))
 
 
+cluster_final <- cluster_group %>% 
+  st_drop_geometry %>% 
+  group_by(group_id) %>% 
+  summarise(start_date = as.Date(min(clus_start)),
+            end_date = as.Date(max(clus_start)),
+            easting = mean(easting),
+            northing = mean(northing)) %>% 
+  right_join(cluster_meta, by = join_by(group_id))
+
+
+# #plotting   
+# # Ensure group_id is a factor (so each group gets a unique color)
+# gps_data <- gps_data %>%
+#   mutate(group_id = as.factor(group_id))
+# 
+# # Plot on satellite map
+# mapview::mapview(gps_data, zcol = "group_id", map.type = "Esri.WorldImagery", legend = TRUE)
 
 # HMM ---------------------------------------------------------------------
 # 
