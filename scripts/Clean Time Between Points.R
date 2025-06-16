@@ -27,7 +27,7 @@ data.all <- janitor::clean_names(read_csv("data/raw/ravenGPS_movebank.csv"))
 cleanGPS <- function(data, interval=28){
   
   #pulling out all raven ID
-  ID <- unique(data$tag.local.identifier)
+  ID <- unique(data$individual_local_identifier)
   
   #making datetime a readable format
   data$study_local_timestamp <- as.POSIXct(data$study_local_timestamp)
@@ -37,7 +37,7 @@ cleanGPS <- function(data, interval=28){
   #removing points too close in time (foraging points)
   print("Starting cleaning loop")
   for(i in 1:length(ID)){
-    ID.tmp <- subset(data, tag_local_identifier == ID[i])
+    ID.tmp <- subset(data, individual_local_identifier == ID[i])
     
     for(j in 1:(nrow(ID.tmp)-1)){
       if(j == 0){
