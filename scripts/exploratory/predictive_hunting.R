@@ -25,14 +25,15 @@ allGPS <- readr::read_csv("data/clean/all_raven_gps_clean28.csv") %>%
   #filter to only winter 
   filter(month(study_local_timestamp) %in% 11:12)
 
+
 # #removing 7653 and 7596 because Canada
 # allGPS <- subset(allGPS, individual_local_identifier != "7653")
 # allGPS <- subset(allGPS, individual_local_identifier != "7596")
 
 
-# #importing demographic information
-# #nb: nonbreeding birds
-# #trans: birds that transitioned between breeder and nonbreeder
+#importing demographic information
+#nb: nonbreeding birds
+#trans: birds that transitioned between breeder and nonbreeder
 # ravenID <- readxl::read_excel("data/raw/ravens_banding_tagging.xlsx",sheet=1)
 # nb <- subset(ravenID, `status (reviewed 8/1/24)` == "vagrant")$`tag-id`
 # trans <- subset(ravenID, `status (reviewed 8/1/24)` %like% "Trans")
@@ -45,23 +46,23 @@ allGPS <- readr::read_csv("data/clean/all_raven_gps_clean28.csv") %>%
 # #subsetting trans territorials into their active territorial periods from entire GPS df
 # transGPS <- allGPS[allGPS$individual_local_identifier %in% trans$`tag-id`,]
 # 
-# transGPS <- do.call("rbind", tapply(transGPS, INDEX=transGPS$individual_local_identifier, 
+# transGPS <- do.call("rbind", tapply(transGPS, INDEX=transGPS$individual_local_identifier,
 #                                     FUN=function(x){
 #                                       ind <- trans[trans$`tag-id` == x[1,]$individual_local_identifier,]
-#                                       
+# 
 #                                       #has only an end date
 #                                       if(is.na(ind$`start date`) & !is.na(ind$`leave date`)){
 #                                         tmp <- x[as.Date(x$study_local_timestamp) > lubridate::ym(ind$`leave date`),]
 #                                         return(tmp)
 #                                       }
-#                                       
+# 
 #                                       #has only a start date
 #                                       if(!is.na(ind$`start date`) & is.na(ind$`leave date`)){
 #                                         tmp <- x[as.Date(x$study_local_timestamp) < lubridate::ym(ind$`start date`),]
 #                                         return(tmp)
 #                                       }
-#                                       
-#                                       
+# 
+# 
 #                                       #should be excluded
 #                                       if(is.na(ind$`start date`) & is.na(ind$`leave date`)){
 #                                         return()
@@ -70,7 +71,7 @@ allGPS <- readr::read_csv("data/clean/all_raven_gps_clean28.csv") %>%
 # 
 # 
 # #combining trans and territorial datasets
-# #!!!SKIP this step if you want to exclude trans 
+# #!!!SKIP this step if you want to exclude trans
 # terrGPS <- rbind(nbGPS, transGPS)
 
 
@@ -98,9 +99,9 @@ cluster_raw <- allGPS %>%
          Long = location_long,
          Lat = location_lat) %>%
   
-  #remove days that don't have 4 points in Gardiner (the min for a GPS cluster)
+  #remove days that don't have 2 points in Gardiner (the min for a GPS cluster)
   group_by(AID) %>%
-  filter(n() >= 2) %>% 
+  filter(n() >= 4) %>% 
   as.data.frame %>% 
   
   arrange(AID)
@@ -114,13 +115,15 @@ daytime <- getSunlightTimes(date = unique(as.Date(cluster_raw$TelemDate)),
 
 
 #adding missed fixes to the data
-id_date <- unique(cluster_raw$AID)
+  #unique ID date_combos
+  id_date <- unique(cluster_raw$AID)
+  
   #creating new dataframe that will include the missed fixes
   cluster_NA <- cluster_raw
 
   for(i in 1:length(id_date)){
   #pulling out specific individual and day
-  tmp <- subset(cluster_raw, AID == id_date[i])
+  tmp <- subset(cluster_NA, AID == id_date[i])
   
   #rounding the time of the GPS points to nearest 30 minute
   round_time <- round_date(tmp$TelemDate, unit = "30 minutes")
@@ -139,7 +142,7 @@ id_date <- unique(cluster_raw$AID)
   #adding missed GPS fixes back into dataset
     #doesn't run if no times are missing
   if(length(missing > 0)){
-    cluster_raw <- cluster_raw %>% 
+    cluster_NA <- cluster_NA %>% 
       bind_rows(data.frame(TelemDate = missing, Lat = NA, Long = NA, AID = tmp$AID[1])) %>% 
       arrange(AID)
   }
@@ -148,14 +151,17 @@ id_date <- unique(cluster_raw$AID)
   
   
 #actually defining clusters
-cluster_output <- GPSeq_clus(cluster_raw,
+cluster_output <- GPSeq_clus(cluster_NA,
                        search_radius_m = 50,
                        window_days = 1,
                        clus_min_locs = 4,
                        show_plots = c(F, "mean"))
 
 #pulling out clusters
-clusters <- cluster_output[[2]]
+clusters <- cluster_output[[2]] %>% 
+  
+  #adding ID
+  mutate(ID = sub("(_\\d{4}-\\d{2}-\\d{2})$", "", AID))
 
 #transforming to sf class
 #allows a distance metric to the polygon to be calculated
@@ -172,9 +178,60 @@ clusters$dist2Gardiner <- as.numeric(st_distance(sf_cluster, gardiner_poly))
 
 #subsetting to only 0 distance (in the polygon)
 cluster_hunt <- subset(clusters, dist2Gardiner == 0)
+
+######################################
+#sampling number of individuals so its the same number through all years
+#testing 2019-2022 with 7 individuals
+ind_year <- cluster_hunt %>%
+  filter(year(clus_start) %in% c(2019:2022)) %>%
+  group_by(year(clus_start)) %>%
+  reframe(ID = unique(ID))
+
+colnames(ind_year) <- c("year", "ID")
+
+#individuals to remove in certain years
+#2019: 7490
+#2020: 7672, 7655 7637, 7494
+#2021: 7563, 7561, 7487, 7648
+#2022: 8900, 7487, 7492 probably just keep all of these since # of individuals is so low
+
+set.seed(10)
+ind_sample <- ind_year %>%
+  
+  # #remove these low point individuals
+  # filter(!(year == 2019 & ID == "7490"),
+  #        !(year == 2020 & ID %in% c("7672", "7655", "7637", "7494")),
+  #        !(year == 2021 & ID %in% c("7563", "7561", "7487", "7648"))) %>% 
+  
+  #manually choosing individuals to optimize days and points per day (2019-2021)
+  filter((year == 2019 & ID %in% c("7658", "7643", "7645", "7493", "7492", "7484", "7489", "7495", "7487", "7637", "7488")) |
+           (year == 2020 & ID %in% c("7532", "7645", "7487", "7564", "7668", "7492", "7489", "7649", "7661", "7488", "7663")) |
+           (year == 2021 & ID %in% c("7661", "7490_3", "7645_2", "7656", "7668", "7492", "7638", "7652_2", "7675_2", "7663", "7667_2"))) %>% 
+  
+  group_by(year) %>%
+  group_split() 
+# %>%
+#   lapply(function(x){
+#     sample_ID <- sample(x$ID, 7)
+#   })
+
+names(ind_sample) <- c(2019:2021)
+
+cluster_sample <- clusters %>% slice(0)
+
+for(i in 1:length(ind_sample)){
+  tmp_data <- subset(clusters, year(clus_start) == names(ind_sample)[i])
+  tmp_sample <- ind_sample[[i]]
+
+  cluster_sample <- subset(tmp_data, tmp_data$ID %in% tmp_sample$ID) %>%
+    bind_rows(cluster_sample)
+}
+
+
+######################################
   
 #adding utm coordinates
-cluster_hunt <- cluster_hunt %>% 
+cluster_sample <- cluster_sample %>% 
   st_as_sf(coords=c("g_c_Long", "g_c_Lat"),
            crs="epsg:4326") %>% 
   st_transform(crs = "+proj=utm +zone=12") %>% 
@@ -185,9 +242,8 @@ cluster_hunt <- cluster_hunt %>%
   #on consecutive days
   #within 50 meters
 combine_cluster <- function(gps_sf, datetime_col = "clus_start", 
-                                 distance_threshold = 50, day_gap = 2) {
+                                 distance_threshold = 150, day_gap = 3) {
 
-  library(igraph)
 
   # Ensure datetime column exists
   if (!datetime_col %in% names(gps_sf)) stop("datetime column not found.")
@@ -215,11 +271,11 @@ combine_cluster <- function(gps_sf, datetime_col = "clus_start",
   }
   
   # Build graph and assign connected components
-  g <- graph_from_data_frame(edges, directed = FALSE, vertices = data.frame(id = 1:n))
-  comps <- components(g)
+  g <- igraph::graph_from_data_frame(edges, directed = FALSE, vertices = data.frame(id = 1:n))
+  comps <- igraph::components(g)
   
   gps_sf$group_id <- NA_integer_
-  gps_sf$group_id[as.integer(V(g)$name)] <- comps$membership
+  gps_sf$group_id[as.integer(igraph::V(g)$name)] <- comps$membership
   
   # Handle unconnected (isolated) points
   missing <- which(is.na(gps_sf$group_id))
@@ -230,7 +286,7 @@ combine_cluster <- function(gps_sf, datetime_col = "clus_start",
   return(gps_sf)
 }
 
-cluster_roost <- combine_cluster(cluster_hunt) %>% 
+cluster_roost <- combine_cluster(cluster_sample) %>% 
 
 #removing clusters that are probably roosts
 #looking at number of night points
@@ -257,34 +313,190 @@ cluster_final <- cluster_roost %>%
   st_as_sf(coords = c("easting", "northing"), crs = "+proj=utm +zone=12")
 
 
-# #plotting   
+
+# QA/QC -------------------------------------------------------------------
 # # Ensure group_id is a factor (so each group gets a unique color)
 # gps_data <- gps_data %>%
 #   mutate(group_id = as.factor(group_id))
 # 
 # # Plot on satellite map
-mapview::mapview(cluster_final %>% filter(year(start_date) == 2024), map.type = "Esri.WorldImagery")
+#mapview::mapview(cluster_final %>% filter(year(start_date) == 2024), map.type = "Esri.WorldImagery")
+
 
 #how many clusters per year
 table(year(cluster_final$start_date))
 
-#how many individuals giving GPS per year
-a <- cluster_raw %>% 
-  filter(year(TelemDate) > 2018) %>% 
-  group_by(year(TelemDate)) %>% 
-  summarise(ind_per_year = length(unique(individual_local_identifier)))
 
-#number of ravens that visited each cluster
-b <- cluster_roost %>% 
-  mutate(ID = sub("(_\\d{4}-\\d{2}-\\d{2})$", "", AID)) %>% 
+#how many individuals giving GPS per year
+(a <- cluster_roost %>% 
+    filter(year(clus_start) > 2018) %>% 
+    group_by(year(clus_start)) %>% 
+    summarise(ind_per_year = length(unique(ID))))
+
+
+#average number of ravens that visited each cluster
+(b <- cluster_roost %>% 
   st_drop_geometry %>% 
   group_by(group_id) %>% 
   summarise(ind = length(unique(ID)), year = mean(year(clus_start))) %>% 
   group_by(year) %>% 
-  summarise(mean(ind))
+  summarise(mean(ind)))
 
-#plotting "number of tagged individuals" vs "average individuals per cluster"
-plot(x = a$ind_per_year, y = b$`mean(ind)`)
+
+#clusters per individual
+as.vector(table(year(cluster_final$start_date)))/a$ind_per_year
+
+
+#number of points in each year from these individuals
+total_GPS_points <- c(NA,NA,NA,NA)
+days_per_year <- c(NA,NA,NA,NA)
+for(i in 1:length(ind_sample)){
+  tmp_data <- subset(cluster_raw, year(TelemDate) == names(ind_sample)[i])
+  tmp_sample <- ind_sample[[i]]
+  
+  total_GPS_points[i] <- tmp_data[tmp_data$individual_local_identifier %in% tmp_sample$ID,] %>% 
+    nrow
+  days_per_year[i] <- length(unique(as.Date(tmp_data$TelemDate)))
+  
+}
+
+#number of GPS points each year in Gardiner
+gardiner_GPS <- cluster_raw %>% 
+  st_as_sf(coords=c("Long", "Lat"),
+           crs="epsg:4326") %>% 
+  mutate(., dist2Gardiner = as.numeric(st_distance(., gardiner_poly))) %>% 
+  filter(dist2Gardiner == 0)
+
+gardiner_GPS_points <- c(NA,NA,NA,NA)
+gardiner_days_per_year <- c(NA,NA,NA,NA)
+for(i in 1:length(ind_sample)){
+  tmp_data <- subset(gardiner_GPS, year(TelemDate) == names(ind_sample)[i])
+  tmp_sample <- ind_sample[[i]]
+  
+  gardiner_GPS_points[i] <- tmp_data[tmp_data$individual_local_identifier %in% tmp_sample$ID,] %>% 
+    nrow
+  gardiner_days_per_year[i] <- length(unique(as.Date(tmp_data$TelemDate)))
+  
+}
+
+
+#look at missed fixes
+missed_fix <- cluster_NA %>% 
+  
+  #adding ID
+  mutate(ID = sub("(_\\d{4}-\\d{2}-\\d{2})$", "", AID),
+         year = year(TelemDate)) %>% 
+  
+  filter((year == 2019 & ID %in% c("7658", "7643", "7645", "7493", "7492", "7484", "7489", "7495", "7487", "7637", "7488")) |
+           (year == 2020 & ID %in% c("7532", "7645", "7487", "7564", "7668", "7492", "7489", "7649", "7661", "7488", "7663")) |
+           (year == 2021 & ID %in% c("7661", "7490_3", "7645_2", "7656", "7668", "7492", "7638", "7652_2", "7675_2", "7663", "7667_2"))) %>% 
+  
+  
+  group_by(ID, year) %>% 
+  
+  summarise(n = n(),
+            missed_fix = sum(is.na(Lat)),
+            prop_na = sum(is.na(Lat))/n()) %>% 
+  arrange(ID)
+
+missed_fix %>% 
+  group_by(year) %>% 
+  summarise(n_mean = mean(n),
+            na_prop_mean = mean(prop_na))
+
+
+
+#looking at the number of fixes per day (doesn't include missed fixes)
+fix_per_day <- cluster_raw %>% 
+  mutate(year = year(TelemDate)) %>% 
+  group_by(individual_local_identifier, year) %>% 
+  summarise(n_day = length(unique(AID)),
+            mean_points_per_day = n()/length(unique(AID)))
+  
+fix_per_day %>% 
+  group_by(year) %>% 
+  summarise(day_mean = mean(n_day),
+            mean_points_per_day = mean(mean_points_per_day))
+
+fix_year_group <- fix_per_day %>% 
+  ungroup %>%
+  group_by(year) %>% 
+  group_split() %>% 
+  purrr::set_names(2018:2024)
+
+fix_year_group %>% 
+  lapply(function(x){hist(x$mean_points_per_day, main = x[1,"year"])})
+#getting a lot more points per day in 2019
+
+#restricting to only individuals that have clusters in Gardiner
+gardiner_fix_year <- cluster_hunt %>%
+  st_drop_geometry %>% 
+  mutate(year = year(clus_start)) %>% 
+  group_by(year(clus_start)) %>% 
+  dplyr::select(ID, year) %>% 
+  group_split %>%
+  purrr::set_names(2019:2024) %>% 
+
+  {lapply(fix_year_group, function(x){
+    if(unique(x$year) != 2018){
+      x[x$individual_local_identifier %in% .[[paste(unique(x$year))]]$ID,]
+    }
+
+  })}
+  
+
+  
+
+
+#duration of cluster
+cluster_final %>% 
+  st_drop_geometry() %>% 
+  mutate(year = year(start_date),
+         duration = as.numeric(difftime(end_date, start_date, unit = "days"))) %>% 
+  group_by(year) %>% 
+  group_split() %>% 
+  # summarise(duration_mean = mean(duration),
+  #           duration_max = max(duration),
+  #           duration_min = min(duration)) %>% 
+  lapply(function(x){hist(x$duration, main = x[1,"year"])})
+  
+
+#number of daily clusters (before grouping)
+cluster_hunt %>%  #only Gardiner
+  st_drop_geometry %>% 
+  mutate(day = as.Date(clus_start),
+         year = year(clus_start)) %>% 
+  group_by(year, day) %>% 
+  summarise(cluster_per_day = length(AID)) %>% 
+  ungroup(day) %>% 
+  summarise(mean_clus_per_day = mean(cluster_per_day))
+
+clusters %>% #all clusters
+  mutate(day = as.Date(clus_start),
+         year = year(clus_start)) %>% 
+  group_by(year, day) %>% 
+  summarise(cluster_per_day = length(AID)) %>% 
+  ungroup(day) %>% 
+  summarise(mean_clus_per_day = mean(cluster_per_day))
+  
+
+### NEXT STEPS
+# (done) check the number of missed fixes for each individual/year. Make sure the fix rate stays high
+#look at the duration of clusters in each year
+#look at the clusters that happen inside the park
+  #do the clusters characteristics look the same (duration)
+#do model validation with wolf kills to make sure clusters are picking up things
+  #start with larger radius and then get slower, see what clusters are lost 
+
+
+#when sampling to 7 individuals only (to match number of ind in 22), the number in 2019 and 2020 stay higher
+#the number of total points (removing points on days with <4 gps) don't follow the trend
+#especially for GPS points in Gardiner, there are actually more GPS points in 21, 22 when there are less clusters
+#all days have some coverage
+
+
+
+  
 # HMM ---------------------------------------------------------------------
 # 
 # #prepping data for HMM package
