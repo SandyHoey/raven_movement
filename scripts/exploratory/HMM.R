@@ -115,21 +115,21 @@ kill_data$DOD <- mdy(kill_data$DOD)
 #subset to only kills from 2019 onwards to match raven GPS data
 #subset to only winter months (Nov-Mar)
 #but removing kills that are in Jan-Mar of 2019
-kill_data %>% 
+kill_data_recent <- kill_data %>% 
   subset(year(DOD) >= 2019 & month(DOD) %in% c(11,12,1,2,3)) %>% 
-  subset(DOD >= as.Date("2019-11-01")) -> kill_data_recent 
+  subset(DOD >= as.Date("2019-11-01"))
 
 
 #creating new column with the most accurate coords available
 #order of accuracy ground -> aerial -> estimated ground
-kill_data_recent %>% 
+kill_data_recent <- kill_data_recent %>% 
   mutate(easting = case_when(!is.na(GROUND.EAST) ~ GROUND.EAST,
                              !is.na(AERIAL.EAST) ~ AERIAL.EAST,
                              !is.na(EST.GROUND.EAST) ~ EST.GROUND.EAST),
          northing = case_when(!is.na(GROUND.NORTH) ~ GROUND.NORTH,
                              !is.na(AERIAL.NORTH) ~ AERIAL.NORTH,
                              !is.na(EST.GROUND.NORTH) ~ EST.GROUND.NORTH)) %>% 
-  subset(!is.na(easting))-> kill_data_recent
+  subset(!is.na(easting))
 
 
 #function to seperate out the kills that are within each territory
