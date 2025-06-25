@@ -229,7 +229,7 @@ for(i in 1:length(ind_sample)){
 
 
 ######################################
-  
+
 #adding utm coordinates
 cluster_sample <- cluster_sample %>% 
   st_as_sf(coords=c("g_c_Long", "g_c_Lat"),
@@ -242,7 +242,7 @@ cluster_sample <- cluster_sample %>%
   #on consecutive days
   #within 50 meters
 combine_cluster <- function(gps_sf, datetime_col = "clus_start", 
-                                 distance_threshold = 150, day_gap = 3) {
+                                 distance_threshold, day_gap) {
 
 
   # Ensure datetime column exists
@@ -286,12 +286,13 @@ combine_cluster <- function(gps_sf, datetime_col = "clus_start",
   return(gps_sf)
 }
 
-cluster_roost <- combine_cluster(cluster_sample) %>% 
+cluster_roost <- combine_cluster(cluster_sample, 
+                                 distance_threshold = 1000, day_gap = 2) %>% 
 
 #removing clusters that are probably roosts
 #looking at number of night points
 #night is defined in the cluster algorithm as suncalc() sunrise/sunset
-  filter(night_prop < .2) %>% 
+  filter(night_prop < .1) %>% 
   
   #only using days in early winter study 11-15 to 12-15
   filter(clus_end >= as.Date(paste(year(clus_end), 11, 15, sep = "-")),
@@ -313,7 +314,139 @@ cluster_final <- cluster_roost %>%
   st_as_sf(coords = c("easting", "northing"), crs = "+proj=utm +zone=12")
 
 
+# testing cluster at wolf kills -------------------------------------------
 
+wolf_kills <- readr::read_csv("data/raw/wolf_project_carcass_data.csv") %>% 
+  janitor::clean_names() %>% 
+  
+  #fix DOD format and add year column
+  mutate(dod = mdy(dod),
+         year = year(dod)) %>% 
+  
+  #filter year and wolf kill probability
+  filter(year %in% 2019:2021,
+         cod %in% c("DEFINITE WOLF", "PROBABLE WOLF", "POSSIBLE WOLF") |
+           kill_type == "SCAVENGE FRESH CARCASS") %>% 
+  
+  #create column with most accurate utm locations
+  mutate(easting = case_when(!is.na(ground_east) ~ ground_east,
+                             !is.na(aerial_east) ~ aerial_east,
+                             !is.na(est_ground_east) ~ est_ground_east),
+         northing = case_when(!is.na(ground_north) ~ ground_north,
+                              !is.na(aerial_north) ~ aerial_north,
+                              !is.na(est_ground_north) ~ est_ground_north)) %>% 
+  subset(!is.na(easting)) %>% 
+  
+  #create sf object
+  st_as_sf(coords = c("easting", "northing"), crs = "+proj=utm +zone=12") %>% 
+  
+  #transform to match sf_cluster
+  st_transform(crs = st_crs(sf_cluster))
+
+
+#metric of how clusters match wolf kills
+  
+  #reading in northern range polygon
+  sf_cluster$nrange <- st_read("data/raw/northern_range_poly.kml") %>%
+    st_transform(crs = st_crs(sf_cluster)) %>% 
+    st_make_valid %>% 
+    st_distance(sf_cluster, .) %>% 
+    as.numeric
+  
+  #reading in YNP boundary polygon
+  sf_cluster$park <- st_read("data/raw/parkpoly.kml") %>%
+    st_transform(crs = st_crs(sf_cluster)) %>% 
+    st_make_valid %>% 
+    st_distance(sf_cluster, .) %>% 
+    as.numeric
+  
+  #function to compare to wolf kills
+  check_proximity_time <- function(max_dist_m, max_days) {
+    # Ensure both are in the same CRS: transform wolf_kills to cluster_park CRS if needed
+    if (st_crs(cluster_park) != st_crs(wolf_kills)) {
+      wolf_kills <- st_transform(wolf_kills, st_crs(cluster_park))
+    }
+    
+    result <- logical(nrow(cluster_park))
+    
+    for (i in seq_len(nrow(cluster_park))) {
+      row1 <- cluster_park[i, ]
+      
+      if (is.na(row1$start_date)) {
+        result[i] <- FALSE
+        next
+      }
+      
+      # Filter wolf_kills rows by date range relative to row1$start_date
+      time_match <- wolf_kills %>%
+        filter(
+          dod <= row1$start_date,
+          dod + days(max_days) >= row1$start_date
+        )
+      
+      if (nrow(time_match) == 0) {
+        result[i] <- FALSE
+        next
+      }
+      
+      # Calculate distances on lon/lat (st_distance on geographic will return meters)
+      dists <- st_distance(row1$geometry, time_match$geometry)
+      dists <- as.numeric(dists)
+      
+      result[i] <- any(dists <= max_dist_m)
+    }
+    
+    return(result)
+  }
+  
+  
+#pipe to get metrics of cluster accuracy  
+cluster_park <- sf_cluster %>% 
+  
+  #only inside the park
+  filter(park == 0, nrange == 0) %>% 
+  
+  #combining clusters
+  combine_cluster(distance_threshold = 200, day_gap = 2) %>%   
+  
+  #remove roost
+  filter(night_prop == 0) %>% 
+  
+  #only using days in early winter study 11-15 to 12-15
+  filter(clus_end >= as.Date(paste(year(clus_end), 11, 15, sep = "-")),
+         clus_start <= as.Date(paste(year(clus_start), 12, 15, sep = "-"))) %>% 
+  
+  st_transform(crs = "+proj=utm +zone=12") %>% 
+  mutate(.,
+         easting = st_coordinates(.)[1],
+         northing = st_coordinates(.)[2]) %>% 
+  group_by(group_id) %>% 
+  summarise(start_date = as.Date(min(clus_start)),
+            end_date = as.Date(max(clus_start)),
+            easting = mean(easting),
+            northing = mean(northing)) %>% 
+  st_as_sf(coords = c("easting", "northing"), crs = "+proj=utm +zone=12") %>% 
+  st_transform(crs = 4326)
+
+#calculating if there is a wolf kill within 200 m and 2 days before 
+cluster_park <- cluster_park %>% 
+  mutate(wolf_check = check_proximity_time(max_dist_m = 200, max_days = 2))
+
+#summary stats
+nrow(cluster_park)
+sum(cluster_park$wolf_check == T)/nrow(cluster_park)
+
+#plot against raven clusters
+mapview::mapview(wolf_kills %>%
+                   mutate(month = month(dod)) %>% 
+                   filter(year == 2020, month %in% 11:12) %>% 
+                   dplyr::select(geometry),
+                 col.region = "red") +
+  mapview::mapview(sf_cluster %>%
+                     mutate(year = year(clus_start)) %>% 
+                     filter(year == 2020) %>% 
+                     dplyr::select(geometry),
+                   col.region = "blue")
 # QA/QC -------------------------------------------------------------------
 # # Ensure group_id is a factor (so each group gets a unique color)
 # gps_data <- gps_data %>%
@@ -495,6 +628,7 @@ clusters %>% #all clusters
 #all days have some coverage
 
 
+    
 
   
 # HMM ---------------------------------------------------------------------
