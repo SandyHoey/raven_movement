@@ -91,7 +91,7 @@ allGPS <- readr::read_csv("data/clean/all_raven_gps_clean28.csv") %>%
 # cluster -----------------------------------------------------------------
 cluster_raw <- allGPS %>% 
   
-  #pulling out only necessary data for clustering
+  #pulling out only necessary columns for clustering
   dplyr::select(study_local_timestamp, location_lat, location_long, individual_local_identifier) %>% 
   mutate(AID = paste0(individual_local_identifier, "_", as.Date(study_local_timestamp)),
          study_local_timestamp = force_tz(study_local_timestamp, tz = "MST")) %>% 
@@ -99,11 +99,10 @@ cluster_raw <- allGPS %>%
          Long = location_long,
          Lat = location_lat) %>%
   
-  #remove days that don't have 2 points in Gardiner (the min for a GPS cluster)
+  #remove days that don't have 4 points (the min for a GPS cluster)
   group_by(AID) %>%
   filter(n() >= 4) %>% 
   as.data.frame %>% 
-  
   arrange(AID)
 
 #getting the sunrise and sunset times for Gardiner
@@ -181,7 +180,10 @@ cluster_hunt <- subset(clusters, dist2Gardiner == 0)
 
 ######################################
 #sampling number of individuals so its the same number through all years
-#testing 2019-2022 with 7 individuals
+#also keeping other metrics similar (missed fixes, total days with points)
+#testing 2019-2021 with 11 individuals
+#more info in data/raven cluster QA.xlsx
+
 ind_year <- cluster_hunt %>%
   filter(year(clus_start) %in% c(2019:2022)) %>%
   group_by(year(clus_start)) %>%
@@ -189,19 +191,8 @@ ind_year <- cluster_hunt %>%
 
 colnames(ind_year) <- c("year", "ID")
 
-#individuals to remove in certain years
-#2019: 7490
-#2020: 7672, 7655 7637, 7494
-#2021: 7563, 7561, 7487, 7648
-#2022: 8900, 7487, 7492 probably just keep all of these since # of individuals is so low
-
 set.seed(10)
 ind_sample <- ind_year %>%
-  
-  # #remove these low point individuals
-  # filter(!(year == 2019 & ID == "7490"),
-  #        !(year == 2020 & ID %in% c("7672", "7655", "7637", "7494")),
-  #        !(year == 2021 & ID %in% c("7563", "7561", "7487", "7648"))) %>% 
   
   #manually choosing individuals to optimize days and points per day (2019-2021)
   filter((year == 2019 & ID %in% c("7658", "7643", "7645", "7493", "7492", "7484", "7489", "7495", "7487", "7637", "7488")) |
@@ -210,10 +201,7 @@ ind_sample <- ind_year %>%
   
   group_by(year) %>%
   group_split() 
-# %>%
-#   lapply(function(x){
-#     sample_ID <- sample(x$ID, 7)
-#   })
+
 
 names(ind_sample) <- c(2019:2021)
 
@@ -315,138 +303,138 @@ cluster_final <- cluster_roost %>%
 
 
 # testing cluster at wolf kills -------------------------------------------
-
-wolf_kills <- readr::read_csv("data/raw/wolf_project_carcass_data.csv") %>% 
-  janitor::clean_names() %>% 
-  
-  #fix DOD format and add year column
-  mutate(dod = mdy(dod),
-         year = year(dod)) %>% 
-  
-  #filter year and wolf kill probability
-  filter(year %in% 2019:2021,
-         cod %in% c("DEFINITE WOLF", "PROBABLE WOLF", "POSSIBLE WOLF") |
-           kill_type == "SCAVENGE FRESH CARCASS") %>% 
-  
-  #create column with most accurate utm locations
-  mutate(easting = case_when(!is.na(ground_east) ~ ground_east,
-                             !is.na(aerial_east) ~ aerial_east,
-                             !is.na(est_ground_east) ~ est_ground_east),
-         northing = case_when(!is.na(ground_north) ~ ground_north,
-                              !is.na(aerial_north) ~ aerial_north,
-                              !is.na(est_ground_north) ~ est_ground_north)) %>% 
-  subset(!is.na(easting)) %>% 
-  
-  #create sf object
-  st_as_sf(coords = c("easting", "northing"), crs = "+proj=utm +zone=12") %>% 
-  
-  #transform to match sf_cluster
-  st_transform(crs = st_crs(sf_cluster))
-
-
-#metric of how clusters match wolf kills
-  
-  #reading in northern range polygon
-  sf_cluster$nrange <- st_read("data/raw/northern_range_poly.kml") %>%
-    st_transform(crs = st_crs(sf_cluster)) %>% 
-    st_make_valid %>% 
-    st_distance(sf_cluster, .) %>% 
-    as.numeric
-  
-  #reading in YNP boundary polygon
-  sf_cluster$park <- st_read("data/raw/parkpoly.kml") %>%
-    st_transform(crs = st_crs(sf_cluster)) %>% 
-    st_make_valid %>% 
-    st_distance(sf_cluster, .) %>% 
-    as.numeric
-  
-  #function to compare to wolf kills
-  check_proximity_time <- function(max_dist_m, max_days) {
-    # Ensure both are in the same CRS: transform wolf_kills to cluster_park CRS if needed
-    if (st_crs(cluster_park) != st_crs(wolf_kills)) {
-      wolf_kills <- st_transform(wolf_kills, st_crs(cluster_park))
-    }
-    
-    result <- logical(nrow(cluster_park))
-    
-    for (i in seq_len(nrow(cluster_park))) {
-      row1 <- cluster_park[i, ]
-      
-      if (is.na(row1$start_date)) {
-        result[i] <- FALSE
-        next
-      }
-      
-      # Filter wolf_kills rows by date range relative to row1$start_date
-      time_match <- wolf_kills %>%
-        filter(
-          dod <= row1$start_date,
-          dod + days(max_days) >= row1$start_date
-        )
-      
-      if (nrow(time_match) == 0) {
-        result[i] <- FALSE
-        next
-      }
-      
-      # Calculate distances on lon/lat (st_distance on geographic will return meters)
-      dists <- st_distance(row1$geometry, time_match$geometry)
-      dists <- as.numeric(dists)
-      
-      result[i] <- any(dists <= max_dist_m)
-    }
-    
-    return(result)
-  }
-  
-  
-#pipe to get metrics of cluster accuracy  
-cluster_park <- sf_cluster %>% 
-  
-  #only inside the park
-  filter(park == 0, nrange == 0) %>% 
-  
-  #combining clusters
-  combine_cluster(distance_threshold = 200, day_gap = 2) %>%   
-  
-  #remove roost
-  filter(night_prop == 0) %>% 
-  
-  #only using days in early winter study 11-15 to 12-15
-  filter(clus_end >= as.Date(paste(year(clus_end), 11, 15, sep = "-")),
-         clus_start <= as.Date(paste(year(clus_start), 12, 15, sep = "-"))) %>% 
-  
-  st_transform(crs = "+proj=utm +zone=12") %>% 
-  mutate(.,
-         easting = st_coordinates(.)[1],
-         northing = st_coordinates(.)[2]) %>% 
-  group_by(group_id) %>% 
-  summarise(start_date = as.Date(min(clus_start)),
-            end_date = as.Date(max(clus_start)),
-            easting = mean(easting),
-            northing = mean(northing)) %>% 
-  st_as_sf(coords = c("easting", "northing"), crs = "+proj=utm +zone=12") %>% 
-  st_transform(crs = 4326)
-
-#calculating if there is a wolf kill within 200 m and 2 days before 
-cluster_park <- cluster_park %>% 
-  mutate(wolf_check = check_proximity_time(max_dist_m = 200, max_days = 2))
-
-#summary stats
-nrow(cluster_park)
-sum(cluster_park$wolf_check == T)/nrow(cluster_park)
-
-#plot against raven clusters
-mapview::mapview(wolf_kills %>%
-                   mutate(month = month(dod)) %>% 
-                   filter(year == 2020, month %in% 11:12) %>% 
-                   dplyr::select(geometry),
-                 col.region = "red") +
-  mapview::mapview(sf_cluster %>%
-                     mutate(year = year(clus_start)) %>% 
-                     filter(year == 2020) %>% 
-                     dplyr::select(geometry),
-                   col.region = "blue")
+# 
+# wolf_kills <- readr::read_csv("data/raw/wolf_project_carcass_data.csv") %>% 
+#   janitor::clean_names() %>% 
+#   
+#   #fix DOD format and add year column
+#   mutate(dod = mdy(dod),
+#          year = year(dod)) %>% 
+#   
+#   #filter year and wolf kill probability
+#   filter(year %in% 2019:2021,
+#          cod %in% c("DEFINITE WOLF", "PROBABLE WOLF", "POSSIBLE WOLF") |
+#            kill_type == "SCAVENGE FRESH CARCASS") %>% 
+#   
+#   #create column with most accurate utm locations
+#   mutate(easting = case_when(!is.na(ground_east) ~ ground_east,
+#                              !is.na(aerial_east) ~ aerial_east,
+#                              !is.na(est_ground_east) ~ est_ground_east),
+#          northing = case_when(!is.na(ground_north) ~ ground_north,
+#                               !is.na(aerial_north) ~ aerial_north,
+#                               !is.na(est_ground_north) ~ est_ground_north)) %>% 
+#   subset(!is.na(easting)) %>% 
+#   
+#   #create sf object
+#   st_as_sf(coords = c("easting", "northing"), crs = "+proj=utm +zone=12") %>% 
+#   
+#   #transform to match sf_cluster
+#   st_transform(crs = st_crs(sf_cluster))
+# 
+# 
+# #metric of how clusters match wolf kills
+#   
+#   #reading in northern range polygon
+#   sf_cluster$nrange <- st_read("data/raw/northern_range_poly.kml") %>%
+#     st_transform(crs = st_crs(sf_cluster)) %>% 
+#     st_make_valid %>% 
+#     st_distance(sf_cluster, .) %>% 
+#     as.numeric
+#   
+#   #reading in YNP boundary polygon
+#   sf_cluster$park <- st_read("data/raw/parkpoly.kml") %>%
+#     st_transform(crs = st_crs(sf_cluster)) %>% 
+#     st_make_valid %>% 
+#     st_distance(sf_cluster, .) %>% 
+#     as.numeric
+#   
+#   #function to compare to wolf kills
+#   check_proximity_time <- function(max_dist_m, max_days) {
+#     # Ensure both are in the same CRS: transform wolf_kills to cluster_park CRS if needed
+#     if (st_crs(cluster_park) != st_crs(wolf_kills)) {
+#       wolf_kills <- st_transform(wolf_kills, st_crs(cluster_park))
+#     }
+#     
+#     result <- logical(nrow(cluster_park))
+#     
+#     for (i in seq_len(nrow(cluster_park))) {
+#       row1 <- cluster_park[i, ]
+#       
+#       if (is.na(row1$start_date)) {
+#         result[i] <- FALSE
+#         next
+#       }
+#       
+#       # Filter wolf_kills rows by date range relative to row1$start_date
+#       time_match <- wolf_kills %>%
+#         filter(
+#           dod <= row1$start_date,
+#           dod + days(max_days) >= row1$start_date
+#         )
+#       
+#       if (nrow(time_match) == 0) {
+#         result[i] <- FALSE
+#         next
+#       }
+#       
+#       # Calculate distances on lon/lat (st_distance on geographic will return meters)
+#       dists <- st_distance(row1$geometry, time_match$geometry)
+#       dists <- as.numeric(dists)
+#       
+#       result[i] <- any(dists <= max_dist_m)
+#     }
+#     
+#     return(result)
+#   }
+#   
+#   
+# #pipe to get metrics of cluster accuracy  
+# cluster_park <- sf_cluster %>% 
+#   
+#   #only inside the park
+#   filter(park == 0, nrange == 0) %>% 
+#   
+#   #combining clusters
+#   combine_cluster(distance_threshold = 200, day_gap = 2) %>%   
+#   
+#   #remove roost
+#   filter(night_prop == 0) %>% 
+#   
+#   #only using days in early winter study 11-15 to 12-15
+#   filter(clus_end >= as.Date(paste(year(clus_end), 11, 15, sep = "-")),
+#          clus_start <= as.Date(paste(year(clus_start), 12, 15, sep = "-"))) %>% 
+#   
+#   st_transform(crs = "+proj=utm +zone=12") %>% 
+#   mutate(.,
+#          easting = st_coordinates(.)[1],
+#          northing = st_coordinates(.)[2]) %>% 
+#   group_by(group_id) %>% 
+#   summarise(start_date = as.Date(min(clus_start)),
+#             end_date = as.Date(max(clus_start)),
+#             easting = mean(easting),
+#             northing = mean(northing)) %>% 
+#   st_as_sf(coords = c("easting", "northing"), crs = "+proj=utm +zone=12") %>% 
+#   st_transform(crs = 4326)
+# 
+# #calculating if there is a wolf kill within 200 m and 2 days before 
+# cluster_park <- cluster_park %>% 
+#   mutate(wolf_check = check_proximity_time(max_dist_m = 200, max_days = 2))
+# 
+# #summary stats
+# nrow(cluster_park)
+# sum(cluster_park$wolf_check == T)/nrow(cluster_park)
+# 
+# #plot against raven clusters
+# mapview::mapview(wolf_kills %>%
+#                    mutate(month = month(dod)) %>% 
+#                    filter(year == 2020, month %in% 11:12) %>% 
+#                    dplyr::select(geometry),
+#                  col.region = "red") +
+#   mapview::mapview(sf_cluster %>%
+#                      mutate(year = year(clus_start)) %>% 
+#                      filter(year == 2020) %>% 
+#                      dplyr::select(geometry),
+#                    col.region = "blue")
 # QA/QC -------------------------------------------------------------------
 # # Ensure group_id is a factor (so each group gets a unique color)
 # gps_data <- gps_data %>%
@@ -579,20 +567,28 @@ gardiner_fix_year <- cluster_hunt %>%
   
 
   
+#cluster duration summary stats
+cluster_final %>% 
+  st_drop_geometry() %>% 
+  mutate(year = year(start_date),
+         duration = as.numeric(difftime(end_date, start_date, unit = "days"))) %>% 
+  group_by(year) %>% 
+  summarise(duration_mean = mean(duration),
+            duration_max = max(duration),
+            duration_min = min(duration))
 
-
-#duration of cluster
+#hist of cluster duration
 cluster_final %>% 
   st_drop_geometry() %>% 
   mutate(year = year(start_date),
          duration = as.numeric(difftime(end_date, start_date, unit = "days"))) %>% 
   group_by(year) %>% 
   group_split() %>% 
-  # summarise(duration_mean = mean(duration),
-  #           duration_max = max(duration),
-  #           duration_min = min(duration)) %>% 
+  summarise(duration_mean = mean(duration),
+            duration_max = max(duration),
+            duration_min = min(duration)) %>%
   lapply(function(x){hist(x$duration, main = x[1,"year"])})
-  
+
 
 #number of daily clusters (before grouping)
 cluster_hunt %>%  #only Gardiner
@@ -615,10 +611,10 @@ clusters %>% #all clusters
 
 ### NEXT STEPS
 # (done) check the number of missed fixes for each individual/year. Make sure the fix rate stays high
-#look at the duration of clusters in each year
+# (done)look at the duration of clusters in each year
 #look at the clusters that happen inside the park
   #do the clusters characteristics look the same (duration)
-#do model validation with wolf kills to make sure clusters are picking up things
+# (done) do model validation with wolf kills to make sure clusters are picking up things
   #start with larger radius and then get slower, see what clusters are lost 
 
 
