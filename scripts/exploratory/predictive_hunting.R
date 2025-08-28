@@ -275,12 +275,12 @@ combine_cluster <- function(gps_sf, datetime_col = "clus_start",
 }
 
 cluster_roost <- combine_cluster(cluster_sample, 
-                                 distance_threshold = 1000, day_gap = 2) %>% 
+                                 distance_threshold = 200, day_gap = 2) %>% 
 
 #removing clusters that are probably roosts
 #looking at number of night points
 #night is defined in the cluster algorithm as suncalc() sunrise/sunset
-  filter(night_prop < .1) %>% 
+  filter(night_prop == 0) %>% 
   
   #only using days in early winter study 11-15 to 12-15
   filter(clus_end >= as.Date(paste(year(clus_end), 11, 15, sep = "-")),
