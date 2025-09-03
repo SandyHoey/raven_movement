@@ -78,7 +78,7 @@ terrGPS <- rbind(terrGPS, transGPS)
 
 
 #subsetting the GPS points to only fall/winter (Nov-Dec)
-terrfwGPS <- terrGPS[month(terrGPS$study.local.timestamp) %in% c(11, 12, 1, 2, 3),]
+terrfwGPS <- terrGPS[month(terrGPS$study.local.timestamp) %in% c(10, 11, 12, 1, 2, 3),]
 
 
         

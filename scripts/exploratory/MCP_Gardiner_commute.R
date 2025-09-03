@@ -27,6 +27,20 @@ mcp_in <- function(){
 
 dist2poly <- mcp_in()
 
+#adding the wolf/hunting periods
+  # Oct 25-Nov 14 rifle hunting only
+  # Nov 15-Nov 30 wolf + hunting
+  # Dec 1-Dec 15 wolf only
+dist2poly <- dist2poly %>% 
+  mutate(day = day(study.local.timestamp),
+         month = month(study.local.timestamp),
+         period = "neither")
+dist2poly[dist2poly$month == 10 | (dist2poly$month == 11 & dist2poly$day < 15),]$period <- "hunt"
+dist2poly[dist2poly$month == 11 & dist2poly$day >= 15,]$period <- "both"
+dist2poly[dist2poly$month == 12 & dist2poly$day <= 15,]$period <- "wolf"
+
+
+
 #getting the number of points in territory and Gardiner 
 info_table <- tapply(dist2poly, INDEX = dist2poly$individual.local.identifier,
        FUN = function(x){
@@ -59,8 +73,13 @@ commute_list <- tapply(dist2poly, INDEX = dist2poly$individual.local.identifier,
        FUN = function(x){
          
          dates <- unique(as.Date(x$study.local.timestamp))
+         period <- x %>% 
+           group_by(as.Date(study.local.timestamp)) %>% 
+           slice(1) %>% 
+           ungroup %>% 
+           pull(period)
          tmp_date_df <- data.frame(ID = x[1, "individual.local.identifier"],
-                                          date = dates, commute = NA) 
+                                          date = dates, period, commute = NA) 
          
          #cycling through all the dates for each individual to tell where the
          #individual ended up that day (terr, other, Gardiner)
@@ -92,14 +111,14 @@ sapply(commute_list,
 
 #calculating the percentage of points in each commute category
 #did remove the old faithful birds
-commute_list %>% 
+commute_percent <- commute_list %>% 
   do.call("rbind",.) %>% 
   mutate(month = month(.$date)) %>% 
   filter(!(individual.local.identifier %in% c("7494", "7485"))) %>% 
   group_by(month) %>% 
   summarise(terr = sum(commute == 1)/n()*100,
             mid = sum(commute == 2)/n()*100,
-            Gardiner = sum(commute == 3)/n()*100) -> commute_percent 
+            Gardiner = sum(commute == 3)/n()*100)
   
 
 #plotting the percentage of each commute category by month
@@ -113,4 +132,14 @@ pivot_longer(cols = c(terr, mid, Gardiner),
   labs(y = "Percent of days") +
   theme_classic() +
   scale_y_continuous(expand=c(0,0), limits = c(0, 65))
+
+
+#plotting the different combinations of wolf/hunter periods
+period_percent <- commute_list %>% 
+  do.call("rbind",.) %>% 
+  filter(!(individual.local.identifier %in% c("7494", "7485"))) %>% 
+  group_by(period) %>% 
+  summarise(terr = sum(commute == 1)/n()*100,
+            mid = sum(commute == 2)/n()*100,
+            Gardiner = sum(commute == 3)/n()*100)
 
