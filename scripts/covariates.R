@@ -73,8 +73,8 @@ GPS_W <- terrGPS[month(terrGPS$study_local_timestamp) %in% c(10,11,12,3),]
 
 
 
-# Covariate 1 -------------------------------------------------------------
-## adding distance to territory
+# Distance to terr -------------------------------------------------------------
+## distance to territory
 
 source("scripts/exploratory/Home Range (MCP).R")
 
@@ -104,7 +104,7 @@ dist2poly$within_terr <- ifelse(dist2poly$dist_terr == 0, 1, 0)
 
 
 
-# Covariate 2 -------------------------------------------------------------
+# Time btwn kills -------------------------------------------------------------
 ## time between kills within territory
 
 ##'   variable 3 may be better (basic kill density)
@@ -203,8 +203,7 @@ avg_day_betwn_kill <- mutate(avg_day_betwn_kill, individual_local_identifier = r
 
 
 
-# Covariate 3 -------------------------------------------------------------
-## kill density
+# Kill density -------------------------------------------------------------
 
 ##'   # of carcasses in territory/# of days(30)
 ##'   going to be calculated only for winter studies when kill detection is best
@@ -251,7 +250,7 @@ bind_rows(kill_density, .id = "individual_local_identifier") %>%
 
 
 
-# Covariate 4 -------------------------------------------------------------
+# Active kill -------------------------------------------------------------
 ## presence of an active kill within the territory
 
 ##' active is less than 3 days old
@@ -283,8 +282,8 @@ dist2poly <- bind_rows(active_kill_fctn())
 
 
 
-# Covariate 5 -------------------------------------------------------------
-## hunting season
+# hunting season-------------------------------------------------------------
+## 
 
 ##'   binary covariate for if the hunting seaosn is in effect
 ##'   Oct 25 - Nov 30 for general ungulate season (FWP)
