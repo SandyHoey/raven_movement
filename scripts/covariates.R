@@ -1,10 +1,15 @@
 #Creating covariates for model
+library(dplyr)
+library(lubridate)
+library(data.table)
+
+
 
 # reading in and subsetting data ------------------------------------------
 
 #reading in all raven points
 #removing columns with NA coords
-allGPS <- read_csv("data/clean/all_raven_gps_clean58.csv")
+allGPS <- readr::read_csv("data/clean/all_raven_gps_clean58.csv")
 allGPS <- subset(allGPS, !is.na(utm_easting))
 
 
@@ -18,7 +23,7 @@ allGPS <- subset(allGPS, individual_local_identifier != "7596")
 #importing demographic information
 #terr: territorial birds with nest inside Yellowstone
 #trans: birds that transitioned between breeder and nonbreeder
-ravenID <- read_excel("data/raw/ravens_banding_tagging.xlsx",sheet=1)
+ravenID <- readxl::read_excel("data/raw/ravens_banding_tagging.xlsx",sheet=1)
 terr <- subset(ravenID, `status (reviewed 8/1/24)` == "territorial" & 
                  ravenID$`inside NationalPark` == "yes")$`tag-id`
 trans <- subset(ravenID, `status (reviewed 8/1/24)` %like% "Trans")
