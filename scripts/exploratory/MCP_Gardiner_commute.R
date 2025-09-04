@@ -3,17 +3,17 @@ source("scripts/exploratory/%inGardiner.R")
 
 
 #calculating distance to territory
-#using 95% mcp
-#using a function to not clutter global environment
+#using 90% mcp
+#distance calculated in meters
 mcp_in <- function(){
-  ID <- mcp95$id
+  ID <- mcp90$id
   
   for(i in 1:length(ID)){
     tmp_data <- subset(terrfwGPS, individual.local.identifier == ID[i])
     tmp_sf <- st_as_sf(tmp_data, coords=c("utm.easting", "utm.northing"), 
                        crs="+proj=utm +zone=12")
     
-    tmp_data$dist2Terr <- as.numeric(st_distance(tmp_sf, st_as_sf(mcp95[i,])))
+    tmp_data$dist2Terr <- as.numeric(st_distance(tmp_sf, st_as_sf(mcp90[i,]), unit = ))
     
     if(i != 1){
       output_df <- rbind(output_df, tmp_data)
@@ -65,7 +65,7 @@ info_table <- tapply(dist2poly, INDEX = dist2poly$individual.local.identifier,
 
 #creating a column that shows if the raven decided to commute or leave terr that day
 #3 = has a least 1 point that day in Gardiner poly
-#2 = has at least 1 point outside of terr poly, but none in Gardiner poly
+#2 = has at least 1 point farther than 1 km from terr poly , but none in Gardiner poly
 #1 = only has points in terr poly
 ID <- unique(dist2poly$individual.local.identifier)
 
@@ -88,7 +88,7 @@ commute_list <- tapply(dist2poly, INDEX = dist2poly$individual.local.identifier,
            
            if(any(tmp_dayta[,"dist2Gardiner"] == 0)){
              tmp_date_df[d,"commute"] <- 3
-           } else if(any(tmp_dayta[,"dist2Terr"] != 0)){
+           } else if(any(tmp_dayta[,"dist2Terr"] > 1000)){
              tmp_date_df[d,"commute"] <- 2
            } else{
              tmp_date_df[d,"commute"] <- 1
