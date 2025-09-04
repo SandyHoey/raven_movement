@@ -3,6 +3,8 @@ library(dplyr)
 library(lubridate)
 library(data.table)
 
+#needs to be restructured when I get the predictive kill data
+
 
 
 # reading in and subsetting data ------------------------------------------
@@ -29,11 +31,12 @@ terr <- subset(ravenID, `status (reviewed 8/1/24)` == "territorial" &
 trans <- subset(ravenID, `status (reviewed 8/1/24)` %like% "Trans")
 
 
-#subsetting territorials from entire GPS df
+#pulling territorials
 terrGPS <- subset(allGPS, individual_local_identifier %in% terr)
 
 
-#subsetting trans territorials into their active territorial periods from entire GPS df
+#pulling trans territorials into their active territorial periods
+#trans means that they changed their breeding status one direction or the other
 transGPS <- allGPS[allGPS$individual_local_identifier %in% trans$`tag-id`,]
 
 transGPS <- do.call("rbind", tapply(transGPS, INDEX=transGPS$individual_local_identifier, 
@@ -66,13 +69,13 @@ terrGPS <- rbind(terrGPS, transGPS)
 
 
 #pulling out only winter points (subject to change the month)
-GPS_W <- terrGPS[month(terrGPS$study_local_timestamp) %in% c(10,11,12,1,2,3),]
+GPS_W <- terrGPS[month(terrGPS$study_local_timestamp) %in% c(10,11,12,3),]
 
 
 
-# creating covariates measurements -------------------------------------------------------
+# Covariate 1 -------------------------------------------------------------
+## adding distance to territory
 
-##1 adding distance to territory
 source("scripts/exploratory/Home Range (MCP).R")
 
 mcp_in <- function(){
@@ -101,22 +104,20 @@ dist2poly$within_terr <- ifelse(dist2poly$dist_terr == 0, 1, 0)
 
 
 
-##2 time between kills within territory
-##'   this may be inaccurate because kill detection goes down outside of winter
-##'     study periods when the plane doesnt fly
-##'     especially for interior territories
-##'  variable 3 may be better (basic kill density)
-##'  !!!!should probably remove cat kills from consideration
+# Covariate 2 -------------------------------------------------------------
+## time between kills within territory
+
+##'   variable 3 may be better (basic kill density)
 
 kill_data <- read.csv("data/raw/wolf_project_carcass_data.csv")
 kill_data$DOD <- mdy(kill_data$DOD)
 
 #subset to only kills from 2019 onwards to match raven GPS data
-#subset to only winter months (Nov-Mar)
+#subset to only winter months (Nov, Dec, Mar)
 #but removing kills that are in Jan-Mar of 2019
 kill_data_recent <- kill_data %>% 
-  subset(year(DOD) >= 2019 & month(DOD) %in% c(11,12,1,2,3)) %>% 
-  subset(DOD >= as.Date("2019-11-01"))
+  filter(year(DOD) >= 2019 & month(DOD) %in% c(11,12,3)) %>% 
+  filter(DOD >= as.Date("2019-11-01"))
 
 
 #creating new column with the most accurate coords available
@@ -128,7 +129,10 @@ kill_data_recent <- kill_data_recent %>%
          northing = case_when(!is.na(GROUND.NORTH) ~ GROUND.NORTH,
                               !is.na(AERIAL.NORTH) ~ AERIAL.NORTH,
                               !is.na(EST.GROUND.NORTH) ~ EST.GROUND.NORTH)) %>% 
-  subset(!is.na(easting))
+  filter(!is.na(easting)) %>% 
+  
+  #removing cat kills
+  filter(nchar(PACK) > 4)
 
 
 #function to seperate out the kills that are within each territory
@@ -199,10 +203,11 @@ avg_day_betwn_kill <- mutate(avg_day_betwn_kill, individual_local_identifier = r
 
 
 
-##3 kill density
+# Covariate 3 -------------------------------------------------------------
+## kill density
+
 ##'   # of carcasses in territory/# of days(30)
 ##'   going to be calculated only for winter studies when kill detection is best
-##'   !!!!should probably remove cat kills from consideration
 
 kill_density <- lapply(in_terr_kill_list, function(x){
   #empty vector to attach all the values of days since previous carcass
@@ -215,7 +220,7 @@ kill_density <- lapply(in_terr_kill_list, function(x){
   late_winter_end <- as.Date(paste0(seq(min(year(x$DOD)), max(year(x$DOD))),"-03-30"))
   
   
-  #a dataframe to put the kill density numbers for each winter sample period
+  #dataframe to put the kill density numbers for each winter sample period
   density_df <- data.frame(year = rep(year(early_winter_start), 2), 
                            period = rep(c("early", "late"), each = length(early_winter_start)), 
                            density = NA)
@@ -246,7 +251,9 @@ bind_rows(kill_density, .id = "individual_local_identifier") %>%
 
 
 
-#4 presence of an active kill within the territory
+# Covariate 4 -------------------------------------------------------------
+## presence of an active kill within the territory
+
 ##' active is less than 3 days old
 ##' days_since is the number of days since the kill was made, including the day of the kill
 
@@ -274,11 +281,17 @@ active_kill_fctn <- function(days_since = 3){
 
 dist2poly <- bind_rows(active_kill_fctn())
 
-##3 hunting season
+
+
+# Covariate 5 -------------------------------------------------------------
+## hunting season
+
 ##'   binary covariate for if the hunting seaosn is in effect
-##'   Oct 26 - Dec 1 for general ungulate season (FWP)
-##'   march for tribal bison hunting (double check this, its probably longer)
+##'   Oct 25 - Nov 30 for general ungulate season (FWP)
+##'   march for tribal bison hunting (This actually depends on bison movement)
+   
+   
 monthday <- format(dist2poly$study_local_timestamp, "%m-%d")
 dist2poly$hunt <- 0
-dist2poly[which(monthday >= "10-26" & monthday < "12-1" |
+dist2poly[which(monthday >= "10-25" & monthday < "11-30" |
                   monthday >= "03-01" & monthday <= "03-30"),]$hunt <- 1
