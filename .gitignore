@@ -51,3 +51,4 @@ rsconnect/
 #large data files that won't upload to GitHub
 /data/clean
 /data/raw/ravenGPS_movebank.csv
+/data/raw/elk_GPS_2025-09-03_BJS.csv
