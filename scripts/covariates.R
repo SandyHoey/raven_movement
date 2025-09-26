@@ -167,29 +167,32 @@ in_terr_kill_list <- kill_freq(dist_from_terr = 3000)
 
 #counting the days between consecutive kills within each territory
 #Summer is messing up days since 
+#6485 has no kills within 4 km of territory
 day_betwn_kill <- lapply(in_terr_kill_list, function(x){
-  #empty vector to attach all the values of days since previous carcass
-  days_since <- c()
-  
-  #start and end dates for each winter period
-  winter_start <- as.Date(paste0(seq(min(year(x$DOD))-1, max(year(x$DOD))),"-11-01"))
-  winter_end <- as.Date(paste0(seq(min(year(x$DOD)), max(year(x$DOD))+1),"-03-31"))
-  
-  for(w in 1:length(winter_start)){
+  if(nrow(x) != 0){
+    #empty vector to attach all the values of days since previous carcass
+    days_since <- c()
     
-    tmp_winter <- subset(x, DOD >= winter_start[w] & 
-                           DOD <= winter_end[w])
+    #start and end dates for each winter period
+    winter_start <- as.Date(paste0(seq(min(year(x$DOD))-1, max(year(x$DOD))),"-11-01"))
+    winter_end <- as.Date(paste0(seq(min(year(x$DOD)), max(year(x$DOD))+1),"-03-31"))
     
-    #has an NA value since the first carcass of a winter period cant have a "days since last carcass"
-    if(nrow(tmp_winter) == 1){
-      days_since <- c(days_since, NA)
-    }else if(nrow(tmp_winter) == 0){
-    }else{
-      days_since <- c(days_since, NA, diff(tmp_winter$DOD))
+    for(w in 1:length(winter_start)){
+      
+      tmp_winter <- subset(x, DOD >= winter_start[w] & 
+                             DOD <= winter_end[w])
+      
+      #has an NA value since the first carcass of a winter period cant have a "days since last carcass"
+      if(nrow(tmp_winter) == 1){
+        days_since <- c(days_since, NA)
+      }else if(nrow(tmp_winter) == 0){
+      }else{
+        days_since <- c(days_since, NA, diff(tmp_winter$DOD))
+      }
     }
+    
+    x$days_since <- days_since
   }
-  
-  x$days_since <- days_since
 })
 
 
