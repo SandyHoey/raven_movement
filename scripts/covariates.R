@@ -107,7 +107,13 @@ dist2poly$within_terr <- ifelse(dist2poly$dist_terr == 0, 1, 0)
 # Time btwn kills -------------------------------------------------------------
 ## time between kills within territory
 
-##'   variable 3 may be better (basic kill density)
+##'   kill density may be better (basic kill density)
+##'   
+##'   
+##' !!!! PROBLEMS !!!!
+##' Just use kill density
+##' but if you want to bring this back it needs a rework
+##' only calculate days between for early and late winter instead of the whole winter
 
 kill_data <- read.csv("data/raw/wolf_project_carcass_data.csv")
 kill_data$DOD <- mdy(kill_data$DOD)
@@ -115,22 +121,22 @@ kill_data$DOD <- mdy(kill_data$DOD)
 #subset to only kills from 2019 onwards to match raven GPS data
 #subset to only winter months (Nov, Dec, Mar)
 #but removing kills that are in Jan-Mar of 2019
-kill_data_recent <- kill_data %>% 
-  filter(year(DOD) >= 2019 & month(DOD) %in% c(11,12,3)) %>% 
+kill_data_recent <- kill_data %>%
+  filter(year(DOD) >= 2019 & month(DOD) %in% c(11,12,3)) %>%
   filter(DOD >= as.Date("2019-11-01"))
 
 
 #creating new column with the most accurate coords available
 #order of accuracy ground -> aerial -> estimated ground
-kill_data_recent <- kill_data_recent %>% 
+kill_data_recent <- kill_data_recent %>%
   mutate(easting = case_when(!is.na(GROUND.EAST) ~ GROUND.EAST,
                              !is.na(AERIAL.EAST) ~ AERIAL.EAST,
                              !is.na(EST.GROUND.EAST) ~ EST.GROUND.EAST),
          northing = case_when(!is.na(GROUND.NORTH) ~ GROUND.NORTH,
                               !is.na(AERIAL.NORTH) ~ AERIAL.NORTH,
-                              !is.na(EST.GROUND.NORTH) ~ EST.GROUND.NORTH)) %>% 
-  filter(!is.na(easting)) %>% 
-  
+                              !is.na(EST.GROUND.NORTH) ~ EST.GROUND.NORTH)) %>%
+  filter(!is.na(easting)) %>%
+
   #removing cat kills
   filter(nchar(PACK) > 4)
 
@@ -139,25 +145,25 @@ kill_data_recent <- kill_data_recent %>%
 #dist_from_terr: how far (m) a kill is from the territory to be counted towards that territory
 kill_freq <- function(dist_from_terr = 0){
   ID <- mcp90$id
-  
+
   #creating a list to put the kill information for kills inside each territory
   in_terr_kill_list <- vector("list", length(ID))
   names(in_terr_kill_list) <- ID
-  
+
   #changing kill data into a format that can be used for the distance measurement
-  tmp_sf <- st_as_sf(kill_data_recent, coords=c("easting", "northing"), 
+  tmp_sf <- st_as_sf(kill_data_recent, coords=c("easting", "northing"),
                      crs="+proj=utm +zone=12")
-  
+
   for(i in 1:length(ID)){
-    
-    #calculating distance 
+
+    #calculating distance
     tmp_dist <- as.numeric(st_distance(tmp_sf, st_as_sf(mcp90[i,])))
-    
+
     #putting all rows with distance == 0 into the list
     #and ordering by date
-    subset(kill_data_recent, tmp_dist <= dist_from_terr) %>% 
-      arrange(DOD) -> in_terr_kill_list[[i]]
-    
+    in_terr_kill_list[[i]] <- subset(kill_data_recent, tmp_dist <= dist_from_terr) %>%
+      arrange(DOD)
+
   }
   return(in_terr_kill_list)
 }
@@ -165,44 +171,46 @@ kill_freq <- function(dist_from_terr = 0){
 in_terr_kill_list <- kill_freq(dist_from_terr = 3000)
 
 
-#counting the days between consecutive kills within each territory
-#Summer is messing up days since 
-#6485 has no kills within 4 km of territory
-day_betwn_kill <- lapply(in_terr_kill_list, function(x){
-  if(nrow(x) != 0){
-    #empty vector to attach all the values of days since previous carcass
-    days_since <- c()
-    
-    #start and end dates for each winter period
-    winter_start <- as.Date(paste0(seq(min(year(x$DOD))-1, max(year(x$DOD))),"-11-01"))
-    winter_end <- as.Date(paste0(seq(min(year(x$DOD)), max(year(x$DOD))+1),"-03-31"))
-    
-    for(w in 1:length(winter_start)){
-      
-      tmp_winter <- subset(x, DOD >= winter_start[w] & 
-                             DOD <= winter_end[w])
-      
-      #has an NA value since the first carcass of a winter period cant have a "days since last carcass"
-      if(nrow(tmp_winter) == 1){
-        days_since <- c(days_since, NA)
-      }else if(nrow(tmp_winter) == 0){
-      }else{
-        days_since <- c(days_since, NA, diff(tmp_winter$DOD))
-      }
-    }
-    
-    x$days_since <- days_since
-  }
-})
-
-
-#calculating average day between kills for individuals
-day_betwn_kill %>% 
-  lapply(mean, na.rm = T) %>% 
-  do.call("rbind",.) %>% 
-  as.data.frame() -> avg_day_betwn_kill
-colnames(avg_day_betwn_kill) <- "avg_day_btwn"
-avg_day_betwn_kill <- mutate(avg_day_betwn_kill, individual_local_identifier = rownames(avg_day_betwn_kill)) 
+# #counting the days between consecutive kills within each territory
+# #Summer is messing up days since 
+# #7485/7494 (old faithful) has no kills within 3 km of territory, so making the days between the max value (30)
+# day_betwn_kill <- lapply(in_terr_kill_list, function(x){
+#   if(nrow(x) != 0){
+#     #empty vector to attach all the values of days since previous carcass
+#     days_since <- c()
+#     
+#     #start and end dates for each winter period
+#     winter_start <- as.Date(paste0(seq(min(year(x$DOD))-1, max(year(x$DOD))),"-11-01"))
+#     winter_end <- as.Date(paste0(seq(min(year(x$DOD)), max(year(x$DOD))+1),"-03-31"))
+#     
+#     for(w in 1:length(winter_start)){
+#       
+#       tmp_winter <- subset(x, DOD >= winter_start[w] & 
+#                              DOD <= winter_end[w])
+#       
+#       #has an NA value since the first carcass of a winter period cant have a "days since last carcass"
+#       if(nrow(tmp_winter) == 1){
+#         days_since <- c(days_since, NA)
+#       }else if(nrow(tmp_winter) == 0){
+#       }else{
+#         days_since <- c(days_since, NA, diff(tmp_winter$DOD))
+#       }
+#     }
+#     
+#     x$days_since <- days_since
+#   } else(days_since <- 30)
+# })
+# 
+# 
+# #calculating average day between kills for individuals
+# avg_day_betwn_kill <- day_betwn_kill %>% 
+#   lapply(mean, na.rm = T) %>% 
+#   do.call("rbind",.) %>% 
+#   as.data.frame() %>% 
+#   rename(avg_day_btwn = V1)
+# 
+# colnames(avg_day_betwn_kill) <- "avg_day_btwn"
+# avg_day_betwn_kill <- mutate(avg_day_betwn_kill, individual_local_identifier = rownames(avg_day_betwn_kill)) 
 
 
 
@@ -210,46 +218,51 @@ avg_day_betwn_kill <- mutate(avg_day_betwn_kill, individual_local_identifier = r
 
 ##'   # of carcasses in territory/# of days(30)
 ##'   going to be calculated only for winter studies when kill detection is best
+##' 
+##' old faithful birds have no kills in terr, need to figure out how that is handled
+##'   probably just a 0 
 
 kill_density <- lapply(in_terr_kill_list, function(x){
-  #empty vector to attach all the values of days since previous carcass
-  days_since <- c()
-  
-  #start and end dates for each winter period
-  early_winter_start <- as.Date(paste0(seq(min(year(x$DOD)), max(year(x$DOD))),"-11-15"))
-  early_winter_end <- as.Date(paste0(seq(min(year(x$DOD)), max(year(x$DOD))),"-12-15"))
-  late_winter_start <- as.Date(paste0(seq(min(year(x$DOD)), max(year(x$DOD))),"-03-01"))
-  late_winter_end <- as.Date(paste0(seq(min(year(x$DOD)), max(year(x$DOD))),"-03-30"))
-  
-  
-  #dataframe to put the kill density numbers for each winter sample period
-  density_df <- data.frame(year = rep(year(early_winter_start), 2), 
-                           period = rep(c("early", "late"), each = length(early_winter_start)), 
-                           density = NA)
-  
-  for(w in 1:length(early_winter_start)){
+  if(nrow(x) != 0){
+    #empty vector to attach all the values of days since previous carcass
+    days_since <- c()
     
-    early_winter <- subset(x, DOD >= early_winter_start[w] & 
-                             DOD <= early_winter_end[w])
-    late_winter <- subset(x, DOD >= late_winter_start[w] & 
-                            DOD <= late_winter_end[w])
+    #start and end dates for each winter period
+    early_winter_start <- as.Date(paste0(seq(min(year(x$DOD)), max(year(x$DOD))),"-11-15"))
+    early_winter_end <- as.Date(paste0(seq(min(year(x$DOD)), max(year(x$DOD))),"-12-15"))
+    late_winter_start <- as.Date(paste0(seq(min(year(x$DOD)), max(year(x$DOD))),"-03-01"))
+    late_winter_end <- as.Date(paste0(seq(min(year(x$DOD)), max(year(x$DOD))),"-03-30"))
     
     
-    #early winter density
-    density_df[w, "density"] <- nrow(early_winter)/30
+    #dataframe to put the kill density numbers for each winter sample period
+    density_df <- data.frame(year = rep(year(early_winter_start), 2), 
+                             period = rep(c("early", "late"), each = length(early_winter_start)), 
+                             density = NA)
     
-    #late winter density
-    density_df[w+length(late_winter_start), "density"] <- nrow(late_winter)/30
+    for(w in 1:length(early_winter_start)){
+      
+      early_winter <- subset(x, DOD >= early_winter_start[w] & 
+                               DOD <= early_winter_end[w])
+      late_winter <- subset(x, DOD >= late_winter_start[w] & 
+                              DOD <= late_winter_end[w])
+      
+      
+      #early winter density
+      density_df[w, "density"] <- nrow(early_winter)/30
+      
+      #late winter density
+      density_df[w+length(late_winter_start), "density"] <- nrow(late_winter)/30
+    }
+    return(density_df)
   }
-  return(density_df)
 })
 
 #am going to use average kill density for each individual
 #the kill density is calculated from winter study periods, so there isn't a number for
 #the other months anyways
-bind_rows(kill_density, .id = "individual_local_identifier") %>% 
+avg_kill_density <- bind_rows(kill_density, .id = "individual_local_identifier") %>% 
   group_by(individual_local_identifier) %>% 
-  summarize(avg_density = mean(density)) -> avg_kill_density
+  summarize(avg_density = mean(density))
 
 
 
