@@ -75,22 +75,23 @@ mysf <- st_as_sf(terrGPS, coords = c("utm.easting", "utm.northing"), crs = 32612
 
 
 #creating mcp for each individual
-mysf %>% 
-  dplyr::select(c("individual.local.identifier", "geometry")) %>% 
-  as_Spatial() %>%
-  mcp(percent = 95, unout = "km2") -> mcp95
+# mcp95 <- mysf %>% 
+#   dplyr::select(c("individual.local.identifier", "geometry")) %>% 
+#   as_Spatial() %>%
+#   mcp(percent = 95, unout = "km2")
+# 
+# 
+# mapview(mcp95[,1])
 
-
-mapview(mcp95[,1])
 
 #95% mcp had the mammoth birds with a massive territory including rainbow lakes and gardiner
 #can either cut that down by lowering mcp % or restricting points to a smaller window
 #most of the points far form the territory were in may and july
 #june is pretty centered
-mysf %>% 
+mcp90 <- mysf %>% 
   dplyr::select(c("individual.local.identifier", "geometry")) %>% 
   as_Spatial() %>%
-  mcp(percent = 90, unout = "km2") -> mcp90
+  mcp(percent = 90, unout = "km2")
 
 
 mapview(mcp90[,1])
