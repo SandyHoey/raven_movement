@@ -3,9 +3,10 @@
 library(dplyr)
 library(sf)
 library(lubridate)
+library(ggplot2)
 
 
-# prepping data -----------------------------------------------------------
+# preppiggplot2# prepping data -----------------------------------------------------------
 
 #reading in data
 elk_data <- readr::read_csv("data/raw/elk_GPS_2025-09-03_BJS.csv") %>% 
@@ -136,17 +137,8 @@ nov_count %>%
 boxplot(prop_jardine ~ day, data = nov_count)
 
 
-#plotting 
-boxplot(prop_jardine ~ yd, data = nov_count)
-
-
-# first point in Jardine each year ----------------------------------------
-#pulling out the first point each winter that each elk is in Jardine
-elk_jardine %>% 
-
-  
-  #grouping by individual and year
-  group_by(ID, year(dt)) %>% 
-  
-  #pulling out first point from each year
-  slice(1)
+#plotting splitting years
+nov_count %>% 
+  ggplot(aes(x = day, y = prop_jardine, 
+             group = year, col = factor(year))) +
+  geom_line()
