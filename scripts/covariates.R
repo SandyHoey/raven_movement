@@ -11,35 +11,35 @@ library(data.table)
 
 #reading in all raven points
 #removing columns with NA coords
-allGPS <- readr::read_csv("data/clean/all_raven_gps_clean58.csv")
-allGPS <- subset(allGPS, !is.na(utm_easting))
+all_gps <- readr::read_csv("data/clean/all_raven_gps_clean58.csv")
+all_gps <- subset(all_gps, !is.na(utm_easting))
 
 
 #removing 7646 because there arent enough winter points
 #removing 7653 and 7596 because Canada
-allGPS <- subset(allGPS, individual_local_identifier != "7646")
-allGPS <- subset(allGPS, individual_local_identifier != "7653")
-allGPS <- subset(allGPS, individual_local_identifier != "7596")
+all_gps <- subset(all_gps, individual_local_identifier != "7646")
+all_gps <- subset(all_gps, individual_local_identifier != "7653")
+all_gps <- subset(all_gps, individual_local_identifier != "7596")
 
 
 #importing demographic information
 #terr: territorial birds with nest inside Yellowstone
 #trans: birds that transitioned between breeder and nonbreeder
-ravenID <- readxl::read_excel("data/raw/ravens_banding_tagging.xlsx",sheet=1)
-terr <- subset(ravenID, `status (reviewed 8/1/24)` == "territorial" & 
-                 ravenID$`inside NationalPark` == "yes")$`tag-id`
-trans <- subset(ravenID, `status (reviewed 8/1/24)` %like% "Trans")
+raven_id <- readxl::read_excel("data/raw/ravens_banding_tagging.xlsx",sheet=1)
+terr <- subset(raven_id, `status (reviewed 8/1/24)` == "territorial" & 
+                 raven_id$`inside NationalPark` == "yes")$`tag-id`
+trans <- subset(raven_id, `status (reviewed 8/1/24)` %like% "Trans")
 
 
 #pulling territorials
-terrGPS <- subset(allGPS, individual_local_identifier %in% terr)
+terr_gps <- subset(all_gps, individual_local_identifier %in% terr)
 
 
 #pulling trans territorials into their active territorial periods
 #trans means that they changed their breeding status one direction or the other
-transGPS <- allGPS[allGPS$individual_local_identifier %in% trans$`tag-id`,]
+trans_gps <- all_gps[all_gps$individual_local_identifier %in% trans$`tag-id`,]
 
-transGPS <- do.call("rbind", tapply(transGPS, INDEX=transGPS$individual_local_identifier, 
+trans_gps <- do.call("rbind", tapply(trans_gps, INDEX=trans_gps$individual_local_identifier, 
                                     FUN=function(x){
                                       ind <- trans[trans$`tag-id` == x[1,]$individual_local_identifier,]
                                       
@@ -65,11 +65,11 @@ transGPS <- do.call("rbind", tapply(transGPS, INDEX=transGPS$individual_local_id
 
 #combining trans and territorial datasets
 #!!!SKIP this step if you want to exclude trans 
-terrGPS <- rbind(terrGPS, transGPS)
+terr_gps <- rbind(terr_gps, trans_gps)
 
 
 #pulling out only winter points (subject to change the month)
-GPS_W <- terrGPS[month(terrGPS$study_local_timestamp) %in% c(10,11,12,3),]
+winter_gps <- terr_gps[month(terr_gps$study_local_timestamp) %in% c(10,11,12,3),]
 
 
 
@@ -82,7 +82,7 @@ mcp_in <- function(){
   ID <- mcp90$id
   
   for(i in 1:length(ID)){
-    tmp_data <- subset(GPS_W, individual_local_identifier == ID[i])
+    tmp_data <- subset(winter_gps, individual_local_identifier == ID[i])
     tmp_sf <- st_as_sf(tmp_data, coords=c("utm_easting", "utm_northing"), 
                        crs="+proj=utm +zone=12")
     
@@ -99,8 +99,8 @@ mcp_in <- function(){
   return(output_df)
 }
 #adding binary metric for inside/outside territory
-dist2poly <- mcp_in()
-dist2poly$within_terr <- ifelse(dist2poly$dist_terr == 0, 1, 0)
+gps_final <- mcp_in()
+gps_final$within_terr <- ifelse(gps_final$dist_terr == 0, 1, 0)
 
 
 
@@ -115,7 +115,7 @@ dist2poly$within_terr <- ifelse(dist2poly$dist_terr == 0, 1, 0)
 ##' but if you want to bring this back it needs a rework
 ##' only calculate days between for early and late winter instead of the whole winter
 
-kill_data <- read.csv("data/raw/wolf_project_carcass_data.csv")
+kill_data <- readr::read_csv("data/raw/wolf_project_carcass_data.csv")
 kill_data$DOD <- mdy(kill_data$DOD)
 
 #subset to only kills from 2019 onwards to match raven GPS data
@@ -273,9 +273,9 @@ avg_kill_density <- bind_rows(kill_density, .id = "individual_local_identifier")
 ##' days_since is the number of days since the kill was made, including the day of the kill
 
 active_kill_fctn <- function(days_since = 3){
-  dist2poly$active_kill <- 0
+  gps_final$active_kill <- 0
   
-  tapply(dist2poly, dist2poly$individual_local_identifier,
+  tapply(gps_final, gps_final$individual_local_identifier,
          FUN = function(x){
            ID <- unique(x$individual_local_identifier)
            tmp_kills <- in_terr_kill_list[[ID]]
@@ -294,7 +294,7 @@ active_kill_fctn <- function(days_since = 3){
          })
 }
 
-dist2poly <- bind_rows(active_kill_fctn())
+gps_final <- bind_rows(active_kill_fctn())
 
 
 
@@ -306,7 +306,7 @@ dist2poly <- bind_rows(active_kill_fctn())
 ##'   march for tribal bison hunting (This actually depends on bison movement)
    
    
-monthday <- format(dist2poly$study_local_timestamp, "%m-%d")
-dist2poly$hunt <- 0
-dist2poly[which(monthday >= "10-25" & monthday < "11-30" |
+monthday <- format(gps_final$study_local_timestamp, "%m-%d")
+gps_final$hunt <- 0
+gps_final[which(monthday >= "10-25" & monthday < "11-30" |
                   monthday >= "03-01" & monthday <= "03-30"),]$hunt <- 1
