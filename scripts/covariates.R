@@ -76,7 +76,7 @@ winter_gps <- terr_gps[month(terr_gps$study_local_timestamp) %in% c(10,11,12,3),
 # Distance to terr -------------------------------------------------------------
 ## distance to territory
 
-source("scripts/exploratory/Home Range (MCP).R")
+source("scripts/Home Range (MCP).R")
 
 mcp_in <- function(){
   ID <- mcp90$id
