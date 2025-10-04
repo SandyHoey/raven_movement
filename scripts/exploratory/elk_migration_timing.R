@@ -88,7 +88,7 @@ boxplot(prop_jardine ~ month, data = monthly_count)
 boxplot(prop_jardine ~ ym, data = monthly_count)
 
 
-# number of collared elk daily during November in Jardine ---------------------------
+# proportion of collared elk daily during November in Jardine ---------------------------
 nov_count <- elk_jardine %>%
   
   #only november
@@ -126,8 +126,8 @@ nov_count <- elk_data %>%
   #adding column with proportion
   mutate(prop_jardine = in_jardine/total_ind) %>% 
   
-  #adding column with combined year-month
-  mutate(yd = paste(year, day, sep="-"))
+  #adding column with full date
+  mutate(yd = as.Date(paste(year, "11", day, sep="-")))
 
 
 #average by day

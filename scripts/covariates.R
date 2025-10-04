@@ -115,7 +115,7 @@ gps_final$within_terr <- ifelse(gps_final$dist_terr == 0, 1, 0)
 ##' but if you want to bring this back it needs a rework
 ##' only calculate days between for early and late winter instead of the whole winter
 
-kill_data <- readr::read_csv("data/raw/wolf_project_carcass_data.csv")
+kill_data <- read.csv("data/raw/wolf_project_carcass_data.csv")
 kill_data$DOD <- mdy(kill_data$DOD)
 
 #subset to only kills from 2019 onwards to match raven GPS data
@@ -310,3 +310,6 @@ monthday <- format(gps_final$study_local_timestamp, "%m-%d")
 gps_final$hunt <- 0
 gps_final[which(monthday >= "10-25" & monthday < "11-30" |
                   monthday >= "03-01" & monthday <= "03-30"),]$hunt <- 1
+
+
+
