@@ -22,16 +22,16 @@ elk_data <- readr::read_csv("data/raw/elk_GPS_2025-09-03_BJS.csv") %>%
   filter(month(dt) %in% c(10, 11, 12))
 
 
-#reading in Gardiner/Jardine kml
+#reading in Gardiner/Jardine and YNP kml
 #transforming latlong to UTM to match the GPS points
 jardine_poly <- st_read("data/raw/gardiner_hunt.kml") %>% 
   st_transform(crs = st_crs(elk_data))
-
+park_poly <- st_read("data/raw/parkpoly.kml") %>% 
+  st_transform(crs = st_crs(elk_data))
 
 #dataframe with only GPS points in Jardine
 elk_jardine <- st_intersection(jardine_poly, elk_data) %>% 
   select(-c(1, 2)) %>% 
-  
   
   #chronological order
   arrange(dt) %>% 
@@ -40,9 +40,29 @@ elk_jardine <- st_intersection(jardine_poly, elk_data) %>%
   st_drop_geometry()
 
 
+#dataframe with only GPS points outside YNP
+elk_ynp <- elk_data %>% 
+  
+  #calculating distance to YNP
+  st_distance(park_poly, elk_data) %>% 
+  as.vector %>% 
+
+  #adding back to elk data as a column
+  bind_cols(elk_data) %>% 
+  rename(distance_ynp = ...1) %>% 
+  
+  #filtering to only distances > 0 (not inside the park)
+  filter(distance_ynp > 0) %>% 
+  
+  #chronological order
+  arrange(dt) %>% 
+  
+  #removing sf geometry
+  st_drop_geometry()
+
 
 # number of collared elk each month in Jardine ---------------------------
-monthly_count <- elk_jardine %>%
+monthly_count <- elk_ynp %>%
 
   
   #adding year and month columns
@@ -51,7 +71,7 @@ monthly_count <- elk_jardine %>%
   group_by(year, month) %>%
   
   #summarize data
-  summarise(in_jardine = n_distinct(ID), .groups = "drop")
+  summarise(outside_park = n_distinct(ID), .groups = "drop")
 
 
 #adding the total sample size each month
@@ -72,7 +92,7 @@ monthly_count <- elk_data %>%
   right_join(monthly_count, by = c("year" = "year", "month" = "month")) %>% 
   
   #adding column with proportion
-  mutate(prop_jardine = in_jardine/total_ind) %>% 
+  mutate(prop_available = outside_park/total_ind) %>% 
   
   #adding column with combined year-month
   mutate(ym = paste(year, month, sep="-"))
@@ -81,15 +101,15 @@ monthly_count <- elk_data %>%
 #average by month
 monthly_count %>% 
   group_by(month) %>% 
-  summarise(mean(prop_jardine))
-boxplot(prop_jardine ~ month, data = monthly_count)
+  summarise(mean(prop_available))
+boxplot(prop_available ~ month, data = monthly_count)
 
 #plotting 
-boxplot(prop_jardine ~ ym, data = monthly_count)
+boxplot(prop_available ~ ym, data = monthly_count)
 
 
 # number of collared elk daily during November in Jardine ---------------------------
-nov_count <- elk_jardine %>%
+nov_count <- elk_ynp %>%
   
   #only november
   filter(month(dt) == 11) %>% 
@@ -100,7 +120,7 @@ nov_count <- elk_jardine %>%
   group_by(year, day) %>%
   
   #summarize data
-  summarise(in_jardine = n_distinct(ID), .groups = "drop")
+  summarise(outside_park = n_distinct(ID), .groups = "drop")
 
 
 #adding the total sample size every day
@@ -124,7 +144,7 @@ nov_count <- elk_data %>%
   right_join(nov_count, by = c("year" = "year", "day" = "day")) %>% 
   
   #adding column with proportion
-  mutate(prop_jardine = in_jardine/total_ind) %>% 
+  mutate(prop_available = outside_park/total_ind) %>% 
   
   #adding column with combined year-month
   mutate(yd = paste(year, day, sep="-"))
@@ -133,13 +153,13 @@ nov_count <- elk_data %>%
 #average by day
 nov_count %>% 
   group_by(day) %>% 
-  summarise(mean(prop_jardine))
-boxplot(prop_jardine ~ day, data = nov_count)
+  summarise(mean(prop_available))
+boxplot(prop_available ~ day, data = nov_count)
 
 
 #plotting splitting years
 nov_count %>% 
-  ggplot(aes(x = day, y = prop_jardine, 
+  ggplot(aes(x = day, y = prop_available, 
              group = year, col = factor(year))) +
   geom_line()
 
