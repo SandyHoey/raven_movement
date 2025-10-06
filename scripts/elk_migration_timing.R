@@ -6,7 +6,7 @@ library(lubridate)
 library(ggplot2)
 
 
-# preppiggplot2# prepping data -----------------------------------------------------------
+# prepping data -----------------------------------------------------------
 
 #reading in data
 elk_data <- readr::read_csv("data/raw/elk_GPS_2025-09-03_BJS.csv") %>% 
@@ -88,7 +88,7 @@ boxplot(prop_jardine ~ month, data = monthly_count)
 boxplot(prop_jardine ~ ym, data = monthly_count)
 
 
-# proportion of collared elk daily during November in Jardine ---------------------------
+# number of collared elk daily during November in Jardine ---------------------------
 nov_count <- elk_jardine %>%
   
   #only november
@@ -126,8 +126,8 @@ nov_count <- elk_data %>%
   #adding column with proportion
   mutate(prop_jardine = in_jardine/total_ind) %>% 
   
-  #adding column with full date
-  mutate(yd = as.Date(paste(year, "11", day, sep="-")))
+  #adding column with combined year-month
+  mutate(yd = paste(year, day, sep="-"))
 
 
 #average by day
@@ -142,3 +142,4 @@ nov_count %>%
   ggplot(aes(x = day, y = prop_jardine, 
              group = year, col = factor(year))) +
   geom_line()
+
