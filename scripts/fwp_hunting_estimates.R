@@ -202,7 +202,7 @@ nov_count %>%
 #creating a single column with the combined take numbers
 nov_count <- nov_count %>% 
   mutate(final_take = final_elk_take + final_deer_take + final_md_buck_take,
-         final_bms = final_elk_bms + final_deer_bms + final_md_buck_bms)
+         final_take_bms = final_elk_bms + final_deer_bms + final_md_buck_bms)
 
 
 #plotting take numbers
@@ -213,6 +213,6 @@ nov_count %>%
 
 #plotting biomass numbers
 nov_count %>% 
-  ggplot(aes(x = day, y = final_bms, 
+  ggplot(aes(x = day, y = final_take_bms, 
              group = year, col = factor(year))) +
   geom_line()
