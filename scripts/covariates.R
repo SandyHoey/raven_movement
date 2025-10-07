@@ -11,7 +11,21 @@ library(data.table)
 
 #reading in all raven points
 #removing columns with NA coords
-all_gps <- readr::read_csv("data/clean/all_raven_gps_clean58.csv")
+all_gps <- readr::read_csv("data/clean/all_raven_gps_clean58.csv") %>% 
+  
+  #removing useless columns
+  dplyr::select(-c(...1, visible, bar_barometric_pressure, data_decoding_software,
+                   eobs_activity, eobs_activity_samples, eobs_key_bin_checksum,
+                   eobs_speed_accuracy_estimate, eobs_start_timestamp, eobs_status,
+                   eobs_temperature, eobs_type_of_fix, eobs_used_time_to_get_fix,
+                   ground_speed, heading, height_above_ellipsoid, height_above_msl,
+                   height_raw, import_marked_outlier, mag_magnetic_field_raw_x,
+                   mag_magnetic_field_raw_y, mag_magnetic_field_raw_z,
+                   manually_marked_outlier, orientation_quaternion_raw_w,
+                   orientation_quaternion_raw_x, orientation_quaternion_raw_y,
+                   orientation_quaternion_raw_z, sensor_type, individual_taxon_canonical_name,
+                   tag_local_identifier, study_timezone))
+  
 all_gps <- subset(all_gps, !is.na(utm_easting))
 
 
@@ -215,8 +229,8 @@ in_terr_kill_list <- kill_freq(dist_from_terr = 3000)
 
 
 # Kill density -------------------------------------------------------------
+## of carcasses in territory/# of days(30)
 
-##'   # of carcasses in territory/# of days(30)
 ##'   going to be calculated only for winter studies when kill detection is best
 ##' 
 ##' old faithful birds have no kills in terr, need to figure out how that is handled
@@ -269,7 +283,7 @@ avg_kill_density <- bind_rows(kill_density, .id = "individual_local_identifier")
 # Active kill -------------------------------------------------------------
 ## presence of an active kill within the territory
 
-##' active is less than 3 days old
+##' active is < than 3 days old (<= 2 days)
 ##' days_since is the number of days since the kill was made, including the day of the kill
 
 active_kill_fctn <- function(days_since = 3){
@@ -298,18 +312,47 @@ gps_final <- bind_rows(active_kill_fctn())
 
 
 
-# hunting season-------------------------------------------------------------
-## 
+# Hunting season-------------------------------------------------------------
+##   binary covariate for if the hunting season is in effect
 
-##'   binary covariate for if the hunting seaosn is in effect
-##'   Oct 25 - Nov 30 for general ungulate season (FWP)
-##'   march for tribal bison hunting (This actually depends on bison movement)
-   
-   
-monthday <- format(gps_final$study_local_timestamp, "%m-%d")
-gps_final$hunt <- 0
-gps_final[which(monthday >= "10-25" & monthday < "11-30" |
-                  monthday >= "03-01" & monthday <= "03-30"),]$hunt <- 1
+##' FWP hunting seaosn is to down to the day
+##' march for tribal bison hunting (This actually depends on bison movement)
+
+#reading in hunting dates
+hunting_dates <- readxl::read_xlsx("data/raw/hunting_seasons.xlsx")
+
+gps_final <- gps_final %>% 
+  
+  #adding month, day columns
+  mutate(year = year(study_local_timestamp),
+         month = month(study_local_timestamp),
+         day = day(study_local_timestamp)) %>% 
+  
+  #adding hunting end date
+  left_join(hunting_dates %>% 
+              dplyr::select(year, start, end),
+            by = join_by(year)) %>% 
+  
+  #creating new boolean column for hunting season
+  mutate(hunt = if_else((format(study_local_timestamp, "%m-%d") >= 
+                           format(start, "%m-%d")) &
+                          (format(study_local_timestamp, "%m-%d") <= 
+                             format(end, "%m-%d")), 
+                        1, #days in nov before end date
+                        0))  #otherwise no hunting == 0 n nov before end date
+
+  
+
+
+# Hunting take ------------------------------------------------------------
+
+#adding FWP hunting estimates
+source("scripts/fwp_hunting_estimates.R")
+
+gps_final <- gps_final %>%
+  left_join(daily_count %>%
+              dplyr::select(year, month, day, final_take, final_take_bms),
+            by = join_by(year, month, day))
 
 
 
