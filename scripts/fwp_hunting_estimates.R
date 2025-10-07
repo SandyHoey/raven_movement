@@ -163,10 +163,17 @@ nov_count <- nov_count %>%
               dplyr::select(year, adj_elk_est, adj_deer_est, adj_md_buck_est),
             by = join_by(year)) %>% 
   
-  #adjusting weighted take values
+  #adjusting weighted take values to match total harvest number and account for prey weight
   mutate(final_elk_take = wt_elk_take + adj_elk_est,
          final_deer_take = wt_deer_take + adj_deer_est,
-         final_md_buck_take = wt_md_buck_take + adj_md_buck_est)
+         final_md_buck_take = wt_md_buck_take + adj_md_buck_est,
+         
+         #going to be using bison weight as a baseline
+         #elk are .5x of bison
+         #deer are .15x of bison
+         final_elk_bms = wt_elk_take + adj_elk_est * .5,
+         final_deer_bms = wt_deer_take + adj_deer_est * .15,
+         final_md_buck_bms = wt_md_buck_take + adj_md_buck_est * .15)
 
 
 #adjusting the mule deer take numbers to reflect the end of their hunting season
@@ -176,6 +183,10 @@ nov_count <- nov_count %>%
   #changing final count to 0 if after mule buck season
   mutate(final_md_buck_take = if_else(day > day(md_end), 0, final_md_buck_take))
   
+
+
+#applying biomass adjustment for each species
+
 
 
 #double checking yearly take numbers
@@ -190,12 +201,18 @@ nov_count %>%
 
 #creating a single column with the combined take numbers
 nov_count <- nov_count %>% 
-  mutate(final_take = final_elk_take + final_deer_take + final_md_buck_take)
+  mutate(final_take = final_elk_take + final_deer_take + final_md_buck_take,
+         final_bms = final_elk_bms + final_deer_bms + final_md_buck_bms)
 
 
+#plotting take numbers
 nov_count %>% 
   ggplot(aes(x = day, y = final_take, 
              group = year, col = factor(year))) +
   geom_line()
 
-#this currently doesn't take into account the biomas provided by each species
+#plotting biomass numbers
+nov_count %>% 
+  ggplot(aes(x = day, y = final_bms, 
+             group = year, col = factor(year))) +
+  geom_line()
