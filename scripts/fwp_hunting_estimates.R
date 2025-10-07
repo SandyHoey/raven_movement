@@ -168,12 +168,12 @@ nov_count <- nov_count %>%
          final_deer_take = wt_deer_take + adj_deer_est,
          final_md_buck_take = wt_md_buck_take + adj_md_buck_est,
          
-         #going to be using bison weight as a baseline
-         #elk are .5x of bison
-         #deer are .15x of bison
-         final_elk_bms = wt_elk_take + adj_elk_est * .5,
-         final_deer_bms = wt_deer_take + adj_deer_est * .15,
-         final_md_buck_bms = wt_md_buck_take + adj_md_buck_est * .15)
+         #going to be using elk weight as a baseline
+         #bison are 2.15x elk
+         #deer are .3x elk
+         final_elk_bms = wt_elk_take + adj_elk_est,
+         final_deer_bms = wt_deer_take + adj_deer_est * .3,
+         final_md_buck_bms = wt_md_buck_take + adj_md_buck_est * .3)
 
 
 #adjusting the mule deer take numbers to reflect the end of their hunting season
