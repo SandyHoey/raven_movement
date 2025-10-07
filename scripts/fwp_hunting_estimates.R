@@ -80,11 +80,15 @@ hunting_dates <- hunting_dates %>%
 
 
 #calculating daily take
+#36 days is the rifle hunting season length every year
+#22 days is the mule deer buck hunting season every year
 elk_harvest_estimate <- elk_harvest_estimate %>% 
-  mutate(elk_daily_take = total_harvest/36)
+  rename(elk_harvest = total_harvest) %>% 
+  mutate(elk_daily_take = elk_harvest/36)
 
-deer_harvest_estimate <- deer_harvest_estimate %>% 
-  mutate(deer_daily_take = total_harvest/36,
+deer_harvest_estimate <- deer_harvest_estimate %>%
+  rename(deer_harvest = total_harvest) %>% 
+  mutate(deer_daily_take = deer_harvest/36,
          md_buck_daily = md_bucks/22)
 
 
@@ -98,12 +102,14 @@ nov_count <- nov_count %>%
   
   #adding elk take
   left_join(elk_harvest_estimate %>% 
-              dplyr::select(license_year, elk_daily_take),
+              dplyr::select(license_year, elk_daily_take, 
+                            elk_harvest),
             by = join_by(year == license_year)) %>% 
   
   #adding deer take
   left_join(deer_harvest_estimate %>% 
-              dplyr::select(license_year, deer_daily_take, md_buck_daily),
+              dplyr::select(license_year, deer_daily_take, md_buck_daily, 
+                            deer_harvest, md_bucks),
             by = join_by(year == license_year)) %>% 
   
   #adding hunting season dates
@@ -111,3 +117,85 @@ nov_count <- nov_count %>%
               dplyr::select(1:4),
             by = join_by(year))
   
+
+
+# calculating weighted take values ----------------------------------------
+nov_count <- nov_count %>% 
+  
+  #shifting prop_available by the lowest value in each year
+  #so the take values follow the same trend when multiplied
+  group_by(year) %>%
+  mutate(prop_shift = prop_available - min(prop_available)) %>% 
+  ungroup %>% 
+  
+  # daily take number * proportion of elk available (shifted)
+  mutate(wt_elk_take = elk_daily_take * prop_shift,
+         wt_deer_take = deer_daily_take * prop_shift,
+         wt_md_buck_take = md_buck_daily * prop_shift)
+  
+
+#calculating the total take given by weighted take values
+wt_take_est <- nov_count %>% 
+  group_by(year) %>% 
+  summarize(wt_elk_est = sum(wt_elk_take),
+            wt_deer_est = sum(wt_deer_take),
+            wt_md_buck_est = sum(wt_md_buck_take)) %>% 
+  
+  #adding the total take numbers
+  left_join(nov_count %>% 
+              dplyr::select(year, elk_harvest, deer_harvest, md_bucks) %>% 
+              group_by(year) %>% 
+              slice(1),
+            by = join_by(year)) %>% 
+  
+  #calculating the amount to adjust the weighted take values to meet the total harvest numbers
+  #subtracting the weighted take from the total harvest
+    #dividing the difference by number of hunt days
+  mutate(adj_elk_est = (elk_harvest - wt_elk_est)/36,
+         adj_deer_est = (deer_harvest - wt_deer_est)/36,
+         adj_md_buck_est = (md_bucks - wt_md_buck_est)/22)
+
+#adding harvest adjustment back to the weighted take values
+nov_count <- nov_count %>% 
+  
+  #adding the adjustment number
+  left_join(wt_take_est %>% 
+              dplyr::select(year, adj_elk_est, adj_deer_est, adj_md_buck_est),
+            by = join_by(year)) %>% 
+  
+  #adjusting weighted take values
+  mutate(final_elk_take = wt_elk_take + adj_elk_est,
+         final_deer_take = wt_deer_take + adj_deer_est,
+         final_md_buck_take = wt_md_buck_take + adj_md_buck_est)
+
+
+#adjusting the mule deer take numbers to reflect the end of their hunting season
+nov_count <- nov_count %>% 
+  group_by(year) %>% 
+  
+  #changing final count to 0 if after mule buck season
+  mutate(final_md_buck_take = if_else(day > day(md_end), 0, final_md_buck_take))
+  
+
+
+#double checking yearly take numbers
+nov_count %>% 
+  group_by(year) %>% 
+  summarize(elk = sum(final_elk_take),
+            deer = sum(final_deer_take),
+            md_bucks = sum(final_md_buck_take))
+#the take number doesnt add up to the total amount because I am only using november
+#the hunting season always starts in october
+
+
+#creating a single column with the combined take numbers
+nov_count <- nov_count %>% 
+  mutate(final_take = final_elk_take + final_deer_take + final_md_buck_take)
+
+
+nov_count %>% 
+  ggplot(aes(x = day, y = final_take, 
+             group = year, col = factor(year))) +
+  geom_line()
+
+#this currently doesn't take into account the biomas provided by each species
