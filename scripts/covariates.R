@@ -3,121 +3,37 @@ library(dplyr)
 library(lubridate)
 library(data.table)
 
-#needs to be restructured when I get the predictive kill data
+
+#currently contains all winter months (nov-mar)
+
+#!!! needs to be restructured when I get the predictive kill data
 
 
+# running code to get daily commute decisions -----------------------------
+source("scripts/commute_decision.R")
 
-# reading in and subsetting data ------------------------------------------
+#3 = has a least 1 point that day in Gardiner poly
+#2 = has at least 1 point farther than 1 km from terr poly , but none in Gardiner poly
+#1 = only has points in terr poly
 
-#reading in all raven points
-#removing columns with NA coords
-all_gps <- readr::read_csv("data/clean/all_raven_gps_clean58.csv") %>% 
-  
-  #removing useless columns
-  dplyr::select(-c(...1, visible, bar_barometric_pressure, data_decoding_software,
-                   eobs_activity, eobs_activity_samples, eobs_key_bin_checksum,
-                   eobs_speed_accuracy_estimate, eobs_start_timestamp, eobs_status,
-                   eobs_temperature, eobs_type_of_fix, eobs_used_time_to_get_fix,
-                   ground_speed, heading, height_above_ellipsoid, height_above_msl,
-                   height_raw, import_marked_outlier, mag_magnetic_field_raw_x,
-                   mag_magnetic_field_raw_y, mag_magnetic_field_raw_z,
-                   manually_marked_outlier, orientation_quaternion_raw_w,
-                   orientation_quaternion_raw_x, orientation_quaternion_raw_y,
-                   orientation_quaternion_raw_z, sensor_type, individual_taxon_canonical_name,
-                   tag_local_identifier, study_timezone, study_name, utm_zone, timestamp,
-                   eobs_battery_voltage, eobs_fix_battery_voltage, eobs_horizontal_accuracy_estimate,
-                   gps_dop, gps_satellite_count))
-  
-all_gps <- subset(all_gps, !is.na(utm_easting))
+#clearing environment of unnecessary variables
+rm(list = setdiff(ls(), c("commute_df", "mcp90")))
 
 
-#removing 7646 because there arent enough winter points
+#removing 7646 because there aren't enough winter points
 #removing 7653 and 7596 because Canada
-all_gps <- subset(all_gps, individual_local_identifier != "7646")
-all_gps <- subset(all_gps, individual_local_identifier != "7653")
-all_gps <- subset(all_gps, individual_local_identifier != "7596")
-
-
-#importing demographic information
-#terr: territorial birds with nest inside Yellowstone
-#trans: birds that transitioned between breeder and nonbreeder
-raven_id <- readxl::read_excel("data/raw/ravens_banding_tagging.xlsx",sheet=1)
-terr <- subset(raven_id, `status (reviewed 8/1/24)` == "territorial" & 
-                 raven_id$`inside NationalPark` == "yes")$`tag-id`
-trans <- subset(raven_id, `status (reviewed 8/1/24)` %like% "Trans")
-
-
-#pulling territorials
-terr_gps <- subset(all_gps, individual_local_identifier %in% terr)
-
-
-#pulling trans territorials into their active territorial periods
-#trans means that they changed their breeding status one direction or the other
-trans_gps <- all_gps[all_gps$individual_local_identifier %in% trans$`tag-id`,]
-
-trans_gps <- do.call("rbind", tapply(trans_gps, INDEX=trans_gps$individual_local_identifier, 
-                                    FUN=function(x){
-                                      ind <- trans[trans$`tag-id` == x[1,]$individual_local_identifier,]
-                                      
-                                      #has only an end date
-                                      if(is.na(ind$`start date`) & !is.na(ind$`leave date`)){
-                                        tmp <- x[as.Date(x$study_local_timestamp) < ym(ind$`leave date`),]
-                                        return(tmp)
-                                      }
-                                      
-                                      #has only a start date
-                                      if(!is.na(ind$`start date`) & is.na(ind$`leave date`)){
-                                        tmp <- x[as.Date(x$study_local_timestamp) > ym(ind$`start date`),]
-                                        return(tmp)
-                                      }
-                                      
-                                      
-                                      #should be excluded
-                                      if(is.na(ind$`start date`) & is.na(ind$`leave date`)){
-                                        return()
-                                      }
-                                    }))
-
-
-#combining trans and territorial datasets
-#!!!SKIP this step if you want to exclude trans 
-terr_gps <- rbind(terr_gps, trans_gps)
-
-
-#pulling out only winter points (subject to change the month)
-winter_gps <- terr_gps[month(terr_gps$study_local_timestamp) %in% c(10,11,12,3),]
-
-
-
-# Distance to terr -------------------------------------------------------------
-## distance to territory
-
-source("scripts/Home Range (MCP).R")
-
-mcp_in <- function(){
-  ID <- mcp90$id
+commute_df <- commute_df %>% 
   
-  for(i in 1:length(ID)){
-    tmp_data <- subset(winter_gps, individual_local_identifier == ID[i])
-    tmp_sf <- st_as_sf(tmp_data, coords=c("utm_easting", "utm_northing"), 
-                       crs="+proj=utm +zone=12")
-    
-    #in kilometers
-    tmp_data$dist_terr <- as.numeric(st_distance(tmp_sf, st_as_sf(mcp90[i,])))/1000
-    
-    if(i != 1){
-      output_df <- rbind(output_df, tmp_data)
-    } else{
-      output_df <- tmp_data
-    }
-  }
+  #renaming raven_id
+  rename(raven_id = individual_local_identifier) %>% 
   
-  return(output_df)
-}
-#adding binary metric for inside/outside territory
-gps_final <- mcp_in()
-gps_final$within_terr <- ifelse(gps_final$dist_terr == 0, 1, 0)
-
+  filter(raven_id != "7646",
+         raven_id != "7653",
+         raven_id != "7596") %>% 
+  
+  #creating new binary columns for traveling to gardiner or staying in territory
+  mutate(jardine_bin = if_else(commute == 3, 1, 0),
+         terr_bin = if_else(commute == 1, 1, 0))
 
 
 # Time btwn kills -------------------------------------------------------------
@@ -157,7 +73,7 @@ kill_data_recent <- kill_data_recent %>%
   filter(nchar(PACK) > 4)
 
 
-#function to seperate out the kills that are within each territory
+#function to separate out the kills that are within each territory
 #dist_from_terr: how far (m) a kill is from the territory to be counted towards that territory
 kill_freq <- function(dist_from_terr = 0){
   ID <- mcp90$id
@@ -226,7 +142,7 @@ in_terr_kill_list <- kill_freq(dist_from_terr = 3000)
 #   rename(avg_day_btwn = V1)
 # 
 # colnames(avg_day_betwn_kill) <- "avg_day_btwn"
-# avg_day_betwn_kill <- mutate(avg_day_betwn_kill, individual_local_identifier = rownames(avg_day_betwn_kill)) 
+# avg_day_betwn_kill <- mutate(avg_day_betwn_kill, raven_id = rownames(avg_day_betwn_kill)) 
 
 
 
@@ -276,8 +192,8 @@ kill_density <- lapply(in_terr_kill_list, function(x){
 #am going to use average kill density for each individual
 #the kill density is calculated from winter study periods, so there isn't a number for
 #the other months anyways
-avg_kill_density <- bind_rows(kill_density, .id = "individual_local_identifier") %>% 
-  group_by(individual_local_identifier) %>% 
+avg_kill_density <- bind_rows(kill_density, .id = "raven_id") %>% 
+  group_by(raven_id) %>% 
   summarize(avg_density = mean(density))
 
 
@@ -289,18 +205,18 @@ avg_kill_density <- bind_rows(kill_density, .id = "individual_local_identifier")
 ##' days_since is the number of days since the kill was made, including the day of the kill
 
 active_kill_fctn <- function(days_since = 3){
-  gps_final$active_kill <- 0
+  commute_df$active_kill <- 0
   
-  tapply(gps_final, gps_final$individual_local_identifier,
+  tapply(commute_df, commute_df$raven_id,
          FUN = function(x){
-           ID <- unique(x$individual_local_identifier)
+           ID <- unique(x$raven_id)
            tmp_kills <- in_terr_kill_list[[ID]]
            
            #looping through each GPS point to see if there is a active kill
            for(i in 1:nrow(x)){
              tmp_GPS <- x[i,]
              
-             time_diff <- difftime(tmp_kills$DOD, as.Date(tmp_GPS$study_local_timestamp), units = "days")
+             time_diff <- difftime(tmp_kills$DOD, as.Date(tmp_GPS$date), units = "days")
              
              if(sum(time_diff >= 0 & time_diff < days_since) >= 1){
                x[i, "active_kill"] <- 1
@@ -310,25 +226,25 @@ active_kill_fctn <- function(days_since = 3){
          })
 }
 
-gps_final <- bind_rows(active_kill_fctn())
+commute_df <- bind_rows(active_kill_fctn())
 
 
 
 # Hunting season-------------------------------------------------------------
 ##   binary covariate for if the hunting season is in effect
 
-##' FWP hunting seaosn is to down to the day
+##' FWP hunting season is to down to the day
 ##' march for tribal bison hunting (This actually depends on bison movement)
 
 #reading in hunting dates
 hunting_dates <- readxl::read_xlsx("data/raw/hunting_seasons.xlsx")
 
-gps_final <- gps_final %>% 
+commute_df <- commute_df %>% 
   
   #adding month, day columns
-  mutate(year = year(study_local_timestamp),
-         month = month(study_local_timestamp),
-         day = day(study_local_timestamp)) %>% 
+  mutate(year = year(date),
+         month = month(date),
+         day = day(date)) %>% 
   
   #adding hunting end date
   left_join(hunting_dates %>% 
@@ -338,10 +254,10 @@ gps_final <- gps_final %>%
          end_hunt = end) %>% 
   
   #creating new boolean column for hunting season
-  mutate(hunt = if_else((format(study_local_timestamp, "%m-%d") >= 
+  mutate(hunt = if_else((format(date, "%m-%d") >= 
                            format(start_hunt, "%m-%d")) &
-                          (format(study_local_timestamp, "%m-%d") <= 
-                             format(end_end, "%m-%d")), 
+                          (format(date, "%m-%d") <= 
+                             format(end_hunt, "%m-%d")), 
                         1, #days in nov before end date
                         0))  #otherwise no hunting == 0 n nov before end date
 
@@ -353,7 +269,7 @@ gps_final <- gps_final %>%
 #adding FWP hunting estimates
 source("scripts/fwp_hunting_estimates.R")
 
-gps_final <- gps_final %>%
+commute_df <- commute_df %>%
   left_join(daily_count %>%
               dplyr::select(year, month, day, 
                             final_take, final_take_bms, 
