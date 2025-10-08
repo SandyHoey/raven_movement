@@ -24,7 +24,9 @@ all_gps <- readr::read_csv("data/clean/all_raven_gps_clean58.csv") %>%
                    manually_marked_outlier, orientation_quaternion_raw_w,
                    orientation_quaternion_raw_x, orientation_quaternion_raw_y,
                    orientation_quaternion_raw_z, sensor_type, individual_taxon_canonical_name,
-                   tag_local_identifier, study_timezone))
+                   tag_local_identifier, study_timezone, study_name, utm_zone, timestamp,
+                   eobs_battery_voltage, eobs_fix_battery_voltage, eobs_horizontal_accuracy_estimate,
+                   gps_dop, gps_satellite_count))
   
 all_gps <- subset(all_gps, !is.na(utm_easting))
 
@@ -332,12 +334,14 @@ gps_final <- gps_final %>%
   left_join(hunting_dates %>% 
               dplyr::select(year, start, end),
             by = join_by(year)) %>% 
+  rename(start_hunt = start,
+         end_hunt = end) %>% 
   
   #creating new boolean column for hunting season
   mutate(hunt = if_else((format(study_local_timestamp, "%m-%d") >= 
-                           format(start, "%m-%d")) &
+                           format(start_hunt, "%m-%d")) &
                           (format(study_local_timestamp, "%m-%d") <= 
-                             format(end, "%m-%d")), 
+                             format(end_end, "%m-%d")), 
                         1, #days in nov before end date
                         0))  #otherwise no hunting == 0 n nov before end date
 
@@ -351,8 +355,12 @@ source("scripts/fwp_hunting_estimates.R")
 
 gps_final <- gps_final %>%
   left_join(daily_count %>%
-              dplyr::select(year, month, day, final_take, final_take_bms),
+              dplyr::select(year, month, day, 
+                            final_take, final_take_bms, 
+                            contains("window")),
             by = join_by(year, month, day))
+
+
 
 
 
