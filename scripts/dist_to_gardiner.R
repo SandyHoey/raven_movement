@@ -86,13 +86,13 @@ terrfwGPS <- terrGPS[month(terrGPS$study.local.timestamp) %in% c(10, 11, 12, 1, 
 #calculating the percent of GPS points that are inside the Gardiner/Jardine polygon
 #for territorial birds
 
-terrfwGardiner <- tapply(terrfwGPS, 
-                         terrfwGPS$individual.local.identifier, 
-                         function(x){
-                           nrow(x[x$dist2Gardiner == 0,])/nrow(x)
-})
-terrfwGardiner
-range(terrfwGardiner)
-hist(terrfwGardiner)
+# terrfwGardiner <- tapply(terrfwGPS, 
+#                          terrfwGPS$individual.local.identifier, 
+#                          function(x){
+#                            nrow(x[x$dist2Gardiner == 0,])/nrow(x)
+# })
+# terrfwGardiner
+# range(terrfwGardiner)
+# hist(terrfwGardiner)
 
 
