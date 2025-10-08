@@ -1,4 +1,4 @@
-source("scripts/exploratory/Home Range (MCP).R")
+source("scripts/Home Range (MCP).R")
 source("scripts/exploratory/%inGardiner.R")
 
 
@@ -97,16 +97,18 @@ commute_list <- tapply(dist2poly, INDEX = dist2poly$individual.local.identifier,
          return(tmp_date_df)
        })
 
+commute_df <- do.call("rbind", commute_list)
+
 
 
 #plotting raven commute decision per day
 #layout(matrix(1:20, nrow=4, ncol=5))
-sapply(commute_list, 
-       FUN = function(x){
-         plot(commute~date, x,
-              main = x[1, "individual.local.identifier"],
-              cex = 0.7, yaxp = c(0,3,3))
-})
+# sapply(commute_list, 
+#        FUN = function(x){
+#          plot(commute~date, x,
+#               main = x[1, "individual.local.identifier"],
+#               cex = 0.7, yaxp = c(0,3,3))
+# })
 
 
 #calculating the percentage of points in each commute category
@@ -125,7 +127,7 @@ commute_percent <- commute_list %>%
 commute_percent %>% 
 pivot_longer(cols = c(terr, mid, Gardiner), 
                names_to = "commute", values_to = "percent") %>% 
-  mutate(month = fct_relevel(as.character(month), c("11", "12", "1", "2", "3"))) %>% 
+  mutate(month = fct_relevel(as.character(month), c("10", "11", "12", "1", "2", "3"))) %>% 
   ggplot(aes(x = month, y = percent, 
              group = commute, col = commute)) +
   geom_line(lwd = 1) +
@@ -134,8 +136,8 @@ pivot_longer(cols = c(terr, mid, Gardiner),
   scale_y_continuous(expand=c(0,0), limits = c(0, 65))
 
 
-#plotting the different combinations of wolf/hunter periods
-period_percent <- commute_list %>% 
+#calculating the different combinations of wolf/hunter periods
+commute_list %>% 
   do.call("rbind",.) %>% 
   filter(!(individual.local.identifier %in% c("7494", "7485"))) %>% 
   group_by(period) %>% 
