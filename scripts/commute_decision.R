@@ -1,16 +1,16 @@
-source("scripts/Home Range (MCP).R")
-source("scripts/exploratory/%inGardiner.R")
+source("scripts/home_range_mcp.R")
+source("scripts/dist_to_gardiner.R")
 
 
 #calculating distance to territory
 #using 90% mcp
 #distance calculated in meters
-mcp_in <- function(){
+gps_in_mcp <- function(){
   ID <- mcp90$id
   
   for(i in 1:length(ID)){
-    tmp_data <- subset(terrfwGPS, individual.local.identifier == ID[i])
-    tmp_sf <- st_as_sf(tmp_data, coords=c("utm.easting", "utm.northing"), 
+    tmp_data <- subset(terrfwGPS, individual_local_identifier == ID[i])
+    tmp_sf <- st_as_sf(tmp_data, coords=c("utm_easting", "utm_northing"), 
                        crs="+proj=utm +zone=12")
     
     tmp_data$dist2Terr <- as.numeric(st_distance(tmp_sf, st_as_sf(mcp90[i,]), unit = ))
@@ -25,15 +25,15 @@ mcp_in <- function(){
   return(output_df)
 }
 
-dist2poly <- mcp_in()
+dist2poly <- gps_in_mcp()
 
 #adding the wolf/hunting periods
   # Oct 25-Nov 14 rifle hunting only
   # Nov 15-Nov 30 wolf + hunting
   # Dec 1-Dec 15 wolf only
 dist2poly <- dist2poly %>% 
-  mutate(day = day(study.local.timestamp),
-         month = month(study.local.timestamp),
+  mutate(day = day(study_local_timestamp),
+         month = month(study_local_timestamp),
          period = "neither")
 dist2poly[dist2poly$month == 10 | (dist2poly$month == 11 & dist2poly$day < 15),]$period <- "hunt"
 dist2poly[dist2poly$month == 11 & dist2poly$day >= 15,]$period <- "both"
@@ -42,7 +42,7 @@ dist2poly[dist2poly$month == 12 & dist2poly$day <= 15,]$period <- "wolf"
 
 
 #getting the number of points in territory and Gardiner 
-info_table <- tapply(dist2poly, INDEX = dist2poly$individual.local.identifier,
+info_table <- tapply(dist2poly, INDEX = dist2poly$individual_local_identifier,
        FUN = function(x){
          info_table <- rep(NA, 4)
          names(info_table) <- c("Gardiner", "Terr", "Other", "Total")
@@ -67,24 +67,24 @@ info_table <- tapply(dist2poly, INDEX = dist2poly$individual.local.identifier,
 #3 = has a least 1 point that day in Gardiner poly
 #2 = has at least 1 point farther than 1 km from terr poly , but none in Gardiner poly
 #1 = only has points in terr poly
-ID <- unique(dist2poly$individual.local.identifier)
+ID <- unique(dist2poly$individual_local_identifier)
 
-commute_list <- tapply(dist2poly, INDEX = dist2poly$individual.local.identifier,
+commute_list <- tapply(dist2poly, INDEX = dist2poly$individual_local_identifier,
        FUN = function(x){
          
-         dates <- unique(as.Date(x$study.local.timestamp))
+         dates <- unique(as.Date(x$study_local_timestamp))
          period <- x %>% 
-           group_by(as.Date(study.local.timestamp)) %>% 
+           group_by(as.Date(study_local_timestamp)) %>% 
            slice(1) %>% 
            ungroup %>% 
            pull(period)
-         tmp_date_df <- data.frame(ID = x[1, "individual.local.identifier"],
+         tmp_date_df <- data.frame(ID = x[1, "individual_local_identifier"],
                                           date = dates, period, commute = NA) 
          
          #cycling through all the dates for each individual to tell where the
          #individual ended up that day (terr, other, Gardiner)
          for(d in 1:length(dates)){
-           tmp_dayta <- subset(x, as.Date(study.local.timestamp) == dates[d])
+           tmp_dayta <- subset(x, as.Date(study_local_timestamp) == dates[d])
            
            if(any(tmp_dayta[,"dist2Gardiner"] == 0)){
              tmp_date_df[d,"commute"] <- 3
@@ -106,7 +106,7 @@ commute_df <- do.call("rbind", commute_list)
 # sapply(commute_list, 
 #        FUN = function(x){
 #          plot(commute~date, x,
-#               main = x[1, "individual.local.identifier"],
+#               main = x[1, "individual_local_identifier"],
 #               cex = 0.7, yaxp = c(0,3,3))
 # })
 
@@ -116,7 +116,7 @@ commute_df <- do.call("rbind", commute_list)
 commute_percent <- commute_list %>% 
   do.call("rbind",.) %>% 
   mutate(month = month(.$date)) %>% 
-  filter(!(individual.local.identifier %in% c("7494", "7485"))) %>% 
+  filter(!(individual_local_identifier %in% c("7494", "7485"))) %>% 
   group_by(month) %>% 
   summarise(terr = sum(commute == 1)/n()*100,
             mid = sum(commute == 2)/n()*100,
@@ -139,7 +139,7 @@ pivot_longer(cols = c(terr, mid, Gardiner),
 #calculating the different combinations of wolf/hunter periods
 commute_list %>% 
   do.call("rbind",.) %>% 
-  filter(!(individual.local.identifier %in% c("7494", "7485"))) %>% 
+  filter(!(individual_local_identifier %in% c("7494", "7485"))) %>% 
   group_by(period) %>% 
   summarise(terr = sum(commute == 1)/n()*100,
             mid = sum(commute == 2)/n()*100,
