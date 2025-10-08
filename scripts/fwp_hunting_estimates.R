@@ -214,3 +214,30 @@ daily_count %>%
              group = year, col = factor(year))) +
   geom_line()
 
+
+
+# calculating floating window averages for previous days -------------------------------------------------------------------------
+
+#function to calculate time period averages for hunting take in previous days
+#only calculating for study periods
+#calculating for early winter period
+fwp_window_function <- function(window){
+  #adding a column where the average will go
+  daily_count <- daily_count %>% 
+    
+    #group by year so there is no bleed over between seasons
+    group_by(year) %>% 
+    
+    #adding the moving average
+    mutate(!!paste0("bms_window_", window) := 
+             slider::slide_dbl(final_take_bms, mean,
+                               .before = window, .after = -1,
+                               .complete = T))
+
+  return(daily_count)
+}
+
+daily_count <- fwp_window_function(1)
+daily_count <- fwp_window_function(3)
+daily_count <- fwp_window_function(5)
+
