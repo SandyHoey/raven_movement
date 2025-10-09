@@ -215,7 +215,6 @@ daily_count %>%
   geom_line()
 
 
-
 # calculating floating window averages for previous days -------------------------------------------------------------------------
 
 #function to calculate time period averages for hunting take in previous days
@@ -241,3 +240,9 @@ daily_count <- fwp_window_function(1)
 daily_count <- fwp_window_function(3)
 daily_count <- fwp_window_function(5)
 
+
+#plotting moving average
+daily_count %>% 
+  ggplot(aes(x = as.Date(paste(2000, md, sep = "-")), y = bms_window_3, 
+             group = year, col = factor(year))) +
+  geom_line()
