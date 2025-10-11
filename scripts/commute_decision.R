@@ -79,7 +79,8 @@ commute_list <- tapply(dist2poly, INDEX = dist2poly$individual_local_identifier,
            ungroup %>% 
            pull(period)
          tmp_date_df <- data.frame(ID = x[1, "individual_local_identifier"],
-                                          date = dates, period, commute = NA) 
+                                   date = dates, period, commute = NA,
+                                   n_point = NA) 
          
          #cycling through all the dates for each individual to tell where the
          #individual ended up that day (terr, other, Gardiner)
@@ -93,11 +94,19 @@ commute_list <- tapply(dist2poly, INDEX = dist2poly$individual_local_identifier,
            } else{
              tmp_date_df[d,"commute"] <- 1
            }
+           
+           #adding the number of points that day
+           tmp_date_df[d, "n_point"] <- nrow(tmp_dayta)
          }
          return(tmp_date_df)
        })
 
-commute_df <- do.call("rbind", commute_list)
+commute_df <- do.call("rbind", commute_list) %>% 
+  
+  #removing days when there is only 1 data point
+  #unless the result is Jardine
+  filter(!(n_point == 1 & commute != 3))
+
 
 
 
