@@ -277,6 +277,29 @@ commute_df <- commute_df %>%
             by = join_by(year, month, day))
 
 
+# clearing up tagged pairs ------------------------------------------------
 
+# High bridge pair (7654 & 7530)
+# Tower pair (7484_2 & 7493_2)
 
+#looking at the number of days for each raven
+high_m <- commute_df %>% 
+  filter(raven_id == "7654")
+high_f <- commute_df %>% 
+  filter(raven_id == "7530")
+tower_m <- commute_df %>% 
+  filter(raven_id == "7484_2")
+tower_f <- commute_df %>% 
+  filter(raven_id == "7493_2")
 
+nrow(high_m)
+nrow(high_f)
+
+nrow(tower_m)
+nrow(tower_f)
+
+#females are both better than males
+
+commute_df <- commute_df %>% 
+  filter(raven_id != "7654",
+         raven_id != "7484_2")
