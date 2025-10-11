@@ -216,29 +216,58 @@ daily_count %>%
 
 
 # calculating floating window averages for previous days -------------------------------------------------------------------------
-
-#function to calculate time period averages for hunting take in previous days
 #only calculating for study periods
 #calculating for early winter period
+
+#making sure the full winter study period is present
+daily_count <- daily_count %>% 
+  
+  #making a single date column
+  mutate(date = make_date(year, month, day)) %>% 
+  
+  #group by year so there is no bleed over between seasons
+  group_by(year) %>% 
+  
+  #completing the date sequence
+  complete(date = seq(as.Date(paste0(cur_group(), "-11-15")),
+                      as.Date(paste0(cur_group(), "-12-15")),
+                      by = "day")) %>% 
+  ungroup %>% 
+  
+  #making sure year, month, day columns are okay
+  mutate(year = year(date),
+         month = month(date),
+         day = day(date),
+         md = paste(month, day, sep = "-"))
+
+
+#function to calculate time period averages for hunting take in previous days
 fwp_window_function <- function(window){
-  #adding a column where the average will go
-  daily_count <- daily_count %>% 
+  
+  #making sure the full winter study period is present
+  data <- daily_count %>% 
     
-    #group by year so there is no bleed over between seasons
     group_by(year) %>% 
+    
+  arrange(year, month, day) %>% 
     
     #adding the moving average
     mutate(!!paste0("bms_window_", window) := 
              slider::slide_dbl(final_take_bms, mean,
                                .before = window, .after = -1,
-                               .complete = T))
+                               .complete = T, na.rm=T))
 
-  return(daily_count)
+  return(data)
 }
 
 daily_count <- fwp_window_function(1)
 daily_count <- fwp_window_function(3)
-daily_count <- fwp_window_function(5)
+daily_count <- fwp_window_function(5) %>%
+  
+  #making sure the later days in the study are represented as a 0
+  mutate(bms_window_1 = if_else(is.nan(bms_window_1), 0, bms_window_1),
+         bms_window_3 = if_else(is.nan(bms_window_3), 0, bms_window_3),
+         bms_window_5 = if_else(is.nan(bms_window_5), 0, bms_window_5))
 
 
 #plotting moving average
