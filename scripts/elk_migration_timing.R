@@ -142,12 +142,16 @@ daily_count <- elk_ynp %>%
   summarise(outside_park = n_distinct(ID), .groups = "drop")
 
   
-#fixing an issue with the early hunting season of 2024 not having any data
+#fixing an issue with the hunting season of 2024 not having any data some days
 #since no elk were out of the park
-daily_count <- data.frame(year = 2024,
+daily_count <- data.frame(year = 2024, #missing days in October
            month = 10,
            day = c(26:29),
            outside_park = 0) %>% 
+  bind_rows(data.frame(year = 2024, #missing days in November
+                       month = 11,
+                       day = 3,
+                       outside_park = 0)) %>% 
   bind_rows(daily_count) %>% 
   arrange(year, month, day)
 
