@@ -192,8 +192,6 @@ daily_count %>%
   summarize(elk = sum(final_elk_take),
             deer = sum(final_deer_take),
             md_bucks = sum(final_md_buck_take, na.rm = T))
-#!!!! 2024 doesnt add up (are all of the days there?)
-#!!!! mule bucks dont add up
 
 
 #creating a single column with the combined take numbers
