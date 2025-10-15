@@ -336,6 +336,14 @@ commute_df <- bison_take %>%
 
 
 
+# Weekends ----------------------------------------------------------------
+#adding weekend effect for hunting
+
+commute_df <- commute_df %>% 
+  
+  mutate(weekend = if_else(weekdays(date) %in% c("Saturday", "Sunday"), 1, 0))
+
+
 # clearing up tagged pairs ------------------------------------------------
 
 # High bridge pair (7654 & 7530)
