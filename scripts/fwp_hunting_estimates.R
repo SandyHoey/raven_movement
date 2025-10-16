@@ -122,16 +122,26 @@ daily_count <- daily_count %>%
 # calculating weighted take values ----------------------------------------
 daily_count <- daily_count %>% 
   
+  #creating a scaled value for mule deer that has 0 out of season
+  mutate(prop_md = if_else((month == 11 & day > day(md_end)) |
+                                        month == 12, 
+                                      0, prop_available)) %>% 
+  
   #shifting prop_available by the lowest value in each year
   #so the take values follow the same trend when multiplied
   group_by(year) %>%
-  mutate(prop_scale = prop_available/sum(prop_available, na.rm=T)) %>%
+  mutate(
+    #scaled value for elk and deer
+    prop_scale = prop_available/sum(prop_available, na.rm=T),
+    
+    #scaled value for mule bucks
+    prop_scale_md = prop_md/sum(prop_md, na.rm = T)) %>%
   ungroup %>% 
   
   #calculating take number using the total take * scaled elk proportion available
   mutate(scale_elk_take = elk_harvest * prop_scale,
          scale_deer_take = deer_harvest * prop_scale,
-         scale_md_buck_take = md_bucks * prop_scale) %>% 
+         scale_md_buck_take = md_bucks * prop_scale) 
   
   # # daily take number * proportion of elk available
   # mutate(wgt_elk_take = elk_daily_take * prop_available,
@@ -142,11 +152,11 @@ daily_count <- daily_count %>%
   # mutate(wgt_md_buck_take = if_else((month == 11 & day > day(md_end)) |
   #                                       month == 12, 
   #                                     NA, wgt_md_buck_take)) %>% 
-  
-  #changing final count to 0 if after mule buck season
-  mutate(scale_md_buck_take = if_else((month == 11 & day > day(md_end)) |
-                                      month == 12, 
-                                    NA, scale_md_buck_take))
+  # 
+  # #changing final count to 0 if after mule buck season
+  # mutate(scale_md_buck_take = if_else((month == 11 & day > day(md_end)) |
+  #                                     month == 12, 
+  #                                   NA, scale_md_buck_take))
 
   
 #seeing if the scaled values are fine
@@ -154,7 +164,7 @@ daily_count %>%
   group_by(year) %>% 
   summarize(elk = sum(scale_elk_take),
             deer = sum(scale_deer_take),
-            md_buck = sum(scale_md_buck_take))
+            md_buck = sum(scale_md_buck_take, na.rm = T))
 
 
 # #calculating the total take given by weighted take values
