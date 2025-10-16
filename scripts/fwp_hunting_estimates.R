@@ -125,79 +125,109 @@ daily_count <- daily_count %>%
   #shifting prop_available by the lowest value in each year
   #so the take values follow the same trend when multiplied
   group_by(year) %>%
-  mutate(prop_shift = prop_available - min(prop_available)) %>% 
+  mutate(prop_scale = prop_available/sum(prop_available, na.rm=T)) %>%
   ungroup %>% 
   
-  # daily take number * proportion of elk available (shifted)
-  mutate(wt_elk_take = elk_daily_take * prop_shift,
-         wt_deer_take = deer_daily_take * prop_shift,
-         wt_md_buck_take = md_buck_daily * prop_shift) %>% 
+  #calculating take number using the total take * scaled elk proportion available
+  mutate(scale_elk_take = elk_harvest * prop_scale,
+         scale_deer_take = deer_harvest * prop_scale,
+         scale_md_buck_take = md_bucks * prop_scale) %>% 
+  
+  # # daily take number * proportion of elk available
+  # mutate(wgt_elk_take = elk_daily_take * prop_available,
+  #        wgt_deer_take = deer_daily_take * prop_available,
+  #        wgt_md_buck_take = md_buck_daily * prop_available) %>% 
+  # 
+  # #changing final count to 0 if after mule buck season
+  # mutate(wgt_md_buck_take = if_else((month == 11 & day > day(md_end)) |
+  #                                       month == 12, 
+  #                                     NA, wgt_md_buck_take)) %>% 
   
   #changing final count to 0 if after mule buck season
-  mutate(wt_md_buck_take = if_else((month == 11 & day > day(md_end)) |
-                                        month == 12, 
-                                      NA, wt_md_buck_take))
-  
+  mutate(scale_md_buck_take = if_else((month == 11 & day > day(md_end)) |
+                                      month == 12, 
+                                    NA, scale_md_buck_take))
 
-#calculating the total take given by weighted take values
-wt_take_est <- daily_count %>% 
+  
+#seeing if the scaled values are fine
+daily_count %>% 
   group_by(year) %>% 
-  summarize(wt_elk_est = sum(wt_elk_take),
-            wt_deer_est = sum(wt_deer_take),
-            wt_md_buck_est = sum(wt_md_buck_take, na.rm = T)) %>% 
-  
-  #adding the total take numbers
-  left_join(daily_count %>% 
-              dplyr::select(year, elk_harvest, deer_harvest, md_bucks) %>% 
-              group_by(year) %>% 
-              slice(1),
-            by = join_by(year)) %>% 
-  
-  #calculating the amount to adjust the weighted take values to meet the total harvest numbers
-  #subtracting the weighted take from the total harvest
-    #dividing the difference by number of hunt days
-  mutate(adj_elk_amount = (elk_harvest - wt_elk_est)/37,
-         adj_deer_amount = (deer_harvest - wt_deer_est)/37,
-         adj_md_buck_amount = (md_bucks - wt_md_buck_est)/23)
+  summarize(elk = sum(scale_elk_take),
+            deer = sum(scale_deer_take),
+            md_buck = sum(scale_md_buck_take))
+
+
+# #calculating the total take given by weighted take values
+# wgt_take_est <- daily_count %>% 
+#   group_by(year) %>% 
+#   summarize(wgt_elk_est = sum(wgt_elk_take),
+#             wgt_deer_est = sum(wgt_deer_take),
+#             wgt_md_buck_est = sum(wgt_md_buck_take, na.rm = T)) %>% 
+#   
+#   #adding the total take numbers
+#   left_join(daily_count %>% 
+#               dplyr::select(year, elk_harvest, deer_harvest, md_bucks) %>% 
+#               group_by(year) %>% 
+#               slice(1),
+#             by = join_by(year)) %>% 
+#   
+#   #calculating the amount to adjust the weighted take values to meet the total harvest numbers
+#   #subtracting the weighted take from the total harvest
+#     #dividing the difference by number of hunt days
+#   mutate(adj_elk_amount = (elk_harvest - wgt_elk_est)/37,
+#          adj_deer_amount = (deer_harvest - wgt_deer_est)/37,
+#          adj_md_buck_amount = (md_bucks - wgt_md_buck_est)/23)
 
 
 #adding harvest adjustment back to the weighted take values
 daily_count <- daily_count %>% 
   
-  #adding the adjustment number
-  left_join(wt_take_est %>% 
-              dplyr::select(year, adj_elk_amount, adj_deer_amount, adj_md_buck_amount),
-            by = join_by(year)) %>% 
+  mutate(
+    #going to be using elk weight as a baseline
+    #bison are 2.15x elk
+    #deer are .3x elk
+    final_elk_bms = scale_elk_take,
+    final_deer_bms = scale_deer_take * .3,
+    final_md_buck_bms = if_else(!is.na(scale_md_buck_take), #if the value is not NA (still buck season)
+                                scale_md_buck_take * .3, #add the value
+                                0) #otherwise leave the NA
+    )
   
-  #adjusting weighted take values to match total harvest number and account for prey weight
-  mutate(final_elk_take = wt_elk_take + adj_elk_amount,
-         final_deer_take = wt_deer_take + adj_deer_amount,
-         final_md_buck_take = if_else(!is.na(wt_md_buck_take), #if the value is not NA (still buck season)
-                                      wt_md_buck_take + adj_md_buck_amount, #add the value
-                                      0), #otherwise leave the NA
-         
-         #going to be using elk weight as a baseline
-         #bison are 2.15x elk
-         #deer are .3x elk
-         final_elk_bms = wt_elk_take + adj_elk_amount,
-         final_deer_bms = (wt_deer_take + adj_deer_amount) * .3,
-         final_md_buck_bms = if_else(!is.na(wt_md_buck_take), #if the value is not NA (still buck season)
-                                     (wt_md_buck_take + adj_md_buck_amount) * .3, #add the value
-                                     0)) #otherwise leave the NA
+  # #adding the adjustment number
+  # left_join(wgt_take_est %>% 
+  #             dplyr::select(year, adj_elk_amount, adj_deer_amount, adj_md_buck_amount),
+  #           by = join_by(year)) %>% 
+  # 
+  # #adjusting weighted take values to match total harvest number and account for prey weight
+  # mutate(final_elk_take = wgt_elk_take + adj_elk_amount,
+  #        final_deer_take = wgt_deer_take + adj_deer_amount,
+  #        final_md_buck_take = if_else(!is.na(wgt_md_buck_take), #if the value is not NA (still buck season)
+  #                                     wgt_md_buck_take + adj_md_buck_amount, #add the value
+  #                                     0), #otherwise leave the NA
+  #        
+  #        #going to be using elk weight as a baseline
+  #        #bison are 2.15x elk
+  #        #deer are .3x elk
+  #        final_elk_bms = wgt_elk_take + adj_elk_amount,
+  #        final_deer_bms = (wgt_deer_take + adj_deer_amount) * .3,
+  #        final_md_buck_bms = if_else(!is.na(wgt_md_buck_take), #if the value is not NA (still buck season)
+  #                                    (wgt_md_buck_take + adj_md_buck_amount) * .3, #add the value
+  #                                    0)) #otherwise leave the NA
 
 
 #double checking yearly take numbers
-daily_count %>% 
-  group_by(year) %>% 
-  summarize(elk = sum(final_elk_take),
-            deer = sum(final_deer_take),
-            md_bucks = sum(final_md_buck_take, na.rm = T))
+# daily_count %>% 
+#   group_by(year) %>% 
+#   summarize(elk = sum(final_elk_take),
+#             deer = sum(final_deer_take),
+#             md_bucks = sum(final_md_buck_take, na.rm = T))
 
 
 #creating a single column with the combined take numbers
 daily_count <- daily_count %>% 
-  mutate(final_take = final_elk_take + final_deer_take + final_md_buck_take,
-         final_take_bms = final_elk_bms + final_deer_bms + final_md_buck_bms)
+  mutate(final_take_bms = final_elk_bms + final_deer_bms + final_md_buck_bms)
+  # mutate(final_take = final_elk_take + final_deer_take + final_md_buck_take,
+  #        final_take_bms = final_elk_bms + final_deer_bms + final_md_buck_bms)
 
 
 #plotting take numbers
@@ -270,6 +300,6 @@ daily_count <- fwp_window_function(5) %>%
 
 #plotting moving average
 daily_count %>% 
-  ggplot(aes(x = as.Date(paste(2000, md, sep = "-")), y = bms_window_3, 
+  ggplot(aes(x = as.Date(paste(2000, md, sep = "-")), y = bms_window_5, 
              group = year, col = factor(year))) +
   geom_line()
