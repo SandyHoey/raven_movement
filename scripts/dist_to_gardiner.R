@@ -8,8 +8,9 @@ library(data.table)
 
 #reading in all raven points
 #removing columns with NA coords
-allGPS <- readr::read_csv("data/clean/all_raven_gps_clean29.csv") %>% 
+all_gps <- readr::read_csv("data/clean/all_raven_gps_clean29.csv") %>% 
   janitor::clean_names() %>% 
+  
   #removing useless columns
   dplyr::select(-c(x1, visible, bar_barometric_pressure, data_decoding_software,
                    eobs_activity, eobs_activity_samples, eobs_key_bin_checksum,
@@ -23,48 +24,55 @@ allGPS <- readr::read_csv("data/clean/all_raven_gps_clean29.csv") %>%
                    orientation_quaternion_raw_z, sensor_type, individual_taxon_canonical_name,
                    tag_local_identifier, study_timezone, study_name, utm_zone, timestamp,
                    eobs_battery_voltage, eobs_fix_battery_voltage, eobs_horizontal_accuracy_estimate,
-                   gps_dop, gps_satellite_count))
+                   gps_dop, gps_satellite_count)) %>% 
   
-allGPS <- subset(allGPS, !is.na(utm_easting))
+  #make sure all rows have coordinates
+  filter(!is.na(utm_easting))
 
 
 
 #transforming raven points to sf dataframe
 #allows a distance metric to the polygon to be calculated
-sf_ravens_all <- st_as_sf(allGPS, coords=c("utm_easting", "utm_northing"), 
+sf_ravens_all <- st_as_sf(all_gps, coords=c("utm_easting", "utm_northing"), 
                           crs="+proj=utm +zone=12")
 
 
 #reading in Gardiner/Jardine kml
-#transforming latlong to UTM to match the GPS points
-Gardinerkml <- st_read("data/raw/gardiner_polygon.kml")
-Gardinerkml <- st_transform(Gardinerkml, crs = st_crs(sf_ravens_all))
+gardiner_kml <- st_read("data/raw/gardiner_polygon.kml") %>% 
+  #transforming latlong to UTM to match the GPS points
+  st_transform(gardiner_kml, crs = st_crs(sf_ravens_all))
+
+#reading at gardiner dump/sewage pond kml
+dump_kml <- st_read("data/raw/gardiner_dump.kml") %>% 
+  #transforming latlong to UTM to match the GPS points
+  st_transform(dump_kml, crs = st_crs(sf_ravens_all))
 
 
-#calculating distance between GPS points and Gardine/Jardine kml
+#calculating distance to (Jardine and dump)
 #0 == inside the polygon
-allGPS$dist2Gardiner <- as.numeric(st_distance(sf_ravens_all, Gardinerkml))
+all_gps <- all_gps %>% 
+  mutate(dist2gardiner  = as.numeric(st_distance(sf_ravens_all, gardiner_kml)),
+         dist2dump = as.numeric(st_distance(sf_ravens_all, dump_kml)))
 
-
-#importing demographic information
+#importing raven demographic information
 #terr: territorial birds inside the park
 #trans: birds that transitioned between breeder and nonbreeder
 #7485 (Old Faithful) currently not included because she transitioned more than once
-ravenID <- readxl::read_excel("data/raw/ravens_banding_tagging.xlsx",sheet=1)
-terr <- subset(ravenID, `status (reviewed 8/1/24)` == "territorial" & 
-                 ravenID$`inside NationalPark` == "yes")$`tag-id`
-trans <- subset(ravenID, `status (reviewed 8/1/24)` %like% "Trans")
+raven_id <- readxl::read_excel("data/raw/ravens_banding_tagging.xlsx",sheet=1)
+terr <- subset(raven_id, `status (reviewed 8/1/24)` == "territorial" & 
+                 raven_id$`inside NationalPark` == "yes")$`tag-id`
+trans <- subset(raven_id, `status (reviewed 8/1/24)` %like% "Trans")
 
 
 #subsetting territorials from entire GPS df
-terrGPS <- subset(allGPS, individual_local_identifier %in% terr)
+terr_gps <- subset(all_gps, individual_local_identifier %in% terr)
 
 
 #subsetting trans territorials into their active territorial periods from entire GPS df
-transGPS <- allGPS[allGPS$individual_local_identifier %in% trans$`tag-id`,]
+trans_gps <- all_gps[all_gps$individual_local_identifier %in% trans$`tag-id`,]
 
-transGPS <- do.call("rbind", tapply(transGPS, INDEX=transGPS$individual_local_identifier, 
-                        FUN=function(x){
+trans_gps <- do.call("rbind", tapply(trans_gps, INDEX = trans_gps$individual_local_identifier, 
+                        FUN = function(x){
                           ind <- trans[trans$`tag-id` == x[1,]$individual_local_identifier,]
                           
                           #has only an end date
@@ -89,26 +97,26 @@ transGPS <- do.call("rbind", tapply(transGPS, INDEX=transGPS$individual_local_id
         
 #combining trans and territorial datasets
 #!!!SKIP this step if you want to exclude trans 
-terrGPS <- rbind(terrGPS, transGPS)
+terr_gps <- rbind(terr_gps, trans_gps)
 
 
 
 #subsetting the GPS points to only fall/winter (Nov-Dec)
-terrfwGPS <- terrGPS[month(terrGPS$study_local_timestamp) %in% c(10, 11, 12, 1, 2, 3),]
-
-
+terr_fw_gps <- terr_gps %>% 
+  filter(month(terr_gps$study_local_timestamp) %in% c(10, 11, 12, 1, 2, 3))
         
         
-#calculating the percent of GPS points that are inside the Gardiner/Jardine polygon
-#for territorial birds
 
-# terrfwGardiner <- tapply(terrfwGPS, 
-#                          terrfwGPS$individual_local_identifier, 
+# basic summary of movement decisions -------------------------------------
+
+# calculating the percent of GPS points that are inside the Gardiner/Jardine polygon
+# for territorial birds
+
+# terr_fw_gardiner <- tapply(terr_fw_gps,
+#                          terr_fw_gps$individual_local_identifier,
 #                          function(x){
-#                            nrow(x[x$dist2Gardiner == 0,])/nrow(x)
+#                            nrow(x[x$dist2gardiner == 0,])/nrow(x)
 # })
-# terrfwGardiner
-# range(terrfwGardiner)
-# hist(terrfwGardiner)
-
-
+# terr_fw_gardiner
+# range(terr_fw_gardiner)
+# hist(terr_fw_gardiner)

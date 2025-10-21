@@ -9,11 +9,11 @@ gps_in_mcp <- function(){
   ID <- mcp90$id
   
   for(i in 1:length(ID)){
-    tmp_data <- subset(terrfwGPS, individual_local_identifier == ID[i])
+    tmp_data <- subset(terr_fw_gps, individual_local_identifier == ID[i])
     tmp_sf <- st_as_sf(tmp_data, coords=c("utm_easting", "utm_northing"), 
                        crs="+proj=utm +zone=12")
     
-    tmp_data$dist2Terr <- as.numeric(st_distance(tmp_sf, st_as_sf(mcp90[i,]), unit = ))
+    tmp_data$dist2terr <- as.numeric(st_distance(tmp_sf, st_as_sf(mcp90[i,]), unit = ))
     
     if(i != 1){
       output_df <- rbind(output_df, tmp_data)
@@ -34,10 +34,10 @@ dist2poly <- gps_in_mcp()
 dist2poly <- dist2poly %>% 
   mutate(day = day(study_local_timestamp),
          month = month(study_local_timestamp),
-         period = "neither")
-dist2poly[dist2poly$month == 10 | (dist2poly$month == 11 & dist2poly$day < 15),]$period <- "hunt"
-dist2poly[dist2poly$month == 11 & dist2poly$day >= 15,]$period <- "both"
-dist2poly[dist2poly$month == 12 & dist2poly$day <= 15,]$period <- "wolf"
+         hunting_period = "neither")
+dist2poly[dist2poly$month == 10 | (dist2poly$month == 11 & dist2poly$day < 15),]$hunting_period <- "hunt"
+dist2poly[dist2poly$month == 11 & dist2poly$day >= 15,]$hunting_period <- "both"
+dist2poly[dist2poly$month == 12 & dist2poly$day <= 15,]$hunting_period <- "wolf"
 
 
 
@@ -47,9 +47,9 @@ info_table <- tapply(dist2poly, INDEX = dist2poly$individual_local_identifier,
          info_table <- rep(NA, 4)
          names(info_table) <- c("Gardiner", "Terr", "Other", "Total")
          
-         info_table[1] <- nrow(subset(x, dist2Gardiner == 0))
-         info_table[2] <- nrow(subset(x, dist2Terr == 0))
-         info_table[3] <-  nrow(subset(x, dist2Gardiner != 0 & dist2Terr != 0))
+         info_table[1] <- nrow(subset(x, dist2gardiner == 0))
+         info_table[2] <- nrow(subset(x, dist2terr == 0))
+         info_table[3] <-  nrow(subset(x, dist2gardiner != 0 & dist2terr != 0))
          info_table[4] <- nrow(x)
            
          return(info_table)
@@ -72,24 +72,28 @@ ID <- unique(dist2poly$individual_local_identifier)
 commute_list <- tapply(dist2poly, INDEX = dist2poly$individual_local_identifier,
        FUN = function(x){
          
+         #pulling unique dates
          dates <- unique(as.Date(x$study_local_timestamp))
-         period <- x %>% 
+         
+         #pulling hunting period for each date
+         hunting_period <- x %>% 
            group_by(as.Date(study_local_timestamp)) %>% 
            slice(1) %>% 
            ungroup %>% 
-           pull(period)
+           pull(hunting_period)
+         
          tmp_date_df <- data.frame(ID = x[1, "individual_local_identifier"],
-                                   date = dates, period, commute = NA,
-                                   n_point = NA) 
+                                   date = dates, hunting_period, 
+                                   commute = NA, dump = NA, n_point = NA) 
          
          #cycling through all the dates for each individual to tell where the
          #individual ended up that day (terr, other, Gardiner)
          for(d in 1:length(dates)){
            tmp_dayta <- subset(x, as.Date(study_local_timestamp) == dates[d])
            
-           if(any(tmp_dayta[,"dist2Gardiner"] == 0)){
+           if(any(tmp_dayta[,"dist2gardiner"] == 0)){
              tmp_date_df[d,"commute"] <- 3
-           } else if(any(tmp_dayta[,"dist2Terr"] > 1000)){
+           } else if(any(tmp_dayta[,"dist2terr"] > 1000)){
              tmp_date_df[d,"commute"] <- 2
            } else{
              tmp_date_df[d,"commute"] <- 1
@@ -97,7 +101,15 @@ commute_list <- tapply(dist2poly, INDEX = dist2poly$individual_local_identifier,
            
            #adding the number of points that day
            tmp_date_df[d, "n_point"] <- nrow(tmp_dayta)
-         }
+           
+           #adding if any of the points were at the dump/sewage
+           if(any(tmp_dayta[,"dist2dump"] == 0)){ 
+             tmp_date_df[d, "dump"] <- TRUE
+             } else(
+               tmp_date_df[d, "dump"] <- FALSE
+             )
+           }
+           
          return(tmp_date_df)
        })
 
@@ -106,8 +118,6 @@ commute_df <- do.call("rbind", commute_list) %>%
   #removing days when there is only 1 data point
   #unless the result is Jardine
   filter(!(n_point == 1 & commute != 3))
-
-
 
 
 #plotting raven commute decision per day
@@ -149,8 +159,16 @@ pivot_longer(cols = c(terr, mid, Gardiner),
 commute_list %>% 
   do.call("rbind",.) %>% 
   filter(!(individual_local_identifier %in% c("7494", "7485"))) %>% 
-  group_by(period) %>% 
+  group_by(hunting_period) %>% 
   summarise(terr = sum(commute == 1)/n()*100,
             mid = sum(commute == 2)/n()*100,
             Gardiner = sum(commute == 3)/n()*100)
 
+
+#calculating the number of commute days that included a visit to the dump
+commute_df %>% 
+  filter(commute == 3) %>% 
+  group_by(dump) %>% 
+  summarise(n())
+668/(668+1877)
+#25% of the time a raven visits the dump when the commute
