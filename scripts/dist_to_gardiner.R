@@ -1,5 +1,6 @@
-#percentage of raven GPS points that occur in the Gardiner/Jardine
-#area during the fall/winter season (Nov-Mar)
+#calculating the distanceo f GPS points to the gardiner hunting district polygon
+#calculating percentage of raven GPS points that occur in the gardiner hunting district
+  #area during the fall/winter season (Nov-Mar)
 
 library(sf)
 library(tidyverse)
@@ -48,7 +49,7 @@ dump_kml <- st_read("data/raw/gardiner_dump.kml") %>%
   st_transform(dump_kml, crs = st_crs(sf_ravens_all))
 
 
-#calculating distance to (Jardine and dump)
+#calculating distance to gardiner hunting region, gardiner dump, and north entrance
 #0 == inside the polygon
 all_gps <- all_gps %>% 
   mutate(dist2gardiner  = as.numeric(st_distance(sf_ravens_all, gardiner_kml)),
