@@ -43,6 +43,35 @@ commute_df <- commute_df %>%
     hunt_bin = if_else((terr_bin = 1 & commute == 3), 1, 0))
 
 
+# Distance to north entrance ---------------------------
+## calculating distance between raven territories and the north entrance station
+
+north_entrance_utm <- data.frame(easting = 523575, northing = 4985810) %>% 
+  st_as_sf(coords=c("easting", "northing"), crs = "+proj=utm +zone=12")
+
+#getting centroid of each ravens territory
+terr_center <- mcp90 %>% 
+  
+  #extracting the polygon coordinates from the mcp
+  ggplot2::fortify() %>% 
+  
+  #getting centroid by averaging
+  group_by(id) %>% 
+  rename(easting = long, northing = lat) %>% 
+  summarize(easting = mean(easting), northing = mean(northing)) %>% 
+  
+  #transforming to utm
+  st_as_sf(coords=c("easting", "northing"), crs = st_crs(north_entrance_utm)) %>% 
+  
+  #calculating distance from terr center to north entrance
+  mutate(., dist2nentrance = as.numeric(st_distance(., north_entrance_utm))) %>% 
+  st_drop_geometry
+
+#adding to main dataframe
+commute_df <- commute_df %>% 
+  left_join(terr_center, by = join_by(raven_id == id))
+
+
 # Time btwn kills -------------------------------------------------------------
 ## time between kills within territory
 
