@@ -32,8 +32,15 @@ commute_df <- commute_df %>%
          raven_id != "7596") %>% 
   
   #creating new binary columns for traveling to gardiner or staying in territory
-  mutate(jardine_bin = if_else(commute == 3, 1, 0),
-         terr_bin = if_else(commute == 1, 1, 0))
+  mutate(
+    # terr_bin
+    # 1 = left territory
+    # 0 = stayed on territory
+    terr_bin = if_else(commute == 1, 0, 1),
+    # hunt_bin
+    # 1 = visited hunting
+    # 0 = visited other place
+    hunt_bin = if_else(terr_bin = 1 & commute == 3, 1, 0))
 
 
 # Time btwn kills -------------------------------------------------------------
