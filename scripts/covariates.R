@@ -272,7 +272,7 @@ source("scripts/fwp_hunting_estimates.R")
 commute_df <- commute_df %>%
   left_join(daily_count %>%
               dplyr::select(year, month, day, 
-                            final_take, final_take_bms, 
+                            final_take_bms, 
                             contains("window")),
             by = join_by(year, month, day))
 
@@ -370,3 +370,9 @@ nrow(tower_f)
 commute_df <- commute_df %>% 
   filter(raven_id != "7654",
          raven_id != "7484_2")
+
+
+# reading out csv to cleaned data folder ----------------------------------
+#so this doesn't have to be run every time to work with model script
+
+write.csv(commute_df, "data/clean/commute_data.csv")
