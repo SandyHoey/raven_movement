@@ -9,7 +9,7 @@ library(ggplot2)
 # prepping data -----------------------------------------------------------
 
 #reading in data
-elk_all_gps <- readr::read_csv("data/raw/elk_all_gps_2025-09-03_BJS.csv") %>% 
+elk_all_gps <- readr::read_csv("data/raw/elk_GPS_2025-09-03_BJS.csv") %>% 
   
   #subsetting to only including study years
   filter(year(dt) >= 2019) %>%
@@ -48,17 +48,14 @@ elk_outside_ynp <- elk_all_gps %>%
   as.vector %>% 
 
   #adding back to elk data as a column
-  bind_cols(elk_all_gps) %>% 
+  bind_cols(elk_all_gps %>% st_drop_geometry) %>% 
   rename(distance_ynp = ...1) %>% 
   
   #filtering to only distances > 0 (not inside the park)
   filter(distance_ynp > 0) %>% 
   
   #chronological order
-  arrange(dt) %>% 
-  
-  #removing sf geometry
-  st_drop_geometry()
+  arrange(dt)
 
 
 # number of collared elk each month in Jardine ---------------------------
