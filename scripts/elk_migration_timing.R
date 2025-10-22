@@ -9,7 +9,7 @@ library(ggplot2)
 # prepping data -----------------------------------------------------------
 
 #reading in data
-elk_data <- readr::read_csv("data/raw/elk_GPS_2025-09-03_BJS.csv") %>% 
+elk_all_gps <- readr::read_csv("data/raw/elk_all_gps_2025-09-03_BJS.csv") %>% 
   
   #subsetting to only including study years
   filter(year(dt) >= 2019) %>%
@@ -24,31 +24,31 @@ elk_data <- readr::read_csv("data/raw/elk_GPS_2025-09-03_BJS.csv") %>%
 
 #reading in Gardiner/Jardine and YNP kml
 #transforming latlong to UTM to match the GPS points
-jardine_poly <- st_read("data/raw/gardiner_hunt.kml") %>% 
-  st_transform(crs = st_crs(elk_data))
+# jardine_poly <- st_read("data/raw/gardiner_hunt.kml") %>% 
+#   st_transform(crs = st_crs(elk_all_gps))
 park_poly <- st_read("data/raw/parkpoly.kml") %>% 
-  st_transform(crs = st_crs(elk_data))
+  st_transform(crs = st_crs(elk_all_gps))
 
 #dataframe with only GPS points in Jardine
-elk_jardine <- st_intersection(jardine_poly, elk_data) %>% 
-  select(-c(1, 2)) %>% 
-  
-  #chronological order
-  arrange(dt) %>% 
-  
-  #removing sf geometry
-  st_drop_geometry()
+# elk_in_jardine <- st_intersection(jardine_poly, elk_all_gps) %>% 
+#   select(-c(1, 2)) %>% 
+#   
+#   #chronological order
+#   arrange(dt) %>% 
+#   
+#   #removing sf geometry
+#   st_drop_geometry()
 
 
 #dataframe with only GPS points outside YNP
-elk_ynp <- elk_data %>% 
+elk_outside_ynp <- elk_all_gps %>% 
   
   #calculating distance to YNP
-  st_distance(park_poly, elk_data) %>% 
+  st_distance(park_poly, elk_all_gps) %>% 
   as.vector %>% 
 
   #adding back to elk data as a column
-  bind_cols(elk_data) %>% 
+  bind_cols(elk_all_gps) %>% 
   rename(distance_ynp = ...1) %>% 
   
   #filtering to only distances > 0 (not inside the park)
@@ -62,7 +62,7 @@ elk_ynp <- elk_data %>%
 
 
 # number of collared elk each month in Jardine ---------------------------
-# monthly_count <- elk_ynp %>%
+# monthly_count <- elk_outside_ynp %>%
 # 
 #   
 #   #adding year and month columns
@@ -75,7 +75,7 @@ elk_ynp <- elk_data %>%
 # 
 # 
 # #adding the total sample size each month
-# monthly_count <- elk_data %>% 
+# monthly_count <- elk_all_gps %>% 
 #   
 #   #removing sf geometry
 #   st_drop_geometry() %>% 
@@ -114,7 +114,7 @@ elk_ynp <- elk_data %>%
 hunting_dates <- readxl::read_xlsx("data/raw/hunting_seasons.xlsx")
 
 
-daily_count <- elk_ynp %>%
+daily_count <- elk_outside_ynp %>%
   
   #adding year, month, and day columns
   mutate(year = year(dt),
@@ -157,7 +157,7 @@ daily_count <- data.frame(year = 2024, #missing days in October
 
 
 #adding the total sample size every day
-daily_count <- elk_data %>% 
+daily_count <- elk_all_gps %>% 
   
   #removing sf geometry
   st_drop_geometry() %>% 
