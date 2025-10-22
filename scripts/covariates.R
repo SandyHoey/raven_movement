@@ -40,7 +40,7 @@ commute_df <- commute_df %>%
     # hunt_bin
     # 1 = visited hunting
     # 0 = visited other place
-    hunt_bin = if_else(terr_bin = 1 & commute == 3, 1, 0))
+    hunt_bin = if_else((terr_bin = 1 & commute == 3), 1, 0))
 
 
 # Time btwn kills -------------------------------------------------------------
