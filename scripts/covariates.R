@@ -36,11 +36,11 @@ commute_df <- commute_df %>%
     # terr_bin
     # 1 = left territory
     # 0 = stayed on territory
-    terr_bin = if_else(commute == 1, 0, 1),
+    terr_bin = if_else(commute == 1, FALSE, TRUE),
     # hunt_bin
     # 1 = visited hunting
     # 0 = visited other place
-    hunt_bin = if_else((terr_bin = 1 & commute == 3), 1, 0))
+    hunt_bin = if_else((terr_bin = 1 & commute == 3), TRUE, FALSE))
 
 
 # Distance to north entrance ---------------------------
@@ -182,15 +182,16 @@ in_terr_kill_list <- kill_freq(dist_from_terr = 3000)
 
 
 
-# Kill density -------------------------------------------------------------
-## of carcasses in territory/# of days(30)
+# Average kill density -------------------------------------------------------------
+## of carcasses in territory/# of days(30) 
+## averaged over all years of data for that raven
 
 ##'   going to be calculated only for winter studies when kill detection is best
 ##' 
 ##' old faithful birds have no kills in terr, need to figure out how that is handled
 ##'   probably just a 0 
 
-kill_density <- lapply(in_terr_kill_list, function(x){
+kill_density_list <- lapply(in_terr_kill_list, function(x){
   if(nrow(x) != 0){
     #empty vector to attach all the values of days since previous carcass
     days_since <- c()
@@ -228,9 +229,14 @@ kill_density <- lapply(in_terr_kill_list, function(x){
 #am going to use average kill density for each individual
 #the kill density is calculated from winter study periods, so there isn't a number for
 #the other months anyways
-avg_kill_density <- bind_rows(kill_density, .id = "raven_id") %>% 
+avg_kill_density_list <- bind_rows(kill_density_list, .id = "raven_id") %>% 
   group_by(raven_id) %>% 
-  summarize(avg_density = mean(density))
+  summarize(avg_terr_kill_density_list = mean(density))
+
+commute_df <- commute_df %>% 
+  left_join(avg_kill_density_list) %>% 
+  #adding 0 for any with no kills on their territory
+  mutate(avg_density = if_else(is.na(avg_terr_kill_density_list), 0, avg_terr_kill_density_list))
 
 
 
@@ -241,7 +247,7 @@ avg_kill_density <- bind_rows(kill_density, .id = "raven_id") %>%
 ##' days_since is the number of days since the kill was made, including the day of the kill
 
 active_kill_fctn <- function(days_since = 3){
-  commute_df$active_kill <- 0
+  commute_df$active_kill <- FALSE
   
   tapply(commute_df, commute_df$raven_id,
          FUN = function(x){
@@ -255,7 +261,7 @@ active_kill_fctn <- function(days_since = 3){
              time_diff <- difftime(tmp_kills$DOD, as.Date(tmp_GPS$date), units = "days")
              
              if(sum(time_diff >= 0 & time_diff < days_since) >= 1){
-               x[i, "active_kill"] <- 1
+               x[i, "active_kill"] <- TRUE
              }
            }
            return(x)
@@ -377,10 +383,10 @@ commute_df <- bison_take %>%
 
 commute_df <- commute_df %>% 
   
-  mutate(weekend = if_else(weekdays(date) %in% c("Saturday", "Sunday"), 1, 0))
+  mutate(weekend = if_else(weekdays(date) %in% c("Saturday", "Sunday"), TRUE, FALSE))
 
 
-# clearing up tagged pairs ------------------------------------------------
+# Clearing up tagged pairs ------------------------------------------------
 
 # High bridge pair (7654 & 7530)
 # Tower pair (7484_2 & 7493_2)
@@ -406,6 +412,33 @@ nrow(tower_f)
 commute_df <- commute_df %>% 
   filter(raven_id != "7654",
          raven_id != "7484_2")
+
+
+# Winter study periods (early/late) ------------------------------------------
+
+commute_df <- commute_df %>% 
+  mutate(study_period = if_else(month %in% c(10, 11), "early", "late"))
+
+
+
+# Yearly kill density -----------------------------------------------------
+## kills in territory/30 days
+
+## distinct kill density for each year and study period
+
+#turning kill_density_list into dataframe that can be joined to commute_df
+kill_density_df <- kill_density_list %>% 
+  #turning list into single dataframe while retaining raven_id as a column
+  bind_rows(.id = "source") %>% 
+  #fixing column names
+  rename(raven_id = source,
+         yearly_terr_kill_density = density,
+         study_period = period)
+
+#adding yearly kill density to main data
+commute_df <- commute_df %>% 
+  left_join(kill_density_df)
+
 
 
 # reading out csv to cleaned data folder ----------------------------------
