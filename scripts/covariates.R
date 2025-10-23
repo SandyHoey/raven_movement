@@ -231,12 +231,12 @@ kill_density_list <- lapply(in_terr_kill_list, function(x){
 #the other months anyways
 avg_kill_density_list <- bind_rows(kill_density_list, .id = "raven_id") %>% 
   group_by(raven_id) %>% 
-  summarize(avg_terr_kill_density_list = mean(density))
+  summarize(avg_terr_kill_density = mean(density))
 
 commute_df <- commute_df %>% 
   left_join(avg_kill_density_list) %>% 
   #adding 0 for any with no kills on their territory
-  mutate(avg_density = if_else(is.na(avg_terr_kill_density_list), 0, avg_terr_kill_density_list))
+  mutate(avg_terr_kill_density = if_else(is.na(avg_terr_kill_density), 0, avg_terr_kill_density))
 
 
 
