@@ -136,7 +136,7 @@ kill_freq <- function(dist_from_terr = 0){
   return(in_terr_kill_list)
 }
 
-in_terr_kill_list <- kill_freq(dist_from_terr = 3000)
+in_terr_kill_list <- kill_freq(dist_from_terr = 1000)
 
 
 # #counting the days between consecutive kills within each territory
@@ -229,15 +229,16 @@ kill_density_list <- lapply(in_terr_kill_list, function(x){
 #am going to use average kill density for each individual
 #the kill density is calculated from winter study periods, so there isn't a number for
 #the other months anyways
-avg_kill_density_list <- bind_rows(kill_density_list, .id = "raven_id") %>% 
+avg_kill_density <- bind_rows(kill_density_list, .id = "raven_id") %>% 
   group_by(raven_id) %>% 
   summarize(avg_terr_kill_density = mean(density))
 
 commute_df <- commute_df %>% 
-  left_join(avg_kill_density_list) %>% 
-  #adding 0 for any with no kills on their territory
-  mutate(avg_terr_kill_density = if_else(is.na(avg_terr_kill_density), 0, avg_terr_kill_density))
-
+  left_join(avg_kill_density) %>% 
+  #making kill_density 0 when NA since there were no kills in its territory
+  #having a row in the commute_df means the raven was taking points that day
+  mutate(avg_terr_kill_density = if_else(is.na(avg_terr_kill_density), 0, 
+                                         avg_terr_kill_density))
 
 
 # Active kill -------------------------------------------------------------
@@ -437,7 +438,11 @@ kill_density_df <- kill_density_list %>%
 
 #adding yearly kill density to main data
 commute_df <- commute_df %>% 
-  left_join(kill_density_df)
+  left_join(kill_density_df) %>% 
+  #making kill_density 0 when NA since there were no kills in its territory
+  #having a row in the commute_df means the raven was taking points that day
+  mutate(yearly_terr_kill_density = if_else(is.na(yearly_terr_kill_density), 0, 
+                                         yearly_terr_kill_density))
 
 
 
