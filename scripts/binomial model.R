@@ -9,8 +9,10 @@ library(DHARMa)
 full_model_data <- readr::read_csv("data/clean/commute_data.csv") %>% 
   
   #restricting to only winter study months
-  filter(month %in% c(11, 12, 3),
-         !(month %in% c(11, 12) & is.na(bms_window_1)))
+  filter((paste(month, day, sep = "-") >= "11-15" &
+            paste(month, day, sep = "-") <= "12-15") |
+          (paste(month, day, sep = "-") >= "3-1" &
+            paste(month, day, sep = "-") <= "3-30"))
 
 
 # checking correlation between biomass covariates --------------------
