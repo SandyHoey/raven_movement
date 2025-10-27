@@ -297,12 +297,13 @@ commute_df <- commute_df %>%
          end_hunt = end) %>% 
   
   #creating new boolean column for hunting season
-  mutate(hunt = if_else((format(date, "%m-%d") >= 
+    #' TRUE = active hunting season
+  mutate(hunt_season = if_else((format(date, "%m-%d") >= 
                            format(start_hunt, "%m-%d")) &
                           (format(date, "%m-%d") <= 
                              format(end_hunt, "%m-%d")), 
-                        1, #days in nov before end date
-                        0))  #otherwise no hunting == 0 n nov before end date
+                        TRUE, #days in nov before end date
+                        FALSE))  #otherwise no hunting == 0 n nov before end date
 
   
 
