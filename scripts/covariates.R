@@ -462,7 +462,7 @@ group_commute_decision <- commute_df %>%
             n_raven_daily = n())
 
 #adding group commute decision to main dataframe
-commute_df %>% 
+commute_df <- commute_df %>% 
   left_join(group_commute_decision) %>% 
   
   #editing the values of group commute to remove the decision of that row
