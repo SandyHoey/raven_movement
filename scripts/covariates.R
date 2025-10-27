@@ -446,6 +446,42 @@ commute_df <- commute_df %>%
 
 
 
+
+# other raven movement decisions ------------------------------------------
+# how many OTHER tagged ravens decided to make what movement decisions
+
+# Calculating how total many ravens out of all ravens chose to 
+  #' leave their territory
+  #' visit the Gardiner hunting district
+group_commute_decision <- commute_df %>% 
+  group_by(date) %>% 
+  summarize(group_left_terr = sum(terr_bin),
+            group_visit_hunt = sum(hunt_bin),
+            #total number of ravens with data for that day
+            #need to subtract one when adding to commute_df to remove that raven from calculations
+            n_raven_daily = n())
+
+#adding group commute decision to main dataframe
+commute_df %>% 
+  left_join(group_commute_decision) %>% 
+  
+  #editing the values of group commute to remove the decision of that row
+  mutate(group_left_terr = if_else(terr_bin == TRUE, #if that raven left its territory
+                                   group_left_terr - 1, #remove 1 raven from the group that chose to leave
+                                   group_left_terr), #else leave the number alone
+         group_visit_hunt = if_else(terr_bin == TRUE, #if that raven visited gardiner
+                                    group_visit_hunt - 1, #remove 1 raven from the group that visited Gardiner
+                                    group_visit_hunt),
+         n_raven_daily = n_raven_daily - 1) %>% 
+  
+  #turning the raw values into a proportion
+  mutate(prop_group_left_terr = group_left_terr/n_raven_daily,
+         prop_group_visit_hunt = group_visit_hunt/n_raven_daily) %>% 
+  
+  #removing raw value of group raven daily decisions
+  dplyr::select(-c(group_left_terr, group_visit_hunt, n_raven_daily))
+  
+
 # reading out csv to cleaned data folder ----------------------------------
 #so this doesn't have to be run every time to work with model script
 
