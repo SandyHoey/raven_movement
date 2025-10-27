@@ -34,7 +34,7 @@ cntrl <- glmerControl(optimizer = "bobyqa", tol = 1e-4, optCtrl=list(maxfun=1000
 # modeling first part of conditional binomial model
 # did the raven choose to leaves its territory
 
-## DEPENDENT VARIABLES ##
+## DEPENDENT VARIABLE ##
 # terr_bin
 # 1 = left territory
 # 0 = stayed on territory
@@ -53,10 +53,12 @@ summary(mod_terr_bms3)
 #modeling second part of conditional binomial model
 # if the raven chose to leave its territory, did it visit the hunting area or not
 
-## DEPENDENT VARIABLES ##
+## DEPENDENT VARIABLE ##
 # hunt_bin
 # 1 = visited hunting
 # 0 = visited other place
+
+#!!! add a covariate for overall yearly wolf kill rate
 
 #creating new data frame to only have days ravens decided to leave territory
 leave_model_data <- full_model_data %>% 
