@@ -418,7 +418,7 @@ commute_df <- commute_df %>%
 # Winter study periods (early/late) ------------------------------------------
 
 commute_df <- commute_df %>% 
-  mutate(study_period = if_else(month %in% c(10, 11), "early", "late"))
+  mutate(study_period = if_else(month %in% c(10, 11, 12), "early", "late"))
 
 
 
@@ -469,10 +469,10 @@ commute_df <- commute_df %>%
   mutate(group_left_terr = if_else(terr_bin == TRUE, #if that raven left its territory
                                    group_left_terr - 1, #remove 1 raven from the group that chose to leave
                                    group_left_terr), #else leave the number alone
-         group_visit_hunt = if_else(terr_bin == TRUE, #if that raven visited gardiner
+         group_visit_hunt = if_else(hunt_bin == TRUE, #if that raven visited gardiner
                                     group_visit_hunt - 1, #remove 1 raven from the group that visited Gardiner
                                     group_visit_hunt),
-         n_raven_daily = n_raven_daily - 1) %>% 
+         n_raven_daily = if_else(n_raven_daily == 1, NA, n_raven_daily - 1)) %>% 
   
   #turning the raw values into a proportion
   mutate(prop_group_left_terr = group_left_terr/n_raven_daily,
@@ -480,9 +480,35 @@ commute_df <- commute_df %>%
   
   #removing raw value of group raven daily decisions
   dplyr::select(-c(group_left_terr, group_visit_hunt, n_raven_daily))
-  
+
+
+
+# looking at decision history --------------------------------------------
+
+#looking to see about the days since the last data point
+commute_df <- commute_df %>%
+  group_by(raven_id, year, study_period) %>%
+  arrange(date) %>%
+  mutate(
+    #adding days since the previous data point
+    days_since_last = as.numeric(date - lag(date)),
+  #' previous day = 1668 days
+  #' 2 days = 1712 days
+  #' 3 days = 1732 days
+  #' 4 days = 1752 days
+  #' 7 days = 1768 days
+
+#adding decisions of previous day
+    #previous day history
+    previous_decision_terr = if_else(days_since_last == 1, 
+                                     lag(terr_bin), 
+                                     NA),
+    previous_decision_hunt = if_else(days_since_last == 1, 
+                                 lag(hunt_bin), 
+                                 NA))
+
 
 # reading out csv to cleaned data folder ----------------------------------
 #so this doesn't have to be run every time to work with model script
 
-write.csv(commute_df, "data/clean/commute_data.csv")
+#write.csv(commute_df, "data/clean/commute_data.csv")
