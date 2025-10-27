@@ -247,7 +247,7 @@ commute_df <- commute_df %>%
 ##' active is < than 3 days old (<= 2 days)
 ##' days_since is the number of days since the kill was made, including the day of the kill
 
-active_kill_fctn <- function(days_since = 3){
+active_kill_fctn <- function(days_since = 2){
   commute_df$active_kill <- FALSE
   
   tapply(commute_df, commute_df$raven_id,
@@ -512,4 +512,4 @@ commute_df <- commute_df %>%
 # reading out csv to cleaned data folder ----------------------------------
 #so this doesn't have to be run every time to work with model script
 
-#write.csv(commute_df, "data/clean/commute_data.csv")
+write.csv(commute_df, "data/clean/commute_data.csv")
