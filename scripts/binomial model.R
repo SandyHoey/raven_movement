@@ -12,7 +12,10 @@ full_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
   filter((paste(month, day, sep = "-") >= "11-15" &
             paste(month, day, sep = "-") <= "12-15") |
           (paste(month, day, sep = "-") >= "3-1" &
-            paste(month, day, sep = "-") <= "3-30"))
+            paste(month, day, sep = "-") <= "3-30")) %>% 
+  
+  #removing rows that don't have a previous_day 
+  filter(!is.na(previous_decision_terr))
 
 
 # checking correlation between biomass covariates --------------------
@@ -41,14 +44,24 @@ cntrl <- glmerControl(optimizer = "bobyqa", tol = 1e-4, optCtrl=list(maxfun=1000
 # 1 = left territory
 # 0 = stayed on territory
 
-#comparing models with different biomass window sizes
+#model with biomass number
+#i changed active to only within 1 day of wolves leaving and that made a big difference
 mod_terr_bms3 <- glmer(terr_bin ~ (1|raven_id) + active_kill * scale(bms_window_3) + scale(yearly_terr_kill_density) + 
-                         scale(dist2nentrance) + study_period + weekend,
+                         scale(dist2nentrance) + study_period + scale(prop_group_left_terr),
                        data = full_model_data,
                        family = "binomial",
                        control = cntrl)
 
 summary(mod_terr_bms3)
+
+#model with just hunting season (basically same result)
+mod_terr_hseason <- glmer(terr_bin ~ (1|raven_id) + active_kill * hunt_season + scale(yearly_terr_kill_density) + 
+                         scale(dist2nentrance) + study_period + scale(prop_group_left_terr),
+                       data = full_model_data,
+                       family = "binomial",
+                       control = cntrl)
+
+summary(mod_terr_hseason)
 
 
 # PART 2 of conditional model (visit gardiner/other) ----------------------
@@ -66,9 +79,20 @@ summary(mod_terr_bms3)
 leave_model_data <- full_model_data %>% 
   filter(terr_bin == 1)
 
-mod_hunt_bms3 <- glmer(hunt_bin ~ (1|raven_id) + scale(bms_window_3) + scale(dist2nentrance) + study_period + weekend,
+mod_hunt_bms3 <- glmer(hunt_bin ~ (1|raven_id) + scale(bms_window_3) + hunt_season + scale(dist2nentrance) + 
+                         study_period + scale(prop_group_visit_hunt),
                        data = leave_model_data,
                        family = "binomial",
                        control = cntrl)
 
 summary(mod_hunt_bms3)
+
+
+mod_hunt_hseason <- glmer(hunt_bin ~ (1|raven_id) + hunt_season + scale(dist2nentrance) + 
+                         study_period + scale(prop_group_visit_hunt),
+                       data = leave_model_data,
+                       family = "binomial",
+                       control = cntrl)
+
+summary(mod_hunt_hseason)
+
