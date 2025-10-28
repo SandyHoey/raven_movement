@@ -53,12 +53,12 @@ cntrl <- glmerControl(optimizer = "bobyqa", tol = 1e-4, optCtrl=list(maxfun=1000
 
 #model with biomass number
 #I changed active_kill to only within 1 day of wolves leaving and that made a big difference
-mod_terr_bms3 <- glmer(terr_bin ~ (1|raven_id) + active_kill * scale(bms_window_1) + scale(yearly_terr_kill_density) + 
+mod_terr_bms1 <- glmer(terr_bin ~ (1|raven_id) + active_kill * scale(bms_window_1) + scale(yearly_terr_kill_density) + 
                          scale(dist2nentrance) + study_period + scale(prop_group_left_terr),
                        data = ws_model_data,
                        family = "binomial",
                        control = cntrl)
-summary(mod_terr_bms3)
+summary(mod_terr_bms1)
 
 
 #model with hunting season (changes result for active_kill)
@@ -78,6 +78,11 @@ mod_terr_hl <- glmer(terr_bin ~ (1|raven_id) + active_kill * take_high_low + sca
                           control = cntrl)
 summary(mod_terr_hl)
 
+AIC(mod_terr_bms1) #equally good
+AIC(mod_terr_hseason) #equally good
+AIC(mod_terr_hl)
+
+
 # PART 2 of conditional model (visit gardiner/other) ----------------------
 #modeling second part of conditional binomial model
 # if the raven chose to leave its territory, did it visit the hunting area or not
@@ -90,12 +95,12 @@ summary(mod_terr_hl)
 #!!! add a covariate for overall yearly wolf kill rate
 
 #model with biomass number
-mod_hunt_bms3 <- glmer(hunt_bin ~ (1|raven_id) + scale(bms_window_1) + scale(dist2nentrance) + 
+mod_hunt_bms1 <- glmer(hunt_bin ~ (1|raven_id) + scale(bms_window_1) + scale(dist2nentrance) + 
                          study_period + scale(prop_group_visit_hunt),
                        data = hunt_model_data,
                        family = "binomial",
                        control = cntrl)
-summary(mod_hunt_bms3)
+summary(mod_hunt_bms1)
 
 
 #model with hunting season (changes study period, p value and effect direction)
@@ -114,3 +119,7 @@ mod_hunt_hl <- glmer(hunt_bin ~ (1|raven_id) + take_high_low + scale(dist2nentra
                           family = "binomial",
                           control = cntrl)
 summary(mod_hunt_hl)
+
+AIC(mod_hunt_bms1)
+AIC(mod_hunt_hseason)
+AIC(mod_hunt_hl) #best by far
