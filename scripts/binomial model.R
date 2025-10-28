@@ -1,12 +1,9 @@
 #modeling the impacts of food availability on raven winter movements decisions
 
 library(dplyr)
-library(lme4)
-library(DHARMa)
 
-
-#restricting to only winter study periods
-full_model_data <- readr::read_csv("data/clean/commute_data.csv") %>% 
+## dataset for part 1 of conditional model
+ws_model_data <- readr::read_csv("data/clean/commute_data.csv") %>% 
   
   #restricting to only winter study months
   filter((paste(month, day, sep = "-") >= "11-15" &
@@ -18,18 +15,28 @@ full_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
   filter(!is.na(previous_decision_terr))
 
 
+## dataset for part 2 of conditional model
+hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>% 
+  
+  #removing rows that don't have a previous_day 
+  filter(!is.na(previous_decision_terr)) %>%
+  
+  #only have days ravens decided to leave territory
+  filter(terr_bin == 1)
+
+
 # checking correlation between biomass covariates --------------------
-# cor.test(full_model_data$bms_window_1, full_model_data$bms_window_3)
-# cor.test(full_model_data$bms_window_1, full_model_data$bms_window_5)
-# cor.test(full_model_data$bms_window_5, full_model_data$bms_window_3)
+# cor.test(hunt_model_data$bms_window_1, hunt_model_data$bms_window_3)
+# cor.test(hunt_model_data$bms_window_1, hunt_model_data$bms_window_5)
+# cor.test(hunt_model_data$bms_window_5, hunt_model_data$bms_window_3)
 # #moving averages are basically the same
 # 
 # #non-average options are still very similar
-# cor.test(full_model_data$bms_window_1, full_model_data$bison_daily_bms)
-# cor.test(full_model_data$bms_window_1, full_model_data$bison_daily_take)
-
+# cor.test(hunt_model_data$bms_window_1, hunt_model_data$final_take_bms)
 
 # model setup -------------------------------------------------------------
+library(lme4)
+library(DHARMa)
 
 #optimizer for glmer
 cntrl <- glmerControl(optimizer = "bobyqa", tol = 1e-4, optCtrl=list(maxfun=100000))
@@ -45,24 +52,31 @@ cntrl <- glmerControl(optimizer = "bobyqa", tol = 1e-4, optCtrl=list(maxfun=1000
 # 0 = stayed on territory
 
 #model with biomass number
-#i changed active to only within 1 day of wolves leaving and that made a big difference
-mod_terr_bms3 <- glmer(terr_bin ~ (1|raven_id) + active_kill * scale(bms_window_3) + scale(yearly_terr_kill_density) + 
+#I changed active_kill to only within 1 day of wolves leaving and that made a big difference
+mod_terr_bms3 <- glmer(terr_bin ~ (1|raven_id) + active_kill * scale(bms_window_1) + scale(yearly_terr_kill_density) + 
                          scale(dist2nentrance) + study_period + scale(prop_group_left_terr),
-                       data = full_model_data,
+                       data = ws_model_data,
                        family = "binomial",
                        control = cntrl)
-
 summary(mod_terr_bms3)
 
-#model with just hunting season (basically same result)
+
+#model with hunting season (changes result for active_kill)
 mod_terr_hseason <- glmer(terr_bin ~ (1|raven_id) + active_kill * hunt_season + scale(yearly_terr_kill_density) + 
                          scale(dist2nentrance) + study_period + scale(prop_group_left_terr),
-                       data = full_model_data,
+                       data = ws_model_data,
                        family = "binomial",
                        control = cntrl)
-
 summary(mod_terr_hseason)
 
+
+#model with categorical high/low hunt (no changes)
+mod_terr_hl <- glmer(terr_bin ~ (1|raven_id) + active_kill * take_high_low + scale(yearly_terr_kill_density) + 
+                            scale(dist2nentrance) + study_period + scale(prop_group_left_terr),
+                          data = ws_model_data,
+                          family = "binomial",
+                          control = cntrl)
+summary(mod_terr_hl)
 
 # PART 2 of conditional model (visit gardiner/other) ----------------------
 #modeling second part of conditional binomial model
@@ -75,24 +89,28 @@ summary(mod_terr_hseason)
 
 #!!! add a covariate for overall yearly wolf kill rate
 
-#creating new data frame to only have days ravens decided to leave territory
-leave_model_data <- full_model_data %>% 
-  filter(terr_bin == 1)
-
-mod_hunt_bms3 <- glmer(hunt_bin ~ (1|raven_id) + scale(bms_window_3) + hunt_season + scale(dist2nentrance) + 
+#model with biomass number
+mod_hunt_bms3 <- glmer(hunt_bin ~ (1|raven_id) + scale(bms_window_1) + scale(dist2nentrance) + 
                          study_period + scale(prop_group_visit_hunt),
-                       data = leave_model_data,
+                       data = hunt_model_data,
                        family = "binomial",
                        control = cntrl)
-
 summary(mod_hunt_bms3)
 
 
+#model with hunting season (changes study period, p value and effect direction)
 mod_hunt_hseason <- glmer(hunt_bin ~ (1|raven_id) + hunt_season + scale(dist2nentrance) + 
                          study_period + scale(prop_group_visit_hunt),
-                       data = leave_model_data,
+                       data = hunt_model_data,
                        family = "binomial",
                        control = cntrl)
-
 summary(mod_hunt_hseason)
 
+
+#model with categorical high/low (changes study period, p value and effect direction)
+mod_hunt_hl <- glmer(hunt_bin ~ (1|raven_id) + take_high_low + scale(dist2nentrance) + 
+                            study_period + scale(prop_group_visit_hunt),
+                          data = hunt_model_data,
+                          family = "binomial",
+                          control = cntrl)
+summary(mod_hunt_hl)
