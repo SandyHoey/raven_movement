@@ -16,9 +16,6 @@ source("scripts/commute_decision.R")
 #2 = has at least 1 point farther than 1 km from terr poly , but none in Gardiner poly
 #1 = only has points in terr poly
 
-#clearing environment of unnecessary variables
-rm(list = setdiff(ls(), c("commute_df", "mcp90")))
-
 
 #removing 7646 because there aren't enough winter points
 #removing 7653 and 7596 because Canada
@@ -298,12 +295,16 @@ commute_df <- commute_df %>%
   
   #creating new boolean column for hunting season
     #' TRUE = active hunting season
-  mutate(hunt_season = if_else((format(date, "%m-%d") >= 
+  mutate(
+    #FWP season
+    hunt_season = if_else((format(date, "%m-%d") >= 
                            format(start_hunt, "%m-%d")) &
                           (format(date, "%m-%d") <= 
                              format(end_hunt, "%m-%d")), 
-                        TRUE, #days in nov before end date
-                        FALSE))  #otherwise no hunting == 0 n nov before end date
+                        TRUE, 
+                        FALSE),
+    #tribal bison season
+    hunt_season = if_else(month == 3, TRUE, hunt_season))
 
   
 
@@ -376,7 +377,8 @@ commute_df <- bison_take %>%
 
   mutate(bms_window_1 = if_else(month == 3, bison_daily_bms, bms_window_1),
          bms_window_3 = if_else(month == 3, bison_daily_bms, bms_window_3),
-         bms_window_5 = if_else(month == 3, bison_daily_bms, bms_window_5)) 
+         bms_window_5 = if_else(month == 3, bison_daily_bms, bms_window_5),
+         final_take_bms = if_else(month == 3, bison_daily_bms, final_take_bms)) 
 
 
 
@@ -448,7 +450,7 @@ commute_df <- commute_df %>%
 
 
 
-# other raven movement decisions ------------------------------------------
+# Other raven movement decisions ------------------------------------------
 # how many OTHER tagged ravens decided to make what movement decisions
 
 # Calculating how total many ravens out of all ravens chose to 
@@ -484,7 +486,7 @@ commute_df <- commute_df %>%
 
 
 
-# looking at decision history --------------------------------------------
+# Individual decision history --------------------------------------------
 
 #looking to see about the days since the last data point
 commute_df <- commute_df %>%
@@ -509,7 +511,7 @@ commute_df <- commute_df %>%
                                  NA))
 
 
-# reading out csv to cleaned data folder ----------------------------------
+# Writing out csv to cleaned data folder ----------------------------------
 #so this doesn't have to be run every time to work with model script
 
 write.csv(commute_df, "data/clean/commute_data.csv")
