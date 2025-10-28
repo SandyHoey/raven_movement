@@ -319,7 +319,12 @@ commute_df <- commute_df %>%
               dplyr::select(year, month, day, 
                             final_take_bms, 
                             contains("window")),
-            by = join_by(year, month, day))
+            by = join_by(year, month, day)) %>% 
+  #adding 0 for all NA days
+  mutate(bms_window_1 = if_else(!is.na(bms_window_1), bms_window_1, 0),
+         bms_window_3 = if_else(!is.na(bms_window_3), bms_window_3, 0),
+         bms_window_5 = if_else(!is.na(bms_window_5), bms_window_5, 0),
+         final_take_bms = if_else(!is.na(final_take_bms), final_take_bms, 0)) 
 
 
 
