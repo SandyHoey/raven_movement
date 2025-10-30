@@ -539,4 +539,9 @@ commute_df <- commute_df %>%
 # Writing out csv to cleaned data folder ----------------------------------
 #so this doesn't have to be run every time to work with model script
 
-write.csv(commute_df, "data/clean/commute_data.csv")
+write.csv(commute_df %>%
+            ungroup() %>% 
+            #removing unnecessary columns
+            dplyr::select(-c(commute, bison_daily_take, bison_daily_bms, year, month, day, 
+                             days_since_last)), 
+          "data/clean/commute_data.csv")
