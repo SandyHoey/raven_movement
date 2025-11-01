@@ -49,7 +49,11 @@ po/*~
 rsconnect/
 
 #large data files that won't upload to GitHub
-/data/clean
+/data/clean/all_raven_gps_clean.csv
+/data/clean/all_raven_gps_clean28.csv
+/data/clean/all_raven_gps_clean29.csv
+/data/clean/all_raven_gps_clean58.csv
+/data/clean/all_raven_gps_clean59.csv
 /data/raw/ravenGPS_movebank.csv
 /data/raw/elk_GPS_2025-09-03_BJS.csv
 
