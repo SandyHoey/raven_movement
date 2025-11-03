@@ -536,6 +536,14 @@ commute_df <- commute_df %>%
                                  NA))
 
 
+
+# Temperature -------------------------------------------------------------
+# temperature history from Red Lodge
+temp_history <- readr::read_csv("data/raw/cooke_city_weather.csv")
+
+commute_df <- commute_df %>% 
+  left_join(temp_history)
+
 # Writing out csv to cleaned data folder ----------------------------------
 #so this doesn't have to be run every time to work with model script
 
