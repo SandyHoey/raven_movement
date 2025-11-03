@@ -11,15 +11,21 @@ ws_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
           (paste(month, day, sep = "-") >= "3-1" &
             paste(month, day, sep = "-") <= "3-30")) %>% 
   
-  #removing rows that don't have a previous_day 
-  filter(!is.na(previous_decision_terr))
+  #making sure rows are complete
+  filter(
+    #previous_day history
+    !is.na(previous_decision_terr))
 
 
 ## dataset for part 2 of conditional model
 hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>% 
   
-  #removing rows that don't have a previous_day 
-  filter(!is.na(previous_decision_terr)) %>%
+  #making sure rows are complete
+  filter(
+    #previous_day history
+    !is.na(previous_decision_terr),
+    #temperature
+    !is.na(temp_max)) %>%
   
   #only have days ravens decided to leave territory
   filter(terr_bin == 1)
@@ -54,7 +60,7 @@ cntrl <- glmerControl(optimizer = "bobyqa", tol = 1e-4, optCtrl=list(maxfun=1000
 #model with biomass number
 #I changed active_kill to only within 1 day of wolves leaving and that made a big difference
 mod_terr_bms1 <- glmer(terr_bin ~ (1|raven_id) + active_kill * scale(bms_window_1) + scale(yearly_terr_kill_density) + 
-                         scale(dist2nentrance) + study_period + scale(prop_group_left_terr),
+                         scale(dist2nentrance) + study_period + scale(prop_group_left_terr) + scale(temp_mean),
                        data = ws_model_data,
                        family = "binomial",
                        control = cntrl)
@@ -62,8 +68,9 @@ summary(mod_terr_bms1)
 
 
 #model with hunting season (changes result for active_kill)
+#including the interaction effect messes with active_kill because of high error with interaction term
 mod_terr_hseason <- glmer(terr_bin ~ (1|raven_id) + active_kill * hunt_season + scale(yearly_terr_kill_density) + 
-                         scale(dist2nentrance) + study_period + scale(prop_group_left_terr),
+                         scale(dist2nentrance) + study_period + scale(prop_group_left_terr) + scale(temp_mean),
                        data = ws_model_data,
                        family = "binomial",
                        control = cntrl)
@@ -72,7 +79,7 @@ summary(mod_terr_hseason)
 
 #model with categorical high/low hunt (no changes)
 mod_terr_hl <- glmer(terr_bin ~ (1|raven_id) + active_kill * take_high_low + scale(yearly_terr_kill_density) + 
-                            scale(dist2nentrance) + study_period + scale(prop_group_left_terr),
+                            scale(dist2nentrance) + study_period + scale(prop_group_left_terr) + scale(temp_mean),
                           data = ws_model_data,
                           family = "binomial",
                           control = cntrl)
@@ -96,7 +103,7 @@ AIC(mod_terr_hl)
 
 #model with biomass number
 mod_hunt_bms1 <- glmer(hunt_bin ~ (1|raven_id) + scale(bms_window_1) + scale(dist2nentrance) + 
-                         study_period + scale(prop_group_visit_hunt),
+                         study_period + scale(prop_group_visit_hunt) + scale(temp_mean),
                        data = hunt_model_data,
                        family = "binomial",
                        control = cntrl)
@@ -105,7 +112,7 @@ summary(mod_hunt_bms1)
 
 #model with hunting season (changes study period, p value and effect direction)
 mod_hunt_hseason <- glmer(hunt_bin ~ (1|raven_id) + hunt_season + scale(dist2nentrance) + 
-                         study_period + scale(prop_group_visit_hunt),
+                         study_period + scale(prop_group_visit_hunt) + scale(temp_mean),
                        data = hunt_model_data,
                        family = "binomial",
                        control = cntrl)
@@ -114,7 +121,7 @@ summary(mod_hunt_hseason)
 
 #model with categorical high/low (changes study period, p value and effect direction)
 mod_hunt_hl <- glmer(hunt_bin ~ (1|raven_id) + take_high_low + scale(dist2nentrance) + 
-                            study_period + scale(prop_group_visit_hunt),
+                            study_period + scale(prop_group_visit_hunt) + scale(temp_mean),
                           data = hunt_model_data,
                           family = "binomial",
                           control = cntrl)
