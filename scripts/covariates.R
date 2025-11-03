@@ -542,6 +542,6 @@ commute_df <- commute_df %>%
 write.csv(commute_df %>%
             ungroup() %>% 
             #removing unnecessary columns
-            dplyr::select(-c(commute, bison_daily_take, bison_daily_bms, year, month, day, 
+            dplyr::select(-c(commute, bison_daily_take, bison_daily_bms, year,
                              days_since_last)), 
           "data/clean/commute_data.csv")
