@@ -11,9 +11,6 @@ ws_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
           (paste(month, day, sep = "-") >= "3-1" &
             paste(month, day, sep = "-") <= "3-30")) %>% 
   
-  #creating a 2 category study period column that puts nov-feb together and march separate
-  mutate(simplified_period = if_else(study_period %in% c("early", "mid"), "early", "late")) %>% 
-  
   #making sure rows are complete
   filter(
     #previous_day history
@@ -30,9 +27,6 @@ hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
     !is.na(previous_decision_terr),
     #temperature
     !is.na(temp_max)) %>%
-  
-  #creating a 2 category study period column that puts nov-feb together and march separate
-  mutate(simplified_period = if_else(study_period %in% c("early", "mid"), "early", "late")) %>% 
   
   #only have days ravens decided to leave territory
   filter(terr_bin == 1)
@@ -112,7 +106,7 @@ AIC(mod_terr_hl)
 
 #model with biomass number
 mod_hunt_bms1 <- glmer(hunt_bin ~ (1|raven_id) + scale(bms_window_1) + scale(dist2nentrance) + 
-                         study_period + scale(prop_group_visit_hunt) + scale(temp_mean),
+                         scale(prop_group_visit_hunt) + scale(temp_mean),
                        data = hunt_model_data,
                        family = "binomial",
                        nAGQ = 100,
@@ -122,7 +116,7 @@ summary(mod_hunt_bms1)
 
 #model with hunting season (changes study period, p value and effect direction)
 mod_hunt_hseason <- glmer(hunt_bin ~ (1|raven_id) + hunt_season + scale(dist2nentrance) + 
-                            study_period + scale(prop_group_visit_hunt) + scale(temp_mean),
+                            scale(prop_group_visit_hunt) + scale(temp_mean),
                           data = hunt_model_data,
                           family = "binomial",
                           nAGQ = 100,
@@ -132,7 +126,7 @@ summary(mod_hunt_hseason)
 
 #model with categorical high/low (changes study period, p value and effect direction)
 mod_hunt_hl <- glmer(hunt_bin ~ (1|raven_id) + take_high_low + scale(dist2nentrance) + 
-                            study_period + scale(prop_group_visit_hunt) + scale(temp_mean),
+                            scale(prop_group_visit_hunt) + scale(temp_mean),
                      data = hunt_model_data,
                      family = "binomial",                       
                      nAGQ = 100,
