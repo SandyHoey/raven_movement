@@ -11,10 +11,14 @@ ws_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
           (paste(month, day, sep = "-") >= "3-1" &
             paste(month, day, sep = "-") <= "3-30")) %>% 
   
+  #creating a 2 category study period column that puts nov-feb together and march separate
+  mutate(simplified_period = if_else(study_period %in% c("early", "mid"), "early", "late")) %>% 
+  
   #making sure rows are complete
   filter(
     #previous_day history
     !is.na(previous_decision_terr))
+  
 
 
 ## dataset for part 2 of conditional model
@@ -27,9 +31,11 @@ hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
     #temperature
     !is.na(temp_max)) %>%
   
+  #creating a 2 category study period column that puts nov-feb together and march separate
+  mutate(simplified_period = if_else(study_period %in% c("early", "mid"), "early", "late")) %>% 
+  
   #only have days ravens decided to leave territory
   filter(terr_bin == 1)
-
 
 # checking correlation between biomass covariates --------------------
 # cor.test(hunt_model_data$bms_window_1, hunt_model_data$bms_window_3)
@@ -63,6 +69,7 @@ mod_terr_bms1 <- glmer(terr_bin ~ (1|raven_id) + active_kill * scale(bms_window_
                          scale(dist2nentrance) + study_period + scale(prop_group_left_terr) + scale(temp_mean),
                        data = ws_model_data,
                        family = "binomial",
+                       nAGQ = 100,
                        control = cntrl)
 summary(mod_terr_bms1)
 
@@ -70,19 +77,21 @@ summary(mod_terr_bms1)
 #model with hunting season (changes result for active_kill)
 #including the interaction effect messes with active_kill because of high error with interaction term
 mod_terr_hseason <- glmer(terr_bin ~ (1|raven_id) + active_kill * hunt_season + scale(yearly_terr_kill_density) + 
-                         scale(dist2nentrance) + study_period + scale(prop_group_left_terr) + scale(temp_mean),
-                       data = ws_model_data,
-                       family = "binomial",
-                       control = cntrl)
+                            scale(dist2nentrance) + study_period + scale(prop_group_left_terr) + scale(temp_mean),
+                         data = ws_model_data,
+                         family = "binomial",
+                         nAGQ = 100,
+                         control = cntrl)
 summary(mod_terr_hseason)
 
 
 #model with categorical high/low hunt (no changes)
 mod_terr_hl <- glmer(terr_bin ~ (1|raven_id) + active_kill * take_high_low + scale(yearly_terr_kill_density) + 
                             scale(dist2nentrance) + study_period + scale(prop_group_left_terr) + scale(temp_mean),
-                          data = ws_model_data,
-                          family = "binomial",
-                          control = cntrl)
+                     data = ws_model_data,
+                     family = "binomial",
+                     nagq = 100,
+                     control = cntrl)
 summary(mod_terr_hl)
 
 AIC(mod_terr_bms1) #equally good
@@ -106,25 +115,28 @@ mod_hunt_bms1 <- glmer(hunt_bin ~ (1|raven_id) + scale(bms_window_1) + scale(dis
                          study_period + scale(prop_group_visit_hunt) + scale(temp_mean),
                        data = hunt_model_data,
                        family = "binomial",
+                       nAGQ = 100,
                        control = cntrl)
 summary(mod_hunt_bms1)
 
 
 #model with hunting season (changes study period, p value and effect direction)
 mod_hunt_hseason <- glmer(hunt_bin ~ (1|raven_id) + hunt_season + scale(dist2nentrance) + 
-                         study_period + scale(prop_group_visit_hunt) + scale(temp_mean),
-                       data = hunt_model_data,
-                       family = "binomial",
-                       control = cntrl)
+                            study_period + scale(prop_group_visit_hunt) + scale(temp_mean),
+                          data = hunt_model_data,
+                          family = "binomial",
+                          nAGQ = 100,
+                          control = cntrl)
 summary(mod_hunt_hseason)
 
 
 #model with categorical high/low (changes study period, p value and effect direction)
 mod_hunt_hl <- glmer(hunt_bin ~ (1|raven_id) + take_high_low + scale(dist2nentrance) + 
                             study_period + scale(prop_group_visit_hunt) + scale(temp_mean),
-                          data = hunt_model_data,
-                          family = "binomial",
-                          control = cntrl)
+                     data = hunt_model_data,
+                     family = "binomial",                       
+                     nAGQ = 100,
+                     control = cntrl)
 summary(mod_hunt_hl)
 
 AIC(mod_hunt_bms1)
