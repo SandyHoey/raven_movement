@@ -90,7 +90,7 @@ mod_terr_hl <- glmer(terr_bin ~ (1|raven_id) + active_kill * take_high_low + sca
                             scale(dist2nentrance) + study_period + scale(prop_group_left_terr) + scale(temp_mean),
                      data = ws_model_data,
                      family = "binomial",
-                     nagq = 100,
+                     nAGQ = 100,
                      control = cntrl)
 summary(mod_terr_hl)
 
