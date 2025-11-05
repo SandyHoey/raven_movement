@@ -8,12 +8,6 @@ bison_hunt (csv): take values and hunitng start dates from the tribal take of bi
 
 breeding_raven_gps (points): Google Earth file that has all of the territorial raven GPS points
 
-cooke_city_weather (csv): history of temperature from Red Lodge (https://www.wunderground.com/history/monthly/us/mt/red-lodge/KRED/date/2025-11)
-	date (date): date of weather
-	temp_max (num): maximum daily temperature
-	temp_mean (num): average daily temperature (not sure how this is calculated)
-	temp_min (num): minimum daily temperature
-
 CUT_hunt (polygon): Google Earth polygon that represents that tribal bison huting area in the Gardiner hunting district
 
 elk_GPS_2025-09-03 (csv): GPS data from the collared elk in the Northern Herd of Yellowstone
@@ -94,6 +88,12 @@ raven_banding_tagging (csv): metadata about each captured and process common rav
 	Fate (as of 8/1/24): category that says if the mortality status of the raven and working status of GPS tag
 	Fate Date (date): date of death or tag failure
 	cause of death (chr): the cause of death of the raven
+
+cooke_city_weather (csv): history of temperature from Red Lodge (https://www.wunderground.com/history/monthly/us/mt/red-lodge/KRED/date/2025-11)
+	date (date): date of weather
+	temp_max (num): maximum daily temperature
+	temp_mean (num): average daily temperature (not sure how this is calculated)
+	temp_min (num): minimum daily temperature
 
 wolf_project_carcass_data: information about all carcasses detected by the Yellowstone Wolf Project
 	Kill number (chr): unique number that matches that provides the link to other data files for metadata about carcasses located
