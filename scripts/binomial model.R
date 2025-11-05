@@ -1,10 +1,12 @@
 #modeling the impacts of food availability on raven winter movements decisions
 
 library(dplyr)
-test <- readr::read_csv("data/clean/commute_data.csv")
 
-hist(test$n_point, 
-     breaks = 1:max(test$n_point))
+#looking at distribution of points per day
+all <- readr::read_csv("data/clean/commute_data.csv")
+hist(all$n_point, 
+     breaks = 1:max(all$n_point))
+
 ## dataset for part 1 of conditional model
 ws_model_data <- readr::read_csv("data/clean/commute_data.csv") %>% 
   
@@ -21,8 +23,7 @@ ws_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
   
   #removing days when there is less than 5 GPS point
   #unless the result is Jardine
-  filter(!(n_point < 5 & commute != 3)) %>% 
-  dplyr::select(-commute)
+  filter(!(n_point < 5 & terr_bin == F))
   
 
 ## dataset for part 2 of conditional model
@@ -40,8 +41,7 @@ hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
   
   #removing days when there is less than 5 GPS point
   #unless the result is Jardine
-  filter(!(n_point < 5 & commute != 3)) %>% 
-  dplyr::select(-commute)
+  filter(!(n_point < 5 & hunt_bin == F))
 
 # checking correlation between biomass covariates --------------------
 # cor.test(hunt_model_data$bms_window_1, hunt_model_data$bms_window_3)

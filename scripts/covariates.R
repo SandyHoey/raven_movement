@@ -28,16 +28,16 @@ commute_df <- commute_df %>%
          raven_id != "7653",
          raven_id != "7596") %>% 
   
-  #creating new binary columns for traveling to gardiner or staying in territory
+  #creating new binary columns for traveling to Gardiner or staying in territory
   mutate(
     # terr_bin
     # 1 = left territory
     # 0 = stayed on territory
-    terr_bin = if_else(commute == 1, FALSE, TRUE),
+    terr_bin = if_else(commute != 1, TRUE, FALSE),
     # hunt_bin
     # 1 = visited hunting
     # 0 = visited other place
-    hunt_bin = if_else((terr_bin = 1 & commute == 3), TRUE, FALSE))
+    hunt_bin = if_else(commute == 3, TRUE, FALSE))
 
 
 # Distance to north entrance ---------------------------
@@ -497,7 +497,7 @@ commute_df <- commute_df %>%
   mutate(group_left_terr = if_else(terr_bin == TRUE, #if that raven left its territory
                                    group_left_terr - 1, #remove 1 raven from the group that chose to leave
                                    group_left_terr), #else leave the number alone
-         group_visit_hunt = if_else(hunt_bin == TRUE, #if that raven visited gardiner
+         group_visit_hunt = if_else(hunt_bin == TRUE, #if that raven visited Gardiner
                                     group_visit_hunt - 1, #remove 1 raven from the group that visited Gardiner
                                     group_visit_hunt),
          n_raven_daily = if_else(n_raven_daily == 1, NA, n_raven_daily - 1)) %>% 
@@ -550,6 +550,6 @@ commute_df <- commute_df %>%
 write.csv(commute_df %>%
             ungroup() %>% 
             #removing unnecessary columns
-            dplyr::select(-c(bison_daily_take, bison_daily_bms, year,
+            dplyr::select(-c(commute, bison_daily_take, bison_daily_bms, year,
                              days_since_last)), 
           "data/clean/commute_data.csv")
