@@ -113,11 +113,7 @@ commute_list <- tapply(dist2poly, INDEX = dist2poly$individual_local_identifier,
          return(tmp_date_df)
        })
 
-commute_df <- do.call("rbind", commute_list) %>% 
-  
-  #removing days when there is only 1 data point
-  #unless the result is Jardine
-  filter(!(n_point == 1 & commute != 3))
+commute_df <- do.call("rbind", commute_list)
 
 
 #plotting raven commute decision per day

@@ -539,7 +539,7 @@ commute_df <- commute_df %>%
 
 # Temperature -------------------------------------------------------------
 # temperature history from Red Lodge
-temp_history <- readr::read_csv("data/raw/cooke_city_weather.csv")
+temp_history <- readr::read_csv("data/raw/red_lodge_weather.csv")
 
 commute_df <- commute_df %>% 
   left_join(temp_history)
@@ -550,6 +550,6 @@ commute_df <- commute_df %>%
 write.csv(commute_df %>%
             ungroup() %>% 
             #removing unnecessary columns
-            dplyr::select(-c(commute, bison_daily_take, bison_daily_bms, year,
+            dplyr::select(-c(bison_daily_take, bison_daily_bms, year,
                              days_since_last)), 
           "data/clean/commute_data.csv")

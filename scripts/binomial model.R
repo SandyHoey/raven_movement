@@ -1,7 +1,10 @@
 #modeling the impacts of food availability on raven winter movements decisions
 
 library(dplyr)
+test <- readr::read_csv("data/clean/commute_data.csv")
 
+hist(test$n_point, 
+     breaks = 1:max(test$n_point))
 ## dataset for part 1 of conditional model
 ws_model_data <- readr::read_csv("data/clean/commute_data.csv") %>% 
   
@@ -14,9 +17,13 @@ ws_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
   #making sure rows are complete
   filter(
     #previous_day history
-    !is.na(previous_decision_terr))
+    !is.na(previous_decision_terr)) %>% 
   
-
+  #removing days when there is less than 5 GPS point
+  #unless the result is Jardine
+  filter(!(n_point < 5 & commute != 3)) %>% 
+  dplyr::select(-commute)
+  
 
 ## dataset for part 2 of conditional model
 hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>% 
@@ -29,7 +36,12 @@ hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
     !is.na(temp_max)) %>%
   
   #only have days ravens decided to leave territory
-  filter(terr_bin == 1)
+  filter(terr_bin == 1) %>% 
+  
+  #removing days when there is less than 5 GPS point
+  #unless the result is Jardine
+  filter(!(n_point < 5 & commute != 3)) %>% 
+  dplyr::select(-commute)
 
 # checking correlation between biomass covariates --------------------
 # cor.test(hunt_model_data$bms_window_1, hunt_model_data$bms_window_3)
@@ -59,7 +71,7 @@ cntrl <- glmerControl(optimizer = "bobyqa", tol = 1e-4, optCtrl=list(maxfun=1000
 
 #model with biomass number
 #I changed active_kill to only within 1 day of wolves leaving and that made a big difference
-mod_terr_bms1 <- glmer(terr_bin ~ (1|raven_id) + active_kill * scale(bms_window_1) + scale(yearly_terr_kill_density) + 
+mod_terr_bms1 <- glmer(terr_bin ~ (1|raven_id) + active_kill * scale(bms_window_1) + scale(avg_terr_kill_density) + 
                          scale(dist2nentrance) + study_period + scale(prop_group_left_terr) + scale(temp_mean),
                        data = ws_model_data,
                        family = "binomial",
@@ -70,7 +82,7 @@ summary(mod_terr_bms1)
 
 #model with hunting season (changes result for active_kill)
 #including the interaction effect messes with active_kill because of high error with interaction term
-mod_terr_hseason <- glmer(terr_bin ~ (1|raven_id) + active_kill * hunt_season + scale(yearly_terr_kill_density) + 
+mod_terr_hseason <- glmer(terr_bin ~ (1|raven_id) + active_kill * hunt_season + scale(avg_terr_kill_density) + 
                             scale(dist2nentrance) + study_period + scale(prop_group_left_terr) + scale(temp_mean),
                          data = ws_model_data,
                          family = "binomial",
@@ -80,7 +92,7 @@ summary(mod_terr_hseason)
 
 
 #model with categorical high/low hunt (no changes)
-mod_terr_hl <- glmer(terr_bin ~ (1|raven_id) + active_kill * take_high_low + scale(yearly_terr_kill_density) + 
+mod_terr_hl <- glmer(terr_bin ~ (1|raven_id) + active_kill * take_high_low + scale(avg_terr_kill_density) + 
                             scale(dist2nentrance) + study_period + scale(prop_group_left_terr) + scale(temp_mean),
                      data = ws_model_data,
                      family = "binomial",
@@ -135,4 +147,4 @@ summary(mod_hunt_hl)
 
 AIC(mod_hunt_bms1)
 AIC(mod_hunt_hseason)
-AIC(mod_hunt_hl) #best by far
+AIC(mod_hunt_hl) #best
