@@ -2,11 +2,6 @@
 
 library(dplyr)
 
-#looking at distribution of points per day
-all <- readr::read_csv("data/clean/commute_data.csv")
-hist(all$n_point, 
-     breaks = 1:max(all$n_point))
-
 ## dataset for part 1 of conditional model
 ws_model_data <- readr::read_csv("data/clean/commute_data.csv") %>% 
   
