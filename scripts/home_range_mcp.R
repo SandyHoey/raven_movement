@@ -12,7 +12,7 @@ library(mapview)
 #reading in all raven points
 #removing columns with NA coords
 allGPS <- read_csv("data/clean/all_raven_gps_clean29.csv")
-allGPS <- subset(allGPS, !is.na(utm.easting))
+allGPS <- subset(allGPS, !is.na(utm_easting))
 
 
 #importing demographic information
@@ -29,25 +29,25 @@ trans <- subset(ravenID, `status (reviewed 8/1/24)` %like% "Trans")
 
 
 #subsetting territorials from entire GPS df
-terrGPS <- subset(allGPS, individual.local.identifier %in% terr)
+terrGPS <- subset(allGPS, individual_local_identifier %in% terr)
 
 
 #subsetting trans territorials into their active territorial periods from entire GPS df
-transGPS <- allGPS[allGPS$individual.local.identifier %in% trans$`tag-id`,]
+transGPS <- allGPS[allGPS$individual_local_identifier %in% trans$`tag-id`,]
 
-transGPS <- do.call("rbind", tapply(transGPS, INDEX=transGPS$individual.local.identifier, 
+transGPS <- do.call("rbind", tapply(transGPS, INDEX=transGPS$individual_local_identifier, 
                                     FUN=function(x){
-                                      ind <- trans[trans$`tag-id` == x[1,]$individual.local.identifier,]
+                                      ind <- trans[trans$`tag-id` == x[1,]$individual_local_identifier,]
                                       
                                       #has only an end date
                                       if(is.na(ind$`start date`) & !is.na(ind$`leave date`)){
-                                        tmp <- x[as.Date(x$study.local.timestamp) < ym(ind$`leave date`),]
+                                        tmp <- x[as.Date(x$study_local_timestamp) < ym(ind$`leave date`),]
                                         return(tmp)
                                       }
                                       
                                       #has only a start date
                                       if(!is.na(ind$`start date`) & is.na(ind$`leave date`)){
-                                        tmp <- x[as.Date(x$study.local.timestamp) > ym(ind$`start date`),]
+                                        tmp <- x[as.Date(x$study_local_timestamp) > ym(ind$`start date`),]
                                         return(tmp)
                                       }
                                       
@@ -66,17 +66,17 @@ terrGPS <- rbind(terrGPS, transGPS)
 
 
 #subsetting the GPS points to only breeding season (subject to change the month)
-terrGPS <- terrGPS[month(terrGPS$study.local.timestamp) %in% c(5,6,7),]
+terrGPS <- terrGPS[month(terrGPS$study_local_timestamp) %in% c(5,6,7),]
 
 
 #plotting gps points per bird to make sure they are on territory 
-mysf <- st_as_sf(terrGPS, coords = c("utm.easting", "utm.northing"), crs = 32612)
-#tapply(mysf, INDEX = mysf$individual.local.identifier, FUN = mapview)
+mysf <- st_as_sf(terrGPS, coords = c("utm_easting", "utm_northing"), crs = 32612)
+#tapply(mysf, INDEX = mysf$individual_local_identifier, FUN = mapview)
 
 
 #creating mcp for each individual
 # mcp95 <- mysf %>% 
-#   dplyr::select(c("individual.local.identifier", "geometry")) %>% 
+#   dplyr::select(c("individual_local_identifier", "geometry")) %>% 
 #   as_Spatial() %>%
 #   mcp(percent = 95, unout = "km2")
 # 
@@ -89,7 +89,7 @@ mysf <- st_as_sf(terrGPS, coords = c("utm.easting", "utm.northing"), crs = 32612
 #most of the points far form the territory were in may and july
 #june is pretty centered
 mcp90 <- mysf %>% 
-  dplyr::select(c("individual.local.identifier", "geometry")) %>% 
+  dplyr::select(c("individual_local_identifier", "geometry")) %>% 
   as_Spatial() %>%
   mcp(percent = 90, unout = "km2")
 
