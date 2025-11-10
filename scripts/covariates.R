@@ -545,7 +545,10 @@ commute_df <- commute_df %>%
 weather_history <- readr::read_csv("data/raw/noaa_weather_ncei.csv", skip = 1) %>% 
   janitor::clean_names() %>% 
   #removing average temperature column because its empty 
-  dplyr::select(-tavg_degrees_fahrenheit)
+  dplyr::select(-tavg_degrees_fahrenheit) %>% 
+  #renaming for simplicity
+  rename(temp_max = tmax_degrees_fahrenheit,
+         temp_min = tmin_degrees_fahrenheit)
 
 commute_df <- commute_df %>% 
   left_join(weather_history)
