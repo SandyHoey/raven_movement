@@ -5,11 +5,11 @@ source("scripts/dist_to_gardiner.R")
 #calculating distance to territory
 #using 90% mcp
 #distance calculated in meters
-gps_in_mcp <- function(){
+gps_in_mcp <- function(data){
   ID <- mcp90$id
   
   for(i in 1:length(ID)){
-    tmp_data <- subset(terr_fw_gps, individual_local_identifier == ID[i])
+    tmp_data <- subset(data, individual_local_identifier == ID[i])
     tmp_sf <- st_as_sf(tmp_data, coords=c("utm_easting", "utm_northing"), 
                        crs="+proj=utm +zone=12")
     
@@ -25,7 +25,7 @@ gps_in_mcp <- function(){
   return(output_df)
 }
 
-dist2poly <- gps_in_mcp()
+dist2poly <- gps_in_mcp(terr_fw_gps)
 
 #adding the wolf/hunting periods
   # Oct 25-Nov 14 rifle hunting only
