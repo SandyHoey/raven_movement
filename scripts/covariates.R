@@ -548,7 +548,10 @@ weather_history <- readr::read_csv("data/raw/noaa_weather_ncei.csv", skip = 1) %
   dplyr::select(-tavg_degrees_fahrenheit) %>% 
   #renaming for simplicity
   rename(temp_max = tmax_degrees_fahrenheit,
-         temp_min = tmin_degrees_fahrenheit)
+         temp_min = tmin_degrees_fahrenheit,
+         precip = prcp_inches,
+         snow_fall = snow_inches,
+         snow_depth = snwd_inches)
 
 commute_df <- commute_df %>% 
   left_join(weather_history)
