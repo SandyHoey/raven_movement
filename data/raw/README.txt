@@ -95,7 +95,7 @@ cooke_city_weather (csv): history of temperature from Red Lodge (https://www.wun
 	temp_mean (num): average daily temperature (not sure how this is calculated)
 	temp_min (num): minimum daily temperature
 
-wolf_project_carcass_data: information about all carcasses detected by the Yellowstone Wolf Project
+wolf_project_carcass_data (csv): information about all carcasses detected by the Yellowstone Wolf Project
 	Kill number (chr): unique number that matches that provides the link to other data files for metadata about carcasses located
 	Cougar Kill . (fac): unique ID for detected cougar kills (probably incomplete)
 	STUDY PERIOD (chr): if the carcass was made during one of the Yellowstone Wolf Project winter study periods
@@ -146,3 +146,21 @@ wolf_project_carcass_data: information about all carcasses detected by the Yello
 	GPS CLUSTER . (chr): unique identifier for the wolf or cougar GPS cluster that is associated with the carcass
 	RANDOM POINT . (chr): UNKNOWN (blank column)
 	OBS (chr): names of the observers that detected the carcass
+
+noaa_weather_ncei (csv): weather history data from Mammoth WY from NOAA (https://www.ncei.noaa.gov/access/past-weather/45.327806104986735,-111.14199917816683,44.91210115485519,-110.06191988168018)
+	Date (date): date of weather history
+	'TAVG (Degrees Fahrenheit)' (num, F): average daily temperature, not sure how average is calculated
+	'TMAX (Degres Fahrenheit)' (num, F): maximum daily temperature
+	'TMIN (Degress Fahrenheit)': minimum daily temperature
+	'PRCP (Inches)' (num, inches): precipitation
+	'SNOW (Inches)' (num, inches): snow fall
+	'SNWD (Inches)' (num, inches): snow depth
+THERE IS ALSO RASTER DATA FROM SNODAS (https://nsidc.org/data/g02158/versions/1) if I need a more precise measure
+
+
+
+
+
+
+
+
