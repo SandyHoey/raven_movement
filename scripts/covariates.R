@@ -537,13 +537,23 @@ commute_df <- commute_df %>%
 
 
 
-# Temperature -------------------------------------------------------------
-# temperature history from Red Lodge
-temp_history <- readr::read_csv("data/raw/red_lodge_weather.csv")
+# Weather -------------------------------------------------------------
+# # temperature history from Red Lodge
+# temp_history <- readr::read_csv("data/raw/red_lodge_weather.csv")
+
+#weather history from NOAA for Mammoth (temperature and snow depth)
+weather_history <- readr::read_csv("data/raw/noaa_weather_ncei.csv", skip = 1) %>% 
+  janitor::clean_names() %>% 
+  #removing average temperature column because its empty 
+  dplyr::select(-tavg_degrees_fahrenheit)
 
 commute_df <- commute_df %>% 
-  left_join(temp_history)
+  left_join(weather_history)
 
+# commute_df <- commute_df %>% 
+#   left_join(temp_history)
+# 
+# plot(tmax_degrees_fahrenheit ~ temp_max, data = commute_df)
 # Writing out csv to cleaned data folder ----------------------------------
 #so this doesn't have to be run every time to work with model script
 
