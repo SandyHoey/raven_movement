@@ -67,7 +67,7 @@ cntrl <- glmerControl(optimizer = "bobyqa", tol = 1e-4, optCtrl=list(maxfun=1000
 #model with biomass number
 #I changed active_kill to only within 1 day of wolves leaving and that made a big difference
 mod_terr_bms1 <- glmer(terr_bin ~ (1|raven_id) + active_kill * scale(bms_window_1) + scale(avg_terr_kill_density) + 
-                         scale(dist2nentrance) + study_period + scale(prop_group_left_terr) + scale(temp_mean),
+                         scale(dist2nentrance) + study_period * scale(temp_max) + scale(snow_depth) + scale(prop_group_left_terr),
                        data = ws_model_data,
                        family = "binomial",
                        nAGQ = 100,
@@ -78,7 +78,7 @@ summary(mod_terr_bms1)
 #model with hunting season (changes result for active_kill)
 #including the interaction effect messes with active_kill because of high error with interaction term
 mod_terr_hseason <- glmer(terr_bin ~ (1|raven_id) + active_kill * hunt_season + scale(avg_terr_kill_density) + 
-                            scale(dist2nentrance) + study_period + scale(prop_group_left_terr) + scale(temp_mean),
+                            scale(dist2nentrance) + study_period * scale(temp_max) + scale(snow_depth) + scale(prop_group_left_terr)
                          data = ws_model_data,
                          family = "binomial",
                          nAGQ = 100,
@@ -88,7 +88,7 @@ summary(mod_terr_hseason)
 
 #model with categorical high/low hunt (no changes)
 mod_terr_hl <- glmer(terr_bin ~ (1|raven_id) + active_kill * take_high_low + scale(avg_terr_kill_density) + 
-                            scale(dist2nentrance) + study_period + scale(prop_group_left_terr) + scale(temp_mean),
+                            scale(dist2nentrance) + study_period * scale(temp_max) + scale(snow_depth) + scale(prop_group_left_terr),
                      data = ws_model_data,
                      family = "binomial",
                      nAGQ = 100,
@@ -113,7 +113,7 @@ AIC(mod_terr_hl)
 
 #model with biomass number
 mod_hunt_bms1 <- glmer(hunt_bin ~ (1|raven_id) + scale(bms_window_1) + scale(dist2nentrance) + 
-                         scale(prop_group_visit_hunt) + scale(temp_mean),
+                         scale(prop_group_visit_hunt) + scale(temp_max) + scale(snow_depth),
                        data = hunt_model_data,
                        family = "binomial",
                        nAGQ = 100,
@@ -123,7 +123,7 @@ summary(mod_hunt_bms1)
 
 #model with hunting season (changes study period, p value and effect direction)
 mod_hunt_hseason <- glmer(hunt_bin ~ (1|raven_id) + hunt_season + scale(dist2nentrance) + 
-                            scale(prop_group_visit_hunt) + scale(temp_mean),
+                            scale(prop_group_visit_hunt) + scale(temp_max) + scale(snow_depth),
                           data = hunt_model_data,
                           family = "binomial",
                           nAGQ = 100,
@@ -133,7 +133,7 @@ summary(mod_hunt_hseason)
 
 #model with categorical high/low (changes study period, p value and effect direction)
 mod_hunt_hl <- glmer(hunt_bin ~ (1|raven_id) + take_high_low + scale(dist2nentrance) + 
-                            scale(prop_group_visit_hunt) + scale(temp_mean),
+                            scale(prop_group_visit_hunt) + scale(temp_max) + scale(snow_depth),
                      data = hunt_model_data,
                      family = "binomial",                       
                      nAGQ = 100,
