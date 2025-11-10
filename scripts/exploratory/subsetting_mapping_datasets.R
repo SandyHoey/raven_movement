@@ -50,9 +50,9 @@ raven_gps_outside_ynp %>%
 # data sets to map based on model covariates -----------------
 
 #reading in commute data
-commute_df <- read_csv("data/clean/commute_data.csv") %>% 
+commute_df_covariates <- read_csv("data/clean/commute_data.csv") %>% 
   #selecting useful columns
-  dplyr::select(raven_id, date, terr_bin, hunt_bin, dist2nentrance, temp_max)
+  dplyr::select(raven_id, date, dist2nentrance, temp_max)
 
 
 #raven GPS data with covariates to map by
@@ -64,11 +64,44 @@ read_csv("data/clean/all_raven_gps_clean29.csv") %>%
   mutate(date = as.Date(study_local_timestamp)) %>% 
   dplyr::select(-study_local_timestamp) %>% 
   #adding commute data to GPS points
-  left_join(commute_df, by = join_by(individual_local_identifier == raven_id, date)) %>% 
+  left_join(commute_df_covariates, by = join_by(individual_local_identifier == raven_id, date)) %>% 
   #only complete rows
   na.omit %>%
   #only winter points
   filter(month(date) %in% c(10:12, 1:3)) %>% 
+  #write out dataset
   write.csv("data/clean/raven_gps_covariates.csv")
+
+
+
+# data set to map GPS days ravens left territory, but didn't visit hunting --------
+
+#reading function that calculates distance of GPS points to territory
+source("scripts/commute_decision.R")
+rm(list = setdiff(ls(), "mcp90", "gps_in_mcp"))
+
+#reading in commute data
+commute_df_intermediate <- read_csv("data/clean/commute_data.csv") %>% 
+  #selecting useful columns
+  dplyr::select(raven_id, date, terr_bin, hunt_bin) %>% 
+  #filter movement decision for left territory, but didn't visit hunting
+  filter(terr_bin == TRUE & hunt_bin == FALSE)
+
+#raven movement data
+raven_gps_outside_terr <- read_csv("data/clean/all_raven_gps_clean29.csv") %>% 
+  clean_names() %>% 
+  #selecting useful columns
+  dplyr::select(individual_local_identifier, utm_easting, utm_northing, study_local_timestamp) %>%
+  #only complete rows
+  na.omit %>% 
+  #calculating distance to territory
+  gps_in_mcp() %>% 
+  #only GPS outside of territory (> 1000 meters)
+  filter(dist2terr > 1000) %>% 
+  dplyr::select(-dist2terr) %>% 
+  #write out datatset
+  write.csv("data/clean/raven_gps_outside_terr.csv")
+  
+
 
   
