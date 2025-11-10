@@ -89,7 +89,8 @@ all %>%
                dplyr::select(raven_id, dist2nentrance)) %>% 
   #plotting
   ggplot(aes(y = visit_hunt_prop, x = dist2nentrance)) +
-  geom_point()
+  geom_point() + 
+  geom_smooth(method = "lm")
 
 
 #movement decisions based on distance to hunting 
@@ -104,4 +105,5 @@ hunt_model_data %>%
                dplyr::select(raven_id, dist2nentrance)) %>% 
   #plotting
   ggplot(aes(y = visit_hunt_prop, x = dist2nentrance)) +
-  geom_point()
+  geom_point() + 
+  geom_smooth(method = "lm")
