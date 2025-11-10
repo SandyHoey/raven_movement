@@ -5,8 +5,25 @@ library(readr)
 library(janitor)
 library(sf)
 library(lubridate)
+library(suncalc)
 
-# raven movement in November ----------------------------------------------
+#calculating sunlight times for all GPS points because I'm to lazy to do it for ecah data set seperately
+#especially because it reuqires lat/long instead of utm
+sunlight <- read_csv("data/clean/all_raven_gps_clean29.csv") %>%
+  clean_names() %>% 
+  mutate(date = as.Date(study_local_timestamp)) %>% 
+  rename(lat = location_lat,
+         lon = location_long) %>% 
+  getSunlightTimes(data = .,
+                 keep = c("sunrise", "sunset"),
+                 tz = "MST") %>% 
+  #getting rid of duplicates
+  group_by(date) %>% 
+  slice(1) %>% 
+  ungroup
+
+
+# raven GPS in March and November ----------------------------------------------
 # used to identify the hunting area used by ravens 
 
 #reading in raven GPS data
@@ -18,11 +35,20 @@ raven_gps_sf <- read_csv("data/clean/all_raven_gps_clean29.csv") %>%
   na.omit %>% 
   #transforming to sf object
   st_as_sf(coords=c("utm_easting", "utm_northing"), 
-           crs="+proj=utm +zone=12")
+           crs="+proj=utm +zone=12") %>% 
+  #extracting date 
+  mutate(date = as.Date(study_local_timestamp)) %>% 
+  #only daytime points
+  left_join(sunlight) %>% 
+  mutate(study_local_timestamp = as.POSIXct(study_local_timestamp, tz = "MST")) %>% 
+  filter(study_local_timestamp > sunrise,
+         study_local_timestamp < sunset)
+
 
 #reading in Yellowstone polygon
 park_poly <- st_read("data/raw/parkpoly.kml") %>% 
   st_transform(crs = st_crs(raven_gps_sf))
+
 
 #only GPS points outside of YNP during November
 raven_gps_outside_ynp <- raven_gps_sf %>% 
@@ -34,6 +60,7 @@ raven_gps_outside_ynp <- raven_gps_sf %>%
   rename(distance_ynp = ...1) %>% 
   #filtering to only distances > 0 (not inside the park)
   filter(distance_ynp > 0)
+
 
 #only November
 raven_gps_outside_ynp %>% 
@@ -47,7 +74,7 @@ raven_gps_outside_ynp %>%
   write.csv("data/clean/mar_gps_outside_ynp.csv")
 
 
-# data sets to map based on model covariates -----------------
+# raven GPS to map based on model covariates -----------------
 
 #reading in commute data
 commute_df_covariates <- read_csv("data/clean/commute_data.csv") %>% 
@@ -62,10 +89,14 @@ read_csv("data/clean/all_raven_gps_clean29.csv") %>%
   dplyr::select(individual_local_identifier, utm_easting, utm_northing, study_local_timestamp) %>%
   #extracting date
   mutate(date = as.Date(study_local_timestamp)) %>% 
-  dplyr::select(-study_local_timestamp) %>% 
   #adding commute data to GPS points
   left_join(commute_df_covariates, by = join_by(individual_local_identifier == raven_id, 
-                                                date)) %>% 
+                                                date)) %>%
+  #only daytime points
+  left_join(sunlight) %>% 
+  mutate(study_local_timestamp = as.POSIXct(study_local_timestamp, tz = "MST")) %>% 
+  filter(study_local_timestamp > sunrise,
+         study_local_timestamp < sunset) %>% 
   #only complete rows
   na.omit %>%
   #only winter points
@@ -75,11 +106,11 @@ read_csv("data/clean/all_raven_gps_clean29.csv") %>%
 
 
 
-# data set to map GPS days ravens left territory, but didn't visit hunting --------
+# raven GPS to map days ravens left territory, but didn't visit hunting --------
 
 #reading function that calculates distance of GPS points to territory
 source("scripts/commute_decision.R")
-rm(list = setdiff(ls(), c("mcp90", "gps_in_mcp")))
+rm(list = setdiff(ls(), c("mcp90", "gps_in_mcp", "sunlight")))
 
 
 #reading in commute data
@@ -104,12 +135,16 @@ read_csv("data/clean/all_raven_gps_clean29.csv") %>%
   dplyr::select(-dist2terr) %>% 
   #extracting date
   mutate(date = as.Date(study_local_timestamp)) %>% 
-  dplyr::select(-study_local_timestamp) %>% 
   #adding commute decisions to each GPS point
   left_join(commute_df_intermediate %>% 
               dplyr::select(raven_id, date, terr_bin, hunt_bin), 
             by = join_by(individual_local_identifier == raven_id, 
                          date)) %>% 
+  #only daytime points
+  left_join(sunlight) %>%
+  mutate(study_local_timestamp = as.POSIXct(study_local_timestamp, tz = "MST")) %>% 
+  filter(study_local_timestamp > sunrise,
+           study_local_timestamp < sunset) %>% 
   #only complete rows
   na.omit %>% 
   #write out datatset
