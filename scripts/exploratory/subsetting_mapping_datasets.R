@@ -64,7 +64,8 @@ read_csv("data/clean/all_raven_gps_clean29.csv") %>%
   mutate(date = as.Date(study_local_timestamp)) %>% 
   dplyr::select(-study_local_timestamp) %>% 
   #adding commute data to GPS points
-  left_join(commute_df_covariates, by = join_by(individual_local_identifier == raven_id, date)) %>% 
+  left_join(commute_df_covariates, by = join_by(individual_local_identifier == raven_id, 
+                                                date)) %>% 
   #only complete rows
   na.omit %>%
   #only winter points
@@ -78,17 +79,19 @@ read_csv("data/clean/all_raven_gps_clean29.csv") %>%
 
 #reading function that calculates distance of GPS points to territory
 source("scripts/commute_decision.R")
-rm(list = setdiff(ls(), "mcp90", "gps_in_mcp"))
+rm(list = setdiff(ls(), c("mcp90", "gps_in_mcp")))
+
 
 #reading in commute data
 commute_df_intermediate <- read_csv("data/clean/commute_data.csv") %>% 
   #selecting useful columns
   dplyr::select(raven_id, date, terr_bin, hunt_bin) %>% 
   #filter movement decision for left territory, but didn't visit hunting
-  filter(terr_bin == TRUE & hunt_bin == FALSE)
+  filter(terr_bin == TRUE, hunt_bin == FALSE)
 
-#raven movement data
-raven_gps_outside_terr <- read_csv("data/clean/all_raven_gps_clean29.csv") %>% 
+
+#raven movement data outside of territory
+read_csv("data/clean/all_raven_gps_clean29.csv") %>% 
   clean_names() %>% 
   #selecting useful columns
   dplyr::select(individual_local_identifier, utm_easting, utm_northing, study_local_timestamp) %>%
@@ -99,8 +102,18 @@ raven_gps_outside_terr <- read_csv("data/clean/all_raven_gps_clean29.csv") %>%
   #only GPS outside of territory (> 1000 meters)
   filter(dist2terr > 1000) %>% 
   dplyr::select(-dist2terr) %>% 
+  #extracting date
+  mutate(date = as.Date(study_local_timestamp)) %>% 
+  dplyr::select(-study_local_timestamp) %>% 
+  #adding commute decisions to each GPS point
+  left_join(commute_df_intermediate %>% 
+              dplyr::select(raven_id, date, terr_bin, hunt_bin), 
+            by = join_by(individual_local_identifier == raven_id, 
+                         date)) %>% 
+  #only complete rows
+  na.omit %>% 
   #write out datatset
-  write.csv("data/clean/raven_gps_outside_terr.csv")
+  write.csv("data/clean/raven_gps_outside_terr_no_hunt.csv")
   
 
 
