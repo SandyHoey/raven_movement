@@ -11,32 +11,38 @@ ws_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
           (paste(month, day, sep = "-") >= "3-1" &
             paste(month, day, sep = "-") <= "3-30")) %>% 
   
-  #making sure rows are complete
-  filter(
-    #previous_day history
-    !is.na(previous_decision_terr)) %>% 
-  
   #removing days when there is less than 5 GPS point
   #unless the result is Jardine
-  filter(!(n_point < 5 & terr_bin == F))
+  filter(!(n_point < 5 & terr_bin == F)) %>% 
+  
+  #only columns used in model
+  dplyr::select(terr_bin, raven_id, active_kill, bms_window_1, avg_terr_kill_density, dist2nentrance,
+                study_period, temp_max, snow_depth, prop_group_left_terr) %>% 
+  
+  #making sure rows are complete
+  filter(complete.cases(.)) 
   
 
 ## dataset for part 2 of conditional model
-hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>% 
-  
-  #making sure rows are complete
-  filter(
-    #previous_day history
-    !is.na(previous_decision_terr),
-    #temperature
-    !is.na(temp_max)) %>%
-  
+hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
+
   #only have days ravens decided to leave territory
   filter(terr_bin == 1) %>% 
   
   #removing days when there is less than 5 GPS point
   #unless the result is Jardine
-  filter(!(n_point < 5 & hunt_bin == F))
+  filter(!(n_point < 5 & hunt_bin == F)) %>% 
+  
+  
+  #only columns used in model
+  dplyr::select(hunt_bin, raven_id, active_kill, bms_window_1, avg_terr_kill_density, 
+                dist2nentrance, study_period, temp_max, snow_depth, prop_group_visit_hunt) %>% 
+  
+  #making sure rows are complete
+  filter(complete.cases(.)) 
+
+  
+
 
 # checking correlation between biomass covariates --------------------
 # cor.test(hunt_model_data$bms_window_1, hunt_model_data$bms_window_3)
@@ -50,9 +56,13 @@ hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
 # model setup -------------------------------------------------------------
 library(lme4)
 library(DHARMa)
+library(ggplot2)
 
 #optimizer for glmer
 cntrl <- glmerControl(optimizer = "bobyqa", tol = 1e-4, optCtrl=list(maxfun=100000))
+
+#function to boostrap parameter confidence intervals
+source("scripts/model_parameter_bootstrap_function.R")
 
 
 # part 1 of conditional model (stay/leave territory) ---------------------------------------------
@@ -70,7 +80,7 @@ mod_terr_bms1 <- glmer(terr_bin ~ (1|raven_id) + active_kill * scale(bms_window_
                          scale(dist2nentrance) + study_period * scale(temp_max) + scale(snow_depth) + scale(prop_group_left_terr),
                        data = ws_model_data,
                        family = "binomial",
-                       nAGQ = 100,
+                       nAGQ = 40,
                        control = cntrl)
 summary(mod_terr_bms1)
 
@@ -81,7 +91,7 @@ mod_terr_hseason <- glmer(terr_bin ~ (1|raven_id) + active_kill * hunt_season + 
                             scale(dist2nentrance) + study_period * scale(temp_max) + scale(snow_depth) + scale(prop_group_left_terr)
                          data = ws_model_data,
                          family = "binomial",
-                         nAGQ = 100,
+                         nAGQ = 40,
                          control = cntrl)
 summary(mod_terr_hseason)
 
@@ -91,7 +101,7 @@ mod_terr_hl <- glmer(terr_bin ~ (1|raven_id) + active_kill * take_high_low + sca
                             scale(dist2nentrance) + study_period * scale(temp_max) + scale(snow_depth) + scale(prop_group_left_terr),
                      data = ws_model_data,
                      family = "binomial",
-                     nAGQ = 100,
+                     nAGQ = 40,
                      control = cntrl)
 summary(mod_terr_hl)
 
@@ -99,6 +109,14 @@ AIC(mod_terr_bms1) #equally good
 AIC(mod_terr_hseason) #equally good
 AIC(mod_terr_hl)
 
+
+# bootstrapping parameter confidence intervals -------------------------------
+
+#bootstrapping parameter values from model simulations
+boot_terr_bms <- boot_param_CI(nsim = 20, model = mod_terr_bms1, data = ws_model_data)
+
+#view effect plot
+boot_terr_bms[[3]]
 
 # PART 2 of conditional model (visit gardiner/other) ----------------------
 #modeling second part of conditional binomial model
@@ -116,7 +134,7 @@ mod_hunt_bms1 <- glmer(hunt_bin ~ (1|raven_id) + scale(bms_window_1) + scale(dis
                          scale(prop_group_visit_hunt) + scale(temp_max) + scale(snow_depth),
                        data = hunt_model_data,
                        family = "binomial",
-                       nAGQ = 100,
+                       nAGQ = 40,
                        control = cntrl)
 summary(mod_hunt_bms1)
 
@@ -126,7 +144,7 @@ mod_hunt_hseason <- glmer(hunt_bin ~ (1|raven_id) + hunt_season + scale(dist2nen
                             scale(prop_group_visit_hunt) + scale(temp_max) + scale(snow_depth),
                           data = hunt_model_data,
                           family = "binomial",
-                          nAGQ = 100,
+                          nAGQ = 40,
                           control = cntrl)
 summary(mod_hunt_hseason)
 
@@ -136,10 +154,19 @@ mod_hunt_hl <- glmer(hunt_bin ~ (1|raven_id) + take_high_low + scale(dist2nentra
                             scale(prop_group_visit_hunt) + scale(temp_max) + scale(snow_depth),
                      data = hunt_model_data,
                      family = "binomial",                       
-                     nAGQ = 100,
+                     nAGQ = 40,
                      control = cntrl)
 summary(mod_hunt_hl)
 
 AIC(mod_hunt_bms1)
 AIC(mod_hunt_hseason)
 AIC(mod_hunt_hl) #best
+
+
+# bootstrapping parameter confidence intervals -------------------------------
+
+#bootstrapping parameter values from model simulations
+boot_hunt_bms <- boot_param_CI(nsim = 50, model = mod_hunt_bms1, data = hunt_model_data)
+
+#view effect plot
+boot_hunt_bms[[3]]
