@@ -61,9 +61,8 @@ library(ggplot2)
 #optimizer for glmer
 cntrl <- glmerControl(optimizer = "bobyqa", tol = 1e-4, optCtrl=list(maxfun=100000))
 
-#function to boostrap parameter confidence intervals
-source("scripts/model_parameter_bootstrap_function.R")
-
+#function for bootstrapping model parameters
+source("C:/Users/billy.DESKTOP-6FIO124/Documents/Stats/model_parameter_bootstrap_function.R")
 
 # part 1 of conditional model (stay/leave territory) ---------------------------------------------
 # modeling first part of conditional binomial model
