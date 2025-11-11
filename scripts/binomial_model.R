@@ -113,7 +113,7 @@ AIC(mod_terr_hl)
 # bootstrapping parameter confidence intervals -------------------------------
 
 #bootstrapping parameter values from model simulations
-boot_terr_bms <- boot_param_CI(nsim = 20, model = mod_terr_bms1, data = ws_model_data)
+boot_terr_bms <- boot_param_CI(nsim = 50, model = mod_terr_bms1, data = ws_model_data)
 
 #view effect plot
 boot_terr_bms[[3]]
