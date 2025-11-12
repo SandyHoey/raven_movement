@@ -112,12 +112,13 @@ AIC(mod_terr_hl)
 # bootstrapping parameter confidence intervals -------------------------------
 
 #bootstrapping parameter values from model simulations
-boot_terr_bms <- boot_param_CI(nsim = 50, model = mod_terr_bms1, data = ws_model_data)
+boot_terr_bms <- boot_param_CI(nsim = 5, model = mod_terr_bms1, data = ws_model_data)
 
 #view effect plot
 boot_terr_bms[[3]]
 
-# PART 2 of conditional model (visit gardiner/other) ----------------------
+
+ # PART 2 of conditional model (visit gardiner/other) ----------------------
 #modeling second part of conditional binomial model
 # if the raven chose to leave its territory, did it visit the hunting area or not
 
