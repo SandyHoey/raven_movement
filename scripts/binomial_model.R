@@ -57,12 +57,11 @@ hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
 library(lme4)
 library(DHARMa)
 library(ggplot2)
+library(myFunctions) #custom bootstrap function
 
 #optimizer for glmer
 cntrl <- glmerControl(optimizer = "bobyqa", tol = 1e-4, optCtrl=list(maxfun=100000))
 
-#function for bootstrapping model parameters
-source("C:/Users/billy.DESKTOP-6FIO124/Documents/Stats/model_parameter_bootstrap_function.R")
 
 # part 1 of conditional model (stay/leave territory) ---------------------------------------------
 # modeling first part of conditional binomial model
