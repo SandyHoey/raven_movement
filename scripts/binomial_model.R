@@ -16,8 +16,9 @@ ws_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
   filter(!(n_point < 5 & terr_bin == F)) %>% 
   
   #only columns used in model
-  dplyr::select(terr_bin, raven_id, active_kill, bms_window_1, avg_terr_kill_density, dist2nentrance,
-                study_period, temp_max, snow_depth, prop_group_left_terr) %>% 
+  dplyr::select(terr_bin, raven_id, active_kill, bms_window_1, hunt_season, take_high_low,
+                avg_terr_kill_density, dist2nentrance, study_period, temp_max, 
+                snow_depth, prop_group_left_terr) %>% 
   
   #making sure rows are complete
   filter(complete.cases(.)) 
@@ -35,8 +36,9 @@ hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
   
   
   #only columns used in model
-  dplyr::select(hunt_bin, raven_id, active_kill, bms_window_1, avg_terr_kill_density, 
-                dist2nentrance, study_period, temp_max, snow_depth, prop_group_visit_hunt) %>% 
+  dplyr::select(hunt_bin, raven_id, active_kill, bms_window_1, hunt_season, take_high_low,
+                avg_terr_kill_density, dist2nentrance, study_period, temp_max, 
+                snow_depth, prop_group_visit_hunt) %>% 
   
   #making sure rows are complete
   filter(complete.cases(.)) 
@@ -112,7 +114,7 @@ AIC(mod_terr_hl)
 # bootstrapping parameter confidence intervals -------------------------------
 
 #bootstrapping parameter values from model simulations
-boot_terr_bms <- boot_param_CI(nsim = 5, model = mod_terr_bms1, data = ws_model_data)
+boot_terr_bms <- boot_param_CI(nsim = 50, model = mod_terr_bms1, data = ws_model_data)
 
 #view effect plot
 boot_terr_bms[[3]]
@@ -127,7 +129,6 @@ boot_terr_bms[[3]]
 # 1 = visited hunting
 # 0 = visited other place
 
-#!!! add a covariate for overall yearly wolf kill rate
 
 #model with biomass number
 mod_hunt_bms1 <- glmer(hunt_bin ~ (1|raven_id) + scale(bms_window_1) + scale(dist2nentrance) + 
