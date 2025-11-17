@@ -1,12 +1,11 @@
 #MCP 95 for in park breeders during the summer
 
 library(adehabitatHR)
-library(data.table) #use of %like%
 library(tidyverse)
 library(sf)
 library(sp)
 library(mapview)
-
+`%like%` <- data.table::`%like%`
 
 
 #reading in all raven points
@@ -94,4 +93,9 @@ mcp90 <- mysf %>%
   mcp(percent = 90, unout = "km2")
 
 
+#viewing territories in a dynamic map
 mapview(mcp90[,1])
+
+
+#writing mcp as a shapefile
+st_write(st_as_sf(mcp90), "data/clean/mcp90_shapefile/mcp90.shp", delete_layer = T)
