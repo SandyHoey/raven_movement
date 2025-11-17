@@ -98,4 +98,4 @@ mapview(mcp90[,1])
 
 
 #writing mcp as a shapefile
-st_write(st_as_sf(mcp90), "data/clean/mcp90_shapefile/mcp90.shp", delete_layer = T)
+#st_write(st_as_sf(mcp90), "data/clean/mcp90_shapefile/mcp90.shp", delete_layer = T)
