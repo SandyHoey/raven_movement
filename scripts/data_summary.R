@@ -48,11 +48,11 @@ hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
 
 # summary data ------------------------------------------------------------
 
-#total number of ravens included in study
+# total number of ravens included in study
 length(unique(all$raven_id))
 
 
-#decision days
+# decision days
 nrow(all) #total days
 mean(table(all$raven_id))
 sd(table(all$raven_id))
@@ -60,24 +60,38 @@ max(table(all$raven_id))
 min(table(all$raven_id))
 
 
-#data date range
+# data date range
 range(all$date)
 
 
-#number of GPS points per day
+# number of GPS points per day
 hist(all$n_point, 
      breaks = 1:max(all$n_point))
 mean(all$n_point)
 sd(all$n_point)
 
 
-#average home range size
+# average home range size
 source("scripts/home_range_mcp.R")
 mean(mcp90@data$area)
 sd(mcp90@data$area)
 
+# daily proportion visiting Gardiner based on daily temperature
+#' based on all decision days, not filtered modeling data
+all %>% 
+  #grouping by date
+  group_by(date) %>% 
+  #calculating the proportion of trips went to the hunting area
+  summarize(visit_hunt_prop = sum(hunt_bin)/n()) %>% 
+  #adding the relevant plotting columns back into the summarized data
+  right_join(all %>% 
+               dplyr::select(date, temp_max)) %>% 
+  #plotting
+  ggplot(aes(y = visit_hunt_prop, x = temp_max)) +
+  geom_point() + 
+  geom_smooth(method = "lm")
 
-#movement decisions based on distance to hunting
+# individuals' Gardiner visits based on distance to hunting
  #' based on all decision days, not filtered modeling data
 all %>% 
   #grouping by individual
@@ -93,7 +107,7 @@ all %>%
   geom_smooth(method = "lm")
 
 
-#movement decisions based on distance to hunting 
+# individuals' Gardiner visits based on distance to hunting 
   #' based on filtered modeling data, only if ravens decided to leave their territory
 hunt_model_data %>% 
   #grouping by individual
@@ -109,7 +123,7 @@ hunt_model_data %>%
   geom_smooth(method = "lm")
 
 
-#range of group proportion decisions
+# range of group proportion decisions
   #' proportion of ravens that left the hunting area
   all %>% 
     group_by(date) %>% 
