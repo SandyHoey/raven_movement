@@ -94,7 +94,7 @@ all %>%
 
 
 #movement decisions based on distance to hunting 
-  #' based filtered modeling data, only if ravens decided to leave their territory
+  #' based on filtered modeling data, only if ravens decided to leave their territory
 hunt_model_data %>% 
   #grouping by individual
   group_by(raven_id) %>% 
@@ -107,3 +107,20 @@ hunt_model_data %>%
   ggplot(aes(y = visit_hunt_prop, x = dist2nentrance)) +
   geom_point() + 
   geom_smooth(method = "lm")
+
+
+#range of group proportion decisions
+  #' proportion of ravens that left the hunting area
+  all %>% 
+    group_by(date) %>% 
+    slice(1) %>% 
+    ungroup %>% 
+    pull(prop_group_left_terr) %>% 
+    hist(main = "proportion of territorials that left territoriy")
+  #' based on part 2 model data, proportion of territorial ravens that visited hunting area
+  all %>% 
+    group_by(date) %>% 
+    slice(1) %>% 
+    ungroup %>% 
+    pull(prop_group_visit_hunt) %>% 
+    hist(main = "proportion of territorials that visited hunting")
