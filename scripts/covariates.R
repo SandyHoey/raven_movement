@@ -148,11 +148,8 @@ rf_in_terr_kill_list <- kill_in_terr(kill_data_rf, dist_from_terr = 1000,
 ## of carcasses in territory/# of days(30) 
 ## averaged over all years of data for that raven
 
-##'   going to be calculated only for winter studies when kill detection is best
-##' 
 ##' old faithful birds have no kills in terr, need to figure out how that is handled
 ##'   probably just a 0 
-
 kill_density_list <- lapply(in_terr_kill_list, function(x){
   if(nrow(x) != 0){
     #empty vector to attach all the values of days since previous carcass
@@ -188,19 +185,62 @@ kill_density_list <- lapply(in_terr_kill_list, function(x){
   }
 })
 
+rf_kill_density_list <- lapply(rf_in_terr_kill_list, function(x){
+  if(nrow(x) != 0){
+    #empty vector to attach all the values of days since previous carcass
+    days_since <- c()
+    
+    #start and end dates for each winter period
+    early_winter_start <- as.Date(paste0(seq(min(year(x$kill_start_date)), max(year(x$kill_start_date))),"-11-15"))
+    early_winter_end <- as.Date(paste0(seq(min(year(x$kill_start_date)), max(year(x$kill_start_date))),"-12-15"))
+    late_winter_start <- as.Date(paste0(seq(min(year(x$kill_start_date)), max(year(x$kill_start_date))),"-03-01"))
+    late_winter_end <- as.Date(paste0(seq(min(year(x$kill_start_date)), max(year(x$kill_start_date))),"-03-30"))
+    
+    
+    #dataframe to put the kill density numbers for each winter sample period
+    density_df <- data.frame(year = rep(year(early_winter_start), 2), 
+                             period = rep(c("early", "late"), each = length(early_winter_start)), 
+                             rf_density = NA)
+    
+    for(w in 1:length(early_winter_start)){
+      
+      early_winter <- subset(x, kill_start_date >= early_winter_start[w] & 
+                               kill_start_date <= early_winter_end[w])
+      late_winter <- subset(x, kill_start_date >= late_winter_start[w] & 
+                              kill_start_date <= late_winter_end[w])
+      
+      
+      #early winter density
+      density_df[w, "density"] <- nrow(early_winter)/30
+      
+      #late winter density
+      density_df[w+length(late_winter_start), "density"] <- nrow(late_winter)/30
+    }
+    return(density_df)
+  }
+})
+
 #am going to use average kill density for each individual
 #the kill density is calculated from winter study periods, so there isn't a number for
 #the other months anyways
 avg_kill_density <- bind_rows(kill_density_list, .id = "raven_id") %>% 
   group_by(raven_id) %>% 
   summarize(avg_terr_kill_density = mean(density))
+rf_avg_kill_density <- bind_rows(rf_kill_density_list, .id = "raven_id") %>% 
+  group_by(raven_id) %>% 
+  summarize(rf_avg_terr_kill_density = mean(density))
 
 commute_df <- commute_df %>% 
+  #wolf project database
   left_join(avg_kill_density) %>% 
+  #Rf predictive 
+  left_join(rf_avg_kill_density) %>% 
   #making kill_density 0 when NA since there were no kills in its territory
   #having a row in the commute_df means the raven was taking points that day
   mutate(avg_terr_kill_density = if_else(is.na(avg_terr_kill_density), 0, 
-                                         avg_terr_kill_density))
+                                         avg_terr_kill_density),
+         rf_avg_terr_kill_density = if_else(is.na(rf_avg_terr_kill_density), 0, 
+                                         rf_avg_terr_kill_density))
 
 
 # Active kill -------------------------------------------------------------
