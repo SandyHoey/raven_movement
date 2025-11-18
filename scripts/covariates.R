@@ -110,8 +110,12 @@ kill_data_recent <- kill_data_recent %>%
 
 
 #function to separate out the kills that are within each territory
-#dist_from_terr: how far (m) a kill is from the territory to be counted towards that territory
-kill_freq <- function(dist_from_terr){
+  #' data: dataframe
+  #' dist_from_terr: how far (m) a kill is from the territory to be counted towards that territory
+  #' coords: columns that have the x and y (x, y)
+  #' crs: coordinate reference system for the coordinates
+  #' death: column name for the start of the kill (date of death)
+kill_in_terr <- function(data, dist_from_terr, coords, crs, death){
   ID <- mcp90$id
 
   #creating a list to put the kill information for kills inside each territory
@@ -119,8 +123,8 @@ kill_freq <- function(dist_from_terr){
   names(in_terr_kill_list) <- ID
 
   #changing kill data into a format that can be used for the distance measurement
-  tmp_sf <- st_as_sf(kill_data_recent, coords=c("easting", "northing"),
-                     crs="+proj=utm +zone=12")
+  tmp_sf <- st_as_sf(data, coords = coords,
+                     crs = crs)
 
   for(i in 1:length(ID)){
 
@@ -129,14 +133,24 @@ kill_freq <- function(dist_from_terr){
 
     #putting all rows with distance == 0 into the list
     #and ordering by date
-    in_terr_kill_list[[i]] <- subset(kill_data_recent, tmp_dist <= dist_from_terr) %>%
-      arrange(dod)
+    in_terr_kill_list[[i]] <- subset(data, tmp_dist <= dist_from_terr) %>%
+      arrange(death)
 
   }
   return(in_terr_kill_list)
 }
 
-in_terr_kill_list <- kill_freq(dist_from_terr = 1000)
+#wolf project database: in territory kills for eac raven
+in_terr_kill_list <- kill_in_terr(kill_data_recent, dist_from_terr = 1000,
+                               coords = c("easting", "northing"), crs = "+proj=utm +zone=12",
+                               death = "dod")
+
+
+#reading in RF data
+source("scripts/clean_rf_data.R")
+rf_in_terr_kill_list <- kill_in_terr(kill_data_rf, dist_from_terr = 1000,
+                               coords = c("easting", "northing"), crs = "+proj=utm +zone=12",
+                               death = "kill_start_date")
 
 
 # #counting the days between consecutive kills within each territory
