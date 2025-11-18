@@ -80,35 +80,38 @@ commute_df <- commute_df %>%
 ##' but if you want to bring this back it needs a rework
 ##' only calculate days between for early and late winter instead of the whole winter
 
-kill_data <- read.csv("data/raw/wolf_project_carcass_data.csv")
-kill_data$DOD <- mdy(kill_data$DOD)
+#reading in wolf project kill database
+kill_data <- readr::read_csv("data/raw/wolf_project_carcass_data.csv") %>% 
+  janitor::clean_names()
+kill_data$dod <- mdy(kill_data$dod)
+
 
 #subset to only kills from 2019 onwards to match raven GPS data
 #subset to only winter months (Nov, Dec, Mar)
 #but removing kills that are in Jan-Mar of 2019
 kill_data_recent <- kill_data %>%
-  filter(year(DOD) >= 2019 & month(DOD) %in% c(11,12,3)) %>%
-  filter(DOD >= as.Date("2019-11-01"))
+  filter(year(dod) >= 2019 & month(dod) %in% c(11,12,3)) %>%
+  filter(dod >= as.Date("2019-11-01"))
 
 
 #creating new column with the most accurate coords available
 #order of accuracy ground -> aerial -> estimated ground
 kill_data_recent <- kill_data_recent %>%
-  mutate(easting = case_when(!is.na(GROUND.EAST) ~ GROUND.EAST,
-                             !is.na(AERIAL.EAST) ~ AERIAL.EAST,
-                             !is.na(EST.GROUND.EAST) ~ EST.GROUND.EAST),
-         northing = case_when(!is.na(GROUND.NORTH) ~ GROUND.NORTH,
-                              !is.na(AERIAL.NORTH) ~ AERIAL.NORTH,
-                              !is.na(EST.GROUND.NORTH) ~ EST.GROUND.NORTH)) %>%
+  mutate(easting = case_when(!is.na(ground_east) ~ ground_east,
+                             !is.na(aerial_east) ~ aerial_east,
+                             !is.na(est_ground_east) ~ est_ground_east),
+         northing = case_when(!is.na(ground_north) ~ ground_north,
+                              !is.na(aerial_north) ~ aerial_north,
+                              !is.na(est_ground_north) ~ est_ground_north)) %>%
   filter(!is.na(easting)) %>%
 
   #removing cat kills
-  filter(nchar(PACK) > 4)
+  filter(nchar(pack) > 4)
 
 
 #function to separate out the kills that are within each territory
 #dist_from_terr: how far (m) a kill is from the territory to be counted towards that territory
-kill_freq <- function(dist_from_terr = 0){
+kill_freq <- function(dist_from_terr){
   ID <- mcp90$id
 
   #creating a list to put the kill information for kills inside each territory
@@ -127,7 +130,7 @@ kill_freq <- function(dist_from_terr = 0){
     #putting all rows with distance == 0 into the list
     #and ordering by date
     in_terr_kill_list[[i]] <- subset(kill_data_recent, tmp_dist <= dist_from_terr) %>%
-      arrange(DOD)
+      arrange(dod)
 
   }
   return(in_terr_kill_list)
@@ -145,20 +148,20 @@ in_terr_kill_list <- kill_freq(dist_from_terr = 1000)
 #     days_since <- c()
 #     
 #     #start and end dates for each winter period
-#     winter_start <- as.Date(paste0(seq(min(year(x$DOD))-1, max(year(x$DOD))),"-11-01"))
-#     winter_end <- as.Date(paste0(seq(min(year(x$DOD)), max(year(x$DOD))+1),"-03-31"))
+#     winter_start <- as.Date(paste0(seq(min(year(x$dod))-1, max(year(x$dod))),"-11-01"))
+#     winter_end <- as.Date(paste0(seq(min(year(x$dod)), max(year(x$dod))+1),"-03-31"))
 #     
 #     for(w in 1:length(winter_start)){
 #       
-#       tmp_winter <- subset(x, DOD >= winter_start[w] & 
-#                              DOD <= winter_end[w])
+#       tmp_winter <- subset(x, dod >= winter_start[w] & 
+#                              dod <= winter_end[w])
 #       
 #       #has an NA value since the first carcass of a winter period cant have a "days since last carcass"
 #       if(nrow(tmp_winter) == 1){
 #         days_since <- c(days_since, NA)
 #       }else if(nrow(tmp_winter) == 0){
 #       }else{
-#         days_since <- c(days_since, NA, diff(tmp_winter$DOD))
+#         days_since <- c(days_since, NA, diff(tmp_winter$dod))
 #       }
 #     }
 #     
@@ -194,10 +197,10 @@ kill_density_list <- lapply(in_terr_kill_list, function(x){
     days_since <- c()
     
     #start and end dates for each winter period
-    early_winter_start <- as.Date(paste0(seq(min(year(x$DOD)), max(year(x$DOD))),"-11-15"))
-    early_winter_end <- as.Date(paste0(seq(min(year(x$DOD)), max(year(x$DOD))),"-12-15"))
-    late_winter_start <- as.Date(paste0(seq(min(year(x$DOD)), max(year(x$DOD))),"-03-01"))
-    late_winter_end <- as.Date(paste0(seq(min(year(x$DOD)), max(year(x$DOD))),"-03-30"))
+    early_winter_start <- as.Date(paste0(seq(min(year(x$dod)), max(year(x$dod))),"-11-15"))
+    early_winter_end <- as.Date(paste0(seq(min(year(x$dod)), max(year(x$dod))),"-12-15"))
+    late_winter_start <- as.Date(paste0(seq(min(year(x$dod)), max(year(x$dod))),"-03-01"))
+    late_winter_end <- as.Date(paste0(seq(min(year(x$dod)), max(year(x$dod))),"-03-30"))
     
     
     #dataframe to put the kill density numbers for each winter sample period
@@ -207,10 +210,10 @@ kill_density_list <- lapply(in_terr_kill_list, function(x){
     
     for(w in 1:length(early_winter_start)){
       
-      early_winter <- subset(x, DOD >= early_winter_start[w] & 
-                               DOD <= early_winter_end[w])
-      late_winter <- subset(x, DOD >= late_winter_start[w] & 
-                              DOD <= late_winter_end[w])
+      early_winter <- subset(x, dod >= early_winter_start[w] & 
+                               dod <= early_winter_end[w])
+      late_winter <- subset(x, dod >= late_winter_start[w] & 
+                              dod <= late_winter_end[w])
       
       
       #early winter density
@@ -256,7 +259,7 @@ active_kill_fctn <- function(days_since = 2){
            for(i in 1:nrow(x)){
              tmp_GPS <- x[i,]
              
-             time_diff <- difftime(tmp_kills$DOD, as.Date(tmp_GPS$date), units = "days")
+             time_diff <- difftime(tmp_kills$dod, as.Date(tmp_GPS$date), units = "days")
              
              if(sum(time_diff >= 0 & time_diff < days_since) >= 1){
                x[i, "active_kill"] <- TRUE
@@ -335,7 +338,7 @@ commute_df <- commute_df %>%
 
 #reading in data
 #year on this data is the year at the time of march, not the hunting season year
-bison_take <- read.csv("data/raw/bison_hunt.csv")
+bison_take <- readr::read_csv("data/raw/bison_hunt.csv")
 
 commute_df <- bison_take %>% 
   
