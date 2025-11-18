@@ -6,8 +6,6 @@ library(data.table)
 
 #currently contains all winter months (nov-mar)
 
-#!!! needs to be restructured when I get the predictive kill data
-
 
 # running code to get daily commute decisions -----------------------------
 source("scripts/commute_decision.R")
