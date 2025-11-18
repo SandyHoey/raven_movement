@@ -69,45 +69,7 @@ commute_df <- commute_df %>%
   left_join(terr_center, by = join_by(raven_id == id))
 
 
-# Time btwn kills -------------------------------------------------------------
-## time between kills within territory
-
-##'   kill density may be better (basic kill density)
-##'   
-##'   
-##' !!!! PROBLEMS !!!!
-##' Just use kill density
-##' but if you want to bring this back it needs a rework
-##' only calculate days between for early and late winter instead of the whole winter
-
-#reading in wolf project kill database
-kill_data <- readr::read_csv("data/raw/wolf_project_carcass_data.csv") %>% 
-  janitor::clean_names()
-kill_data$dod <- mdy(kill_data$dod)
-
-
-#subset to only kills from 2019 onwards to match raven GPS data
-#subset to only winter months (Nov, Dec, Mar)
-#but removing kills that are in Jan-Mar of 2019
-kill_data_recent <- kill_data %>%
-  filter(year(dod) >= 2019 & month(dod) %in% c(11,12,3)) %>%
-  filter(dod >= as.Date("2019-11-01"))
-
-
-#creating new column with the most accurate coords available
-#order of accuracy ground -> aerial -> estimated ground
-kill_data_recent <- kill_data_recent %>%
-  mutate(easting = case_when(!is.na(ground_east) ~ ground_east,
-                             !is.na(aerial_east) ~ aerial_east,
-                             !is.na(est_ground_east) ~ est_ground_east),
-         northing = case_when(!is.na(ground_north) ~ ground_north,
-                              !is.na(aerial_north) ~ aerial_north,
-                              !is.na(est_ground_north) ~ est_ground_north)) %>%
-  filter(!is.na(easting)) %>%
-
-  #removing cat kills
-  filter(nchar(pack) > 4)
-
+# FUNCTION: Kills in territory -------------------------------------------------------------
 
 #function to separate out the kills that are within each territory
   #' data: dataframe
@@ -140,6 +102,35 @@ kill_in_terr <- function(data, dist_from_terr, coords, crs, death){
   return(in_terr_kill_list)
 }
 
+
+#reading in wolf project kill database
+kill_data <- readr::read_csv("data/raw/wolf_project_carcass_data.csv") %>% 
+  janitor::clean_names()
+kill_data$dod <- mdy(kill_data$dod)
+
+
+#subset to only kills from 2019 onwards to match raven GPS data
+#subset to only winter months (Nov, Dec, Mar)
+#but removing kills that are in Jan-Mar of 2019
+kill_data_recent <- kill_data %>%
+  filter(year(dod) >= 2019 & month(dod) %in% c(11,12,3)) %>%
+  filter(dod >= as.Date("2019-11-01"))
+
+
+#creating new column with the most accurate coords available
+#order of accuracy ground -> aerial -> estimated ground
+kill_data_recent <- kill_data_recent %>%
+  mutate(easting = case_when(!is.na(ground_east) ~ ground_east,
+                             !is.na(aerial_east) ~ aerial_east,
+                             !is.na(est_ground_east) ~ est_ground_east),
+         northing = case_when(!is.na(ground_north) ~ ground_north,
+                              !is.na(aerial_north) ~ aerial_north,
+                              !is.na(est_ground_north) ~ est_ground_north)) %>%
+  filter(!is.na(easting)) %>%
+  
+  #removing cat kills
+  filter(nchar(pack) > 4)
+
 #wolf project database: in territory kills for eac raven
 in_terr_kill_list <- kill_in_terr(kill_data_recent, dist_from_terr = 1000,
                                coords = c("easting", "northing"), crs = "+proj=utm +zone=12",
@@ -151,49 +142,6 @@ source("scripts/clean_rf_data.R")
 rf_in_terr_kill_list <- kill_in_terr(kill_data_rf, dist_from_terr = 1000,
                                coords = c("easting", "northing"), crs = "+proj=utm +zone=12",
                                death = "kill_start_date")
-
-
-# #counting the days between consecutive kills within each territory
-# #Summer is messing up days since 
-# #7485/7494 (old faithful) has no kills within 3 km of territory, so making the days between the max value (30)
-# day_betwn_kill <- lapply(in_terr_kill_list, function(x){
-#   if(nrow(x) != 0){
-#     #empty vector to attach all the values of days since previous carcass
-#     days_since <- c()
-#     
-#     #start and end dates for each winter period
-#     winter_start <- as.Date(paste0(seq(min(year(x$dod))-1, max(year(x$dod))),"-11-01"))
-#     winter_end <- as.Date(paste0(seq(min(year(x$dod)), max(year(x$dod))+1),"-03-31"))
-#     
-#     for(w in 1:length(winter_start)){
-#       
-#       tmp_winter <- subset(x, dod >= winter_start[w] & 
-#                              dod <= winter_end[w])
-#       
-#       #has an NA value since the first carcass of a winter period cant have a "days since last carcass"
-#       if(nrow(tmp_winter) == 1){
-#         days_since <- c(days_since, NA)
-#       }else if(nrow(tmp_winter) == 0){
-#       }else{
-#         days_since <- c(days_since, NA, diff(tmp_winter$dod))
-#       }
-#     }
-#     
-#     x$days_since <- days_since
-#   } else(days_since <- 30)
-# })
-# 
-# 
-# #calculating average day between kills for individuals
-# avg_day_betwn_kill <- day_betwn_kill %>% 
-#   lapply(mean, na.rm = T) %>% 
-#   do.call("rbind",.) %>% 
-#   as.data.frame() %>% 
-#   rename(avg_day_btwn = V1)
-# 
-# colnames(avg_day_betwn_kill) <- "avg_day_btwn"
-# avg_day_betwn_kill <- mutate(avg_day_betwn_kill, raven_id = rownames(avg_day_betwn_kill)) 
-
 
 
 # Average kill density -------------------------------------------------------------
