@@ -76,8 +76,8 @@ commute_df <- commute_df %>%
   #' dist_from_terr: how far (m) a kill is from the territory to be counted towards that territory
   #' coords: columns that have the x and y (x, y)
   #' crs: coordinate reference system for the coordinates
-  #' death: column name for the start of the kill (date of death)
-kill_in_terr <- function(data, dist_from_terr, coords, crs, death){
+  #' start: column name for the start of the kill (date of death, cluster start)
+kill_in_terr <- function(data, dist_from_terr, coords, crs, start){
   ID <- mcp90$id
 
   #creating a list to put the kill information for kills inside each territory
@@ -96,7 +96,7 @@ kill_in_terr <- function(data, dist_from_terr, coords, crs, death){
     #putting all rows with distance == 0 into the list
     #and ordering by date
     in_terr_kill_list[[i]] <- subset(data, tmp_dist <= dist_from_terr) %>%
-      arrange(death)
+      arrange(start)
 
   }
   return(in_terr_kill_list)
@@ -134,14 +134,14 @@ kill_data_recent <- kill_data_recent %>%
 #wolf project database: in territory kills for eac raven
 in_terr_kill_list <- kill_in_terr(kill_data_recent, dist_from_terr = 1000,
                                coords = c("easting", "northing"), crs = "+proj=utm +zone=12",
-                               death = "dod")
+                               start = "dod")
 
 
 #reading in RF data
 source("scripts/clean_rf_data.R")
 rf_in_terr_kill_list <- kill_in_terr(kill_data_rf, dist_from_terr = 1000,
                                coords = c("easting", "northing"), crs = "+proj=utm +zone=12",
-                               death = "kill_start_date")
+                               start = "kill_start_date")
 
 
 # Average kill density -------------------------------------------------------------
@@ -245,34 +245,46 @@ commute_df <- commute_df %>%
 
 # Active kill -------------------------------------------------------------
 ## presence of an active kill within the territory
+## active is < than 3 days old (<= 2 days)
 
-##' active is < than 3 days old (<= 2 days)
-##' days_since is the number of days since the kill was made, including the day of the kill
-
-active_kill_fctn <- function(days_since = 2){
+  #' data: in_terr_kill_list from the kill_in_terr function
+  #' days_since: the number of days since the kill was made, including the day of the kill
+active_kill_fctn <- function(data, days_since, start){
+  #new column for the binary predictor
   commute_df$active_kill <- FALSE
   
-  tapply(commute_df, commute_df$raven_id,
-         FUN = function(x){
-           ID <- unique(x$raven_id)
-           tmp_kills <- in_terr_kill_list[[ID]]
-           
-           #looping through each GPS point to see if there is a active kill
-           for(i in 1:nrow(x)){
-             tmp_GPS <- x[i,]
-             
-             time_diff <- difftime(tmp_kills$dod, as.Date(tmp_GPS$date), units = "days")
-             
-             if(sum(time_diff >= 0 & time_diff < days_since) >= 1){
-               x[i, "active_kill"] <- TRUE
-             }
-           }
-           return(x)
-         })
+  #separating each raven in the main data set and matching it to the inside territory kill lists
+  active_kill_list <- tapply(commute_df, commute_df$raven_id,
+                             FUN = function(x){
+                               ID <- unique(x$raven_id)
+                               tmp_kills <- data[[ID]]
+                               
+                               #looping through each GPS point to see if there is an active kill that day
+                               for(i in 1:nrow(x)){
+                                 tmp_GPS <- x[i,]
+                                 
+                                 #calculating time difference in days (0 = kill on that day)
+                                 time_diff <- difftime(tmp_kills %>% 
+                                                         pull(start), 
+                                                       as.Date(tmp_GPS$date), units = "days")
+                                 
+                                 #if GPS point is after kill is made and before the days_since argument
+                                 if(sum(time_diff >= 0 & time_diff < days_since) >= 1){
+                                   x[i, "active_kill"] <- TRUE
+                                 }
+                               }
+                               return(x)
+                             })
+  return(bind_rows(active_kill_list)$active_kill)
 }
 
-commute_df <- bind_rows(active_kill_fctn())
-
+#wolf project database
+commute_df <- commute_df %>% 
+  mutate(
+    #wolf project kill database
+    active_kill = active_kill_fctn(in_terr_kill_list, days_since = 2, start = "dod"),
+    #RF predictive kills
+    rf_active_kill = active_kill_fctn(rf_in_terr_kill_list, days_since = 2, start = "kill_start_date"))
 
 
 # Hunting season-------------------------------------------------------------
