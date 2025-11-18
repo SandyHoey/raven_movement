@@ -61,6 +61,22 @@ hunting_season (csv): start and end dates from the MTFWP rifle hunting season
 	end (date): end date of the MTFWP rifle hunting season
 	md_end (date): start date of protections for mule deer bucks prohibiting take
 
+mergedkills_wolf_summer_RF_spec95 (rds): random forest output of predicted wolf kills from GPS clusters during the summer (May, June, July) from 2026 - 2024
+	tf_ (datetime): hourly intervals from the start of the carcass until the end of the study period (Dec 15 or Mar 30) to keep the carcass available on the landscape
+	killStartDate (datetime): date time of the first wolf GPS point at that kill
+	x (num): easting of cluster centroid predicted to be a kill
+	y (num): northing of cluster centroid predicted to be a kill
+	wolfID (chr): identidication of the wolf who's cluster is predicted to be a kill
+	killID (num): unique identification for each kill site to combine multiple clusters from multiple wolves into a single kill
+
+mergedkills_wolf_winter_RF_spec95 (rds): random forest output of predicted wolf kills from GPS clusters during the winter(November, December, March) from 2017 - 2024
+	tf_ (datetime): hourly intervals from the start of the carcass until the end of the study period (Dec 15 or Mar 30) to keep the carcass available on the landscape
+	killStartDate (datetime): date time of the first wolf GPS point at that kill
+	x (num): easting of cluster centroid predicted to be a kill
+	y (num): northing of cluster centroid predicted to be a kill
+	wolfID (chr): identidication of the wolf who's cluster is predicted to be a kill
+	killID (num): unique identification for each kill site to combine multiple clusters from multiple wolves into a single kill
+
 jardine_hunt (polygon): Google Earth polygon that represents the Jardine area of the Gardiner hunting district used for ungulate hunting during the MTFWP season
 
 northern_range_poly (polygon): Google Earth polygon that represents the northern range of Yellowstone
@@ -155,9 +171,11 @@ noaa_weather_ncei (csv): weather history data from Mammoth WY from NOAA (https:/
 	'PRCP (Inches)' (num, inches): precipitation
 	'SNOW (Inches)' (num, inches): snow fall
 	'SNWD (Inches)' (num, inches): snow depth
-THERE IS ALSO RASTER DATA FROM SNODAS (https://nsidc.org/data/g02158/versions/1) if I need a more precise measure
+	THERE IS ALSO RASTER DATA FROM SNODAS (https://nsidc.org/data/g02158/versions/1) if I need a more precise measure
 
+cluster_summaries_wolves_summer (rds): clusters used as input data for the RF predictive model for wolf kills during the summer (May, June, July) from 2016 - 2024
 
+cluster_summaries_wolves_winter (rds): clusters used as input data for the RF predictive model for wolf kills during the summer (November, December, March) from 2017 - 2024
 
 
 
