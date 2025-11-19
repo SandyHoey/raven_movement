@@ -243,11 +243,10 @@ commute_df <- commute_df %>%
 
 # Active kill -------------------------------------------------------------
 ## presence of an active kill within the territory
-## active is < than 3 days old (<= 2 days)
 
   #' data: in_terr_kill_list from the kill_in_terr function
-  #' days_since: the number of days since the kill was made, including the day of the kill
-active_kill_fctn <- function(data, days_since, start){
+  #' days_since: the number of days since the kill was made (day of the kill is 0)
+active_kill_fctn <- function(data, days_since, start, end){
   #new column for the binary predictor
   commute_df$active_kill <- FALSE
   
@@ -257,17 +256,28 @@ active_kill_fctn <- function(data, days_since, start){
                                ID <- unique(x$raven_id)
                                tmp_kills <- data[[ID]]
                                
-                               #looping through each GPS point to see if there is an active kill that day
+                               # looping through each GPS point to see if there is an active kill that day
                                for(i in 1:nrow(x)){
                                  tmp_GPS <- x[i,]
                                  
-                                 #calculating time difference in days (0 = kill on that day)
-                                 time_diff <- difftime(tmp_kills %>% 
-                                                         pull(start), 
-                                                       as.Date(tmp_GPS$date), units = "days")
+                                 # calculating time difference in days to start of carcass (0 = kill on that day) for all kills in territory
+                                 time_diff_start <- difftime(as.Date(tmp_GPS$date),
+                                                             tmp_kills %>% 
+                                                               pull(start), 
+                                                             units = "days") %>% 
+                                   as.numeric()
+                                 # calculating time difference in days to end of carcass for all kills in territory
+                                  # for wolf project database this is the same as start 
+                                  # for RF predictive, this is the cluster end date
+                                 time_diff_end <- difftime(as.Date(tmp_GPS$date),
+                                                           tmp_kills %>% 
+                                                             pull(end), 
+                                                           units = "days") %>% 
+                                   as.numeric()
                                  
-                                 #if GPS point is after kill is made and before the days_since argument
-                                 if(sum(time_diff >= 0 & time_diff < days_since) >= 1){
+                                 # if GPS point is after the kill is made and before the days_since argument for any of the kills in territory
+                                  # active_kill is TRUE
+                                 if(sum(time_diff_start >= 0 & time_diff_end <= days_since) >= 1){
                                    x[i, "active_kill"] <- TRUE
                                  }
                                }
@@ -280,9 +290,11 @@ active_kill_fctn <- function(data, days_since, start){
 commute_df <- commute_df %>% 
   mutate(
     #wolf project kill database
-    active_kill = active_kill_fctn(in_terr_kill_list, days_since = 2, start = "dod"),
+    active_kill = active_kill_fctn(in_terr_kill_list, days_since = 2, 
+                                   start = "dod", end = "dod"),
     #RF predictive kills
-    rf_active_kill = active_kill_fctn(rf_in_terr_kill_list, days_since = 2, start = "kill_start_date"))
+    rf_active_kill = active_kill_fctn(rf_in_terr_kill_list, days_since = 1, 
+                                      start = "kill_start_date", end = "kill_end_date"))
 
 
 # Hunting season-------------------------------------------------------------
