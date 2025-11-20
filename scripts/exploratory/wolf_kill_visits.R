@@ -23,7 +23,9 @@ rf_kills <- readr::read_rds("data/raw/mergedkills_wolf_winter_RF_spec95.rds") %>
 
 # creating a single combined kill dataframe with the start date and coordinates
 wolf_kills <- wp_kills %>% 
+  # only useful columns
   dplyr::select(dod, easting, northing) %>% 
+  # adding RF predictive kills
   bind_rows(rf_kills %>% 
               mutate(dod = as.Date(kill_start_date)) %>% 
               dplyr::select(dod, x, y) %>% 
@@ -37,14 +39,24 @@ wolf_kills <- wp_kills %>%
 
 # reading in GPS data for this particular case
 leave_no_hunt_gps <- readr::read_csv("data/clean/raven_gps_outside_terr_no_hunt.csv") %>% 
-  dplyr::select(study_local_timestamp, utm_easting, utm_northing) %>% 
+  # only useful columns
+  dplyr::select(individual_local_identifier, study_local_timestamp, utm_easting, utm_northing) %>%
+  # simpler column names
+  rename(raven_id = individual_local_identifier,
+         date = study_local_timestamp,
+         easting = utm_easting,
+         northing = utm_northing) %>% 
+  # remove time from date column
+  mutate(date = as.Date(date)) %>%
+  # only complete rows
   filter(complete.cases(.)) %>% 
+  # add crs
   st_drop_geometry() %>% 
-  st_as_sf(coords = c("utm_easting", "utm_northing"), crs = "+proj=utm +zone=12")
+  st_as_sf(coords = c("easting", "northing"), crs = "+proj=utm +zone=12")
 
 
 # adding column with distance to closest wolf kill
-# wolf kills are available for that entire winter
+# wolf kills are available for 2 weeks after dod
 leave_no_hunt_gps$dist2kill <- NA
 # loop comparing each GPS point to all wolf kills
 for(i in 1:nrow(leave_no_hunt_gps)){
@@ -52,11 +64,37 @@ for(i in 1:nrow(leave_no_hunt_gps)){
   
   tmp_kills <- wolf_kills %>% 
     # only kills that were made within last 2 weeks
-    filter(difftime(as.Date(tmp_gps$study_local_timestamp), dod, 
-                    units = "days") <= 14)
+    filter(difftime(leave_no_hunt_gps$date, dod, 
+                    units = "days") <= 14,
+           difftime(leave_no_hunt_gps$date, dod, 
+                    units = "days") >= 0,)
   
-  # calculating distance, but only for the closest wolf kill
-  leave_no_hunt_gps$dist2kill[i,] <- st_distance(tmp_gps, tmp_kills, by_element = T)
-  
+  #if there are no kills, then make distance NA
+  if(nrow(tmp_kills) > 0){
+    # calculating distance, but only for the closest wolf kill
+    leave_no_hunt_gps[i, "dist2kill"] <- as.numeric(min(st_distance(tmp_gps, tmp_kills, units = "meters")))
+  } else(leave_no_hunt_gps[i, "dist2kill"] <- NA)
 }
+
+# how many days each raven has GPS points are within 500 meters
+leave_no_hunt_gps %>% 
+  st_drop_geometry() %>% 
+  # only GPR points within 500 m of kill
+  filter(dist2kill < 500) %>% 
+  #a single row for each raven/day
+  group_by(raven_id, date) %>% 
+  slice(1) %>% 
+  # remove date grouping (only ID)
+  ungroup(date) %>% 
+  summarize(days_visit = n()) %>% 
+  #adding the total number of days the raven left the territory by didn't visit hunting
+  left_join(leave_no_hunt_gps %>% 
+              st_drop_geometry %>% 
+              group_by(raven_id, date) %>% 
+              slice(1) %>% 
+              ungroup(date) %>% 
+              summarize(total_days = n())) %>% 
+  #calculating proportion of days visiting wolf kill outside territory without visiting the hunting area
+  mutate(prop_visit = days_visit/total_days)
+
 
