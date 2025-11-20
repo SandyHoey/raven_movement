@@ -1,6 +1,7 @@
 #looking to see how often ravens visit wolf kills during different movement decisions
 
 library(dplyr)
+library(sf)
 `%like%` <- data.table::`%like%`
 
 # reading in wolf kill data (both wolf project database and RF predictive)
@@ -27,10 +28,35 @@ wolf_kills <- wp_kills %>%
               mutate(dod = as.Date(kill_start_date)) %>% 
               dplyr::select(dod, x, y) %>% 
               rename(easting = x,
-                     northing = y))
+                     northing = y)) %>% 
+  filter(complete.cases(.)) %>% 
+  st_as_sf(coords = c("easting", "northing"), crs = "+proj=utm +zone=12")
 
 
 # leaving the territory, but not visiting the hunting area-------------------------------------------------------------------------
 
 # reading in GPS data for this particular case
-leave_no_hunt_gps <- readr::read_csv("data/clean/raven_gps_outside_terr_no_hunt.csv")
+leave_no_hunt_gps <- readr::read_csv("data/clean/raven_gps_outside_terr_no_hunt.csv") %>% 
+  dplyr::select(study_local_timestamp, utm_easting, utm_northing) %>% 
+  filter(complete.cases(.)) %>% 
+  st_drop_geometry() %>% 
+  st_as_sf(coords = c("utm_easting", "utm_northing"), crs = "+proj=utm +zone=12")
+
+
+# adding column with distance to closest wolf kill
+# wolf kills are available for that entire winter
+leave_no_hunt_gps$dist2kill <- NA
+# loop comparing each GPS point to all wolf kills
+for(i in 1:nrow(leave_no_hunt_gps)){
+  tmp_gps <- leave_no_hunt_gps[i,]
+  
+  tmp_kills <- wolf_kills %>% 
+    # only kills that were made within last 2 weeks
+    filter(difftime(as.Date(tmp_gps$study_local_timestamp), dod, 
+                    units = "days") <= 14)
+  
+  # calculating distance, but only for the closest wolf kill
+  leave_no_hunt_gps$dist2kill[i,] <- st_distance(tmp_gps, tmp_kills, by_element = T)
+  
+}
+
