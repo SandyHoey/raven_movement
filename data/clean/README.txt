@@ -1,5 +1,9 @@
 Explanation of what each file is used for and each column (column type, units)
 
+gardiner_hunt_poly_roads (shp): a polygon for the Gardiner hunitng region based on a buffer outside Yellowstone boundary and roads as potential hunting access points
+
+mcp90_shapefile (shp): exported shapefiles for the raven territories calculated using a 90% minimum convex polygon
+
 all_raven_gps_clean##: the raw raven GPS movement data taken from movebank and cleaned so that the minimum amount of time between consecutive points for an individual is ## (number at the end of file name). These files are created and written form clean_time_between_points.R
 	Only explaining relevant columns since there is a lot of junk from Movebank that isn't used
 	timestamp (datetime): raven GPS point date and time at UTC-0
