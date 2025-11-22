@@ -177,7 +177,7 @@ cluster_summaries_wolves_summer (rds): clusters used as input data for the RF pr
 
 cluster_summaries_wolves_winter (rds): clusters used as input data for the RF predictive model for wolf kills during the summer (November, December, March) from 2017 - 2024
 
-
+MDT_Spatial_data_map (ArcGIS): shapefile with the road system from Montana Department of Transportation (https://www.arcgis.com/home/item.html?id=1eab4f286f61456b87fa28dc42e49e8f)
 
 
 
