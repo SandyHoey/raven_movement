@@ -1,5 +1,5 @@
-#calculating the distanceo f GPS points to the gardiner hunting district polygon
-#calculating percentage of raven GPS points that occur in the gardiner hunting district
+#calculating the distance of GPS points to the Gardiner hunting region polygon
+#calculating percentage of raven GPS points that occur in the Gardiner hunting district
   #area during the fall/winter season (Nov-Mar)
 
 library(sf)
@@ -38,21 +38,21 @@ sf_ravens_all <- st_as_sf(all_gps, coords=c("utm_easting", "utm_northing"),
                           crs="+proj=utm +zone=12")
 
 
-#reading in Gardiner/Jardine kml
-gardiner_kml <- st_read("data/raw/gardiner_polygon.kml") %>% 
+#reading in Gardiner hunting region shapefile
+gardiner_hunt_poly <- st_read("data/clean/Gardiner_hunt_poly_roads/MDT_road_10k_buffer_5k.shp") %>% 
   #transforming latlong to UTM to match the GPS points
-  st_transform(gardiner_kml, crs = st_crs(sf_ravens_all))
+  st_transform(gardiner_hunt_poly, crs = st_crs(sf_ravens_all))
 
-#reading at gardiner dump/sewage pond kml
-dump_kml <- st_read("data/raw/gardiner_dump.kml") %>% 
+#reading at Gardiner dump/sewage pond kml
+dump_kml <- st_read("data/raw/Gardiner_dump.kml") %>% 
   #transforming latlong to UTM to match the GPS points
   st_transform(dump_kml, crs = st_crs(sf_ravens_all))
 
 
-#calculating distance to gardiner hunting region, gardiner dump, and north entrance
+#calculating distance to Gardiner hunting region, Gardiner dump, and north entrance
 #0 == inside the polygon
 all_gps <- all_gps %>% 
-  mutate(dist2gardiner  = as.numeric(st_distance(sf_ravens_all, gardiner_kml)),
+  mutate(dist2gardiner  = as.numeric(st_distance(sf_ravens_all, gardiner_hunt_poly)),
          dist2dump = as.numeric(st_distance(sf_ravens_all, dump_kml)))
 
 #importing raven demographic information
@@ -113,11 +113,11 @@ terr_fw_gps <- terr_gps %>%
 # calculating the percent of GPS points that are inside the Gardiner/Jardine polygon
 # for territorial birds
 
-# terr_fw_gardiner <- tapply(terr_fw_gps,
+# terr_fw_Gardiner <- tapply(terr_fw_gps,
 #                          terr_fw_gps$individual_local_identifier,
 #                          function(x){
 #                            nrow(x[x$dist2gardiner == 0,])/nrow(x)
 # })
-# terr_fw_gardiner
-# range(terr_fw_gardiner)
-# hist(terr_fw_gardiner)
+# terr_fw_Gardiner
+# range(terr_fw_Gardiner)
+# hist(terr_fw_Gardiner)
