@@ -64,10 +64,10 @@ for(i in 1:nrow(leave_no_hunt_gps)){
   
   tmp_kills <- wolf_kills %>% 
     # only kills that were made within last 2 weeks
-    filter(difftime(leave_no_hunt_gps$date, dod, 
-                    units = "days") <= 14,
-           difftime(leave_no_hunt_gps$date, dod, 
-                    units = "days") >= 0,)
+    filter(as.numeric(difftime(tmp_gps$date, dod, 
+                    units = "days")) <= 14,
+           as.numeric(difftime(tmp_gps$date, dod, 
+                               units = "days")) >= 0)
   
   #if there are no kills, then make distance NA
   if(nrow(tmp_kills) > 0){
@@ -98,3 +98,4 @@ leave_no_hunt_gps %>%
   mutate(prop_visit = days_visit/total_days)
 
 
+# visiting the hunting area -------------------------------------------------------------------------
