@@ -86,7 +86,7 @@ raven_gps_outside_ynp %>%
 #reading in commute data
 commute_df_covariates <- read_csv("data/clean/commute_data.csv") %>% 
   #selecting useful columns
-  dplyr::select(raven_id, date, dist2nentrance, temp_max)
+  dplyr::select(raven_id, date, hunt_bin, dist2nentrance, temp_max)
 
 
 #raven GPS data with covariates to map by
