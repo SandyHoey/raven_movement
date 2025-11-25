@@ -138,3 +138,37 @@ hunt_model_data %>%
     ungroup %>% 
     pull(prop_group_visit_hunt) %>% 
     hist(main = "proportion of territorials that visited hunting")
+  
+  
+# table showing raven decisions
+  (decision_table <- all %>% 
+    group_by(raven_id) %>% 
+    summarize(terr = sum(terr_bin == FALSE),
+              other = sum(terr_bin == TRUE & hunt_bin == FALSE),
+              hunt = sum(hunt_bin == TRUE)) %>% 
+  mutate(n = hunt + other + terr))
+  
+# stacked barplot showing raven decisions
+  decision_table %>% 
+    # switching to long format
+    pivot_longer(cols = c(hunt, other, terr),
+                 names_to = "decision") %>% 
+    # plotting proportion stacked barchart
+    ggplot(aes(x = value, y = raven_id, fill = decision)) +
+    geom_bar(position = "fill", stat = "identity") +
+    labs(title = "Raven movement decisions",
+         x = "Proportion",
+         y = "Raven ID",
+         fill = "Movement\ndecision") +
+    scale_x_continuous(expand = c(0, 0)) +
+    # changing name of legend items
+    scale_fill_discrete(labels = c("hunting", "other", "territory")) + 
+    geom_text(data = decision_table, aes(x = 1.01, y = raven_id, label = n),
+              inherit.aes = FALSE, hjust = 0, size = 3) + 
+    # adding label for sample size column
+    annotate("text", x = 1, y = Inf, label = "Sample size",
+             hjust = 0, vjust = -0.3, size = 3) +
+    # adjusting plot axis to show the extra text
+    coord_cartesian(xlim = c(0, 1.1), clip = "off") +
+    theme_classic()
+
