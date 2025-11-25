@@ -1,0 +1,87 @@
+---
+title: "ch2 comparing wolf kill databases"
+author: "Cameron Ho"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(readr)
+library(here)
+library(lme4)
+
+#optimizer for glmer
+cntrl <- glmerControl(optimizer = "bobyqa", tol = 1e-4, optCtrl=list(maxfun=100000))
+
+```
+
+## Summary
+This document will compare the outputs of the part 1 of the conditional model with the RF predictive wolf kills against the wolf project database data.  
+Both covariates are calculated slightly differently. The wolf project database only has a start date, which is the date of death. So for the wolf project database covariate (active_kill), the kill remains available to ravens for 2 days after the date of death. So if the kill is made on 3/1, the kill is available until 3/3. This is pretty coarse because the size of the prey will heavily impact how long there is food available. A deer will last way less than any elk will, but that 2 day period is just an average that has to be applied across all kills. I could take the prey species from the kill database and determine the days it will remain available based on that, but you run into problems of unknowns. I think it'll just be simpler to use the RF data because even prey of the same species can last different lengths when you consider the other factors as well like pack size. Then that calculation just starts looking like its own mess.
+For the RF predictive database we have more precise information on the movement of wolves. As long as wolves are still at the site, then we can assume that there is biomass that can still be consumed. For this reason, a carcass will remain available from the start of the cluster until 1 day after the end of the cluster. This decision was made based on the direct observations of ravens at wolf kills. For the average wolf kill, ravens continued to return for 1.2 days after the wolves have left. While this definition is still imprecise, it is less coarse than the wolf kill database version of 2 days after the date of death. This is because it allows me to take into account when the wolves leave the kill, which should make the size of the prey less important as the wolves are only likely to leave when the amount of biomass remaining is low.  
+A quick note, the RF data utilizes wolf GPS positioning to predict if GPS clusters are kills or not. This means that packs that don't have GPS collars are not represent for a certain period of time until they are captured and recollared. I have not accounted for this yet. But this would lower the number of raven data points I have because I would have to remove ravens when the pack in their area is not being sampled via GPS collar.  
+A big difference between the two databases is that the wolf project database can include carcasses other than wolf kills or carcasses that wolves visited. For this, I removed all of the cougar kills but that still left a large number of winter kills. The RF predictive data on the other hand is exclusive to carcasses that wolves were at. And even though the certainty rate (or whatever its called) is pretty high for the winter, it can still miss things when they don't spend a lot of time at a site.  
+Here is a basic summary of how the two databases stack up for the various wolf kill covariates.  
+The mean kill density is the average of of the wolf kill density, calculated as the number of wolf kills within 1 km of the territory during the winter study period divided by 30 (days). The density is calculated twice per year for each bird, once in early winter (Nov-Dec) and once in late winter (Mar).  
+The n active kill is the number of days that the raven has an active kill on their territory. 
+
+```{r basic summary, cols.print=5}
+data <- readr::read_csv(here("data", "clean", "commute_data.csv"))
+
+data %>% 
+  group_by(raven_id) %>% 
+  summarize(mean_kill_density = mean(avg_terr_kill_density),
+            rf_mean_kill_density = mean(rf_avg_terr_kill_density),
+            n_active_kills = sum(active_kill),
+            rf_n_active_kills = sum(rf_active_kill))
+
+```
+This table shows the kill density in their territory and the total number of days with an active kill found by each database within the ravens' territory.
+
+## Model
+```{r reading in data, results = 'hide', message = FALSE}
+#data for part 1 of conditional model
+ws_model_data <- read_csv(here("data", "clean", "commute_data.csv")) %>% 
+  
+  #restricting to only winter study months
+  filter((paste(month, day, sep = "-") >= "11-15" &
+            paste(month, day, sep = "-") <= "12-15") |
+          (paste(month, day, sep = "-") >= "3-1" &
+            paste(month, day, sep = "-") <= "3-30")) %>% 
+  
+  #removing days when there is less than 5 GPS point
+  #unless the result is Jardine
+  filter(!(n_point < 5 & terr_bin == F)) %>% 
+  
+  #only columns used in model
+  dplyr::select(terr_bin, raven_id, active_kill, rf_active_kill, bms_window_1, hunt_season, take_high_low, avg_terr_kill_density, rf_avg_terr_kill_density, dist2nentrance,
+                study_period, temp_max, snow_depth, prop_group_left_terr) %>% 
+  
+  #making sure rows are complete
+  filter(complete.cases(.)) 
+```
+#### Wolf project database
+```{r wolf project covariate}
+mod_wp <- glmer(terr_bin ~ (1|raven_id) + active_kill * scale(bms_window_1) + scale(avg_terr_kill_density) + 
+                         scale(dist2nentrance) + study_period * scale(temp_max) + scale(snow_depth) + scale(prop_group_left_terr),
+                       data = ws_model_data,
+                       family = "binomial",
+                       nAGQ = 40,
+                       control = cntrl)
+summary(mod_wp)
+```
+#### RF predictive kill database
+```{r RF covariate}
+mod_rf <- glmer(terr_bin ~ (1|raven_id) + rf_active_kill * scale(bms_window_1) + scale(rf_avg_terr_kill_density) + 
+                         scale(dist2nentrance) + study_period * scale(temp_max) + scale(snow_depth) + scale(prop_group_left_terr),
+                       data = ws_model_data,
+                       family = "binomial",
+                       nAGQ = 40,
+                       control = cntrl)
+summary(mod_rf)
+```
+The models have basically the same results. Not sure what to think. 
