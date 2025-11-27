@@ -1,11 +1,12 @@
 #looking to see how often ravens visit wolf kills during different movement decisions
 
 library(dplyr)
+library(here)
 library(sf)
 `%like%` <- data.table::`%like%`
 
 # reading in wolf kill data (both wolf project database and RF predictive)
-wp_kills <- readr::read_csv("data/raw/wolf_project_carcass_data.csv") %>% 
+wp_kills <- readr::read_csv(here("data/raw/wolf_project_carcass_data.csv")) %>% 
   janitor::clean_names() %>% 
   # removing cat kills
   filter(cod %like% "WOLF") %>% 
@@ -19,7 +20,7 @@ wp_kills <- readr::read_csv("data/raw/wolf_project_carcass_data.csv") %>%
          #fixing date column format
          dod = lubridate::mdy(dod))
 
-rf_kills <- readr::read_rds("data/raw/mergedkills_wolf_winter_RF_spec95.rds") %>% janitor::clean_names() %>% ungroup
+rf_kills <- readr::read_rds(here("data/raw/mergedkills_wolf_winter_RF_spec95.rds")) %>% janitor::clean_names() %>% ungroup
 
 # creating a single combined kill dataframe with the start date and coordinates
 wolf_kills <- wp_kills %>% 
@@ -38,7 +39,7 @@ wolf_kills <- wp_kills %>%
 # leaving the territory, but not visiting the hunting area-------------------------------------------------------------------------
 
 # reading in GPS data for this particular case
-leave_no_hunt_gps <- readr::read_csv("data/clean/raven_gps_outside_terr_no_hunt.csv") %>% 
+leave_no_hunt_gps <- readr::read_csv(here("data/clean/raven_gps_outside_terr_no_hunt.csv")) %>% 
   # only useful columns
   dplyr::select(individual_local_identifier, study_local_timestamp, utm_easting, utm_northing) %>%
   # simpler column names
@@ -100,7 +101,7 @@ leave_no_hunt_wolf_kills <- leave_no_hunt_gps %>%
 
 # visiting the hunting area -------------------------------------------------------------------------
 
-hunt_gps <- readr::read_csv("data/clean/raven_gps_covariates.csv") %>% 
+hunt_gps <- readr::read_csv(here("data/clean/raven_gps_covariates.csv")) %>% 
   #only days with visit to hunting area
   filter(hunt_bin == 1) %>% 
   # only useful columns
