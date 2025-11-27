@@ -186,7 +186,7 @@ boot_param_CI(nsim = 1000, model = mod_hunt_bms1, data = hunt_model_data)[[3]]
 
 ## Figures
 Here is a table that shows the number of times raven made each decision. Beth had the idea to make some kind of heat map similar to the map below that has individual examples of ravens GPS points, but for raven decisions. This would be so there was some, more easily understandable (the giant mass of GPS points is hard to comprehend and compare), visual example. The Gardiner hunting region and the territory would be heat map areas and then the times that the raven left its territory but didn't go to Gardiner would leave the GPS points like map 1.B. This would mean that you could only have 1 raven per map so that the heat map reflected that individuals decisions.
-```{r table of raven decisions}
+```{r table of raven decisions, message=FALSE}
 (raven_decisions <- read_csv(here("data",  "clean", "commute_data.csv")) %>%
    group_by(raven_id) %>% 
    summarize(terr = sum(terr_bin == FALSE),
@@ -196,7 +196,7 @@ Here is a table that shows the number of times raven made each decision. Beth ha
    mutate(n = hunt + other + terr))
 ```
 But I think an even better option would be a bar chart with 3 levels showing the proportion of days making whatever decisions (similar to how we handled the raven foraging).
-```{r bar plot of raven decisions}
+```{r bar plot of raven decisions, echo=FALSE}
 raven_decisions %>% 
   # switching to long format
   pivot_longer(cols = c(hunt, other, terr),
@@ -248,7 +248,7 @@ Here is a map of the relevant polygons used including the study area of Yellowst
 ![](study_area.jpg)
 ## Wolf kill visits 
 I looked at how often ravens were visiting wolf kills when they left their territory because it looked like they didn't visit kills that often when they left their territory but didn't visit the Gardiner hunting region (map 1.B). 
-```{r wolf kill visits off territory}
+```{r wolf kill visits off territory, message=FALSE}
 source(here("scripts", "exploratory", "wolf_kill_visits.R"))
 
 #table for days visiting wolf kills with no hunting visit
