@@ -66,6 +66,18 @@ hunt_model_data <- read_csv(here("data", "clean", "commute_data.csv")) %>%
   #making sure rows are complete
   filter(complete.cases(.)) 
 ```
+Here is a description of all the model covariates
+- rf_active_kill: if a kill detected through the RF predictive model is present on the ravens territory or not
+- bms_window_1: the estimated available biomass from human hunting
+- hunt_season: if it is currently within the hunting season or not
+- take_high_low: a categorical value for if human hunting take was high (>1), low (<1), or 0
+- rf_avg_terr_kill_density: the average number of kills per 30 days during early or late winter study period
+- dist2nentrance: distance from raven territory to the north entrance station
+- study_period: early or late winter study
+- temp_max: daily maximum temperature
+- snow_depth: daily snow depth
+prop_group_left_terr: the proportion of other ravens that left their territory
+prop_group_visit_hunt: the proportion of other ravens that visited the Gardiner hunting region
 ## Part 1 of conditional model
 The first part of the conditional model predicts if a raven will leaves it territory or not.  
 <br>
@@ -75,6 +87,7 @@ terr_bin
 0 = stayed on territory  
 <br>
 I ended up trying a three different covariates to represent the hunting element of the model because I don't know how ravens view the resource or the thresholds for availability that they consider viable. For examples,  10 and 15 kills are probably basically the same thing. Its a lot of potential food. But where is that line drawn. Is 1 and 5 different enough? What about 5 and 10? Or maybe 1 is all it takes. Or just hunters trying. It also allows for a little flexibility without the most precise daily data for hunting.  
+After talking with John, I am probably going to report both the hunting season model (2) and the biomass model (1). This is because the biomass covariate has so much uncertainty in how it is calculated during the MTFWP season since it doesn't actually quantify the number of daily kills. It tries to account for variation by using elk movement. It is very possible that someone doesn't like or believe it is calculated correctly. By also including the hunting season model we can show that the overall hunting period itself, regardless of the daily biomass availability, has an effect on decision making. Then, we can say that we tried to get finer scaled using the biomass covariate. The results are similar enough that it is believable and doesn't drastically change interpretation, but a reader can disregard that part if they want. 
 <br>
 1. bms_window: The most specific is the a measure of the available biomass.
 ```{r (1) bms_window model}
@@ -195,7 +208,7 @@ Here is a table that shows the number of times raven made each decision. Beth ha
   # adding column for total sample size for each raven
    mutate(n = hunt + other + terr))
 ```
-But I think an even better option would be a bar chart with 3 levels showing the proportion of days making whatever decisions (similar to how we handled the raven foraging).
+But I think an even better option would be a bar chart with 3 levels showing the proportion of days making whatever decisions (similar to how we handled the raven foraging).  
 ```{r bar plot of raven decisions, echo=FALSE}
 raven_decisions %>% 
   # switching to long format
@@ -232,30 +245,31 @@ raven_decisions %>%
 ```
 <br>
 Here is an visual example of three different ravens with territories at different distances from the Gardiner hunting region area and their GPS points.  
-Of the three ravens, the orange raven with its territory at Old Faithful is the only one that doesn't visit the hunting area which is why it looks the same in both maps. Instead, its trips are consistently to the closer town of West Yellowstone, presumably to feed on human refuse. It probably makes this decision because the time investment to travel up to the Gardiner hunting region is not worth it when an alternative location with consistent foraging is nearby.
-Even though purple is a similar distance to West Yellowstone where orange visits frequently, it  chooses to travel to the north instead. It probably makes this choice because unlike orange, the time investment is about the same between the two locations. And Gardiner has a much higher level of hunting offering a potentially better foraging opportunity while also have human refuse as a back up. Almost all trips north for purple resulted in a visit to the Gardiner hunting region, and the few remaining points up north are probably because of a missed fix in the hunting area.Most of the time when the purple chooses to leave its territory, but not visit the Gardiner hunting region, it is actually still hanging out around its territory but just outside of the 1 kilometer around the 90% minimum convex polygon I am currently considering their territory. 
-Green is so close to the Gardiner hunting region that it only makes sense that it visits so often, given that the flight time for that trip is less than 30 minutes. On days that it leaves its territory but does not visit the Gardiner hunting region it visits various areas in the northern range inside the park and even ventures eastward a few times during October before it gets too cold. 
-One super interesting thing to note is that you would think that there would be more obvious instances of ravens visiting wolf kills outside their territories which would show up as small concentrations of GPS points in map B. However, this almost never occurs, or at least isn't obvious. I think this is because either the carcass is close enough to their territory that I still consider the raven as having not left. Or, ravens will frequently visit wolf kills outside their territory, followed by a trip to the Gardiner hunting area. This second explanation actually lines up with some of my experiences seeing a group of ravens fly into a carcass sometime in the morning, only to leave not long after. I look into this a farther down using some tables.   
+Of the three ravens, the orange raven with its territory at Old Faithful is the only one that doesn't visit the hunting area which is why it looks the same in both maps. Instead, its trips are consistently to the closer town of West Yellowstone, presumably to feed on human refuse. It probably makes this decision because the time investment to travel up to the Gardiner hunting region is not worth it when an alternative location with consistent foraging is nearby.  
+Even though purple is a similar distance to West Yellowstone where orange visits frequently, it  chooses to travel to the north instead. It probably makes this choice because unlike orange, the time investment is about the same between the two locations. And Gardiner has a much higher level of hunting offering a potentially better foraging opportunity while also have human refuse as a back up. Almost all trips north for purple resulted in a visit to the Gardiner hunting region, and the few remaining points up north are probably because of a missed fix in the hunting area. Most of the time when the purple chooses to leave its territory, but not visit the Gardiner hunting region, it is actually still hanging out around its territory but just outside of the 1 kilometer around the 90% minimum convex polygon I am currently considering their territory.  
+Green's territory is so close to the Gardiner hunting region that it only makes sense that it visits so often, given that the flight time for that trip is less than 30 minutes. On days that it leaves its territory but does not visit the Gardiner hunting region it visits various areas in the northern range inside the park and even ventures eastward a few times during October before it gets too cold.  
+One super interesting thing to note is that you would think that there would be more obvious instances of ravens visiting wolf kills outside their territories which would show up as small concentrations of GPS points in map B. However, this almost never occurs, or at least isn't obvious. I think this is because either the carcass is close enough to their territory that I still consider the raven as having not left. Or, ravens will frequently visit wolf kills outside their territory, followed by a trip to the Gardiner hunting area. This second explanation actually lines up with some of my experiences seeing a group of ravens fly into a carcass sometime in the morning, only to leave not long after. I look into this a farther down using some tables.  
 Map A shows the all GPS points made by each of the three ravens. Map B shows the GPS points for the three ravens when they choose to exit their territories (highlighted in red), but did not visit the Gardiner hunting region.
   
 ![](individual_examples.jpg)
 <br>
 Here is a heat map of the raven GPS points outside the park from November and March along with a polygon denoting the area used to determine if a raven attempted to search for hunter created resources during the MTFWP rifle hunting season and the tribal bison hunt (hereafter Gardiner hunting region). The Gardiner hunting region is defined as the space 5 km from all roads within 10 km north of the national park boundary. This space has a high density of hunting activity in close proximity to the northern range of the park. The 5 km buffer around roads was used as a reasonable distance for a hunter to travel. There is certainly successful hunting attempts in the areas outside this polygon, but the relative number of those will be low compared to hunting within the polygon.  
-This polygon does include the town of Gardiner along with the local landfill and water treatment ponds that ravens have been documented using as locations to forage since I made the assumption that a raven visiting this area would always attempt to find hunter offal, even if unsuccessful. Only 26% of trips to the Gardiner hunting region during the hunting season resulted in a trip to the landfill and water treatment pond.  
+This polygon does include the town of Gardiner along with the local landfill and water treatment ponds that ravens have been documented using as locations to forage since I made the assumption that a dominant territorial raven visiting this area would always attempt to find hunter offal, even if unsuccessful. 26% of trips to the Gardiner hunting region during the hunting season resulted in at least 1 GPS point at the landfill and water treatment pond.  
 ![](hunting_heatmap.jpg)
 <br>
 Here is a map of the relevant polygons used including the study area of Yellowstone National Park, the northern range of Yellowstone, and raven territories calculated using 90% minimum convex polygons of their breeding season GPS data. All raven used for this study have territories within the boundary of the national park. In 2 cases where a territorial pair had both individuals GPS tagged, only the female was used since the GPS fix rate was higher due to better battery levels resulting from less coverage of the solar panel during the winter.  
 ![](study_area.jpg)
-## Wolf kill visits 
-I looked at how often ravens were visiting wolf kills when they left their territory because it looked like they didn't visit kills that often when they left their territory but didn't visit the Gardiner hunting region (map 1.B). 
+## Wolf kill visits
+I looked at how often ravens were visiting wolf kills when they left their territory because it looked like they didn't visit kills that often when they left their territory but didn't visit the Gardiner hunting region (map 1.B). This currently includes both the RF predicted wolf kills and the wolf project kill database to have the maximum coverage of possible kills. 
 ```{r wolf kill visits off territory, message=FALSE}
 source(here("scripts", "exploratory", "wolf_kill_visits.R"))
 
-#table for days visiting wolf kills with no hunting visit
+# table for days visiting wolf kills with no hunting visit
 leave_no_hunt_wolf_kills
 
 # table for days visiting wolf kills with hunting visit
 hunt_wolf_kills
 
 ```
-It looks like wolf kill visits are not a large portion of trips outside of the territory, regardless of if the raven ends up in the Gardiner hunting region or not. This tracks with the foraging paper and the relative importance of natural carrion to anthropogenic resources used by most ravens. It is worth noting that a fair number of times ravens do visit wolf kills before preceding to search for hunter gutpiles. 
+It looks like wolf kill visits are not a large portion of trips outside of the territory, regardless of if the raven ends up in the Gardiner hunting region or not. Although it is more than map 1.B makes it look like. This might be because they don't actually spend a lot of time at these kills, so they don't accumulate GPS points there.  
+This tracks with the foraging paper and the relative importance of natural carrion compared to anthropogenic resources used by most ravens. It is worth noting that a fair number of times ravens do visit wolf kills before preceding to the Gardiner hunting region to search for hunter gutpiles. 
