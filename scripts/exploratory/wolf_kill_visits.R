@@ -162,3 +162,16 @@ hunt_wolf_kills <- hunt_gps %>%
               summarize(total_days = n())) %>% 
   #calculating proportion of days visiting wolf kill outside territory without visiting the hunting area
   mutate(prop_visit = days_visit/total_days)
+
+
+# other stuff -------------------------------------------------------------
+
+mean(leave_no_hunt_wolf_kills$prop_visit)
+leave_no_hunt_wolf_kills %>% 
+  summarize(visit = sum(days_visit),
+            total = sum(total_days))
+
+mean(hunt_wolf_kills$prop_visit)
+hunt_wolf_kills %>% 
+  summarize(visit = sum(days_visit),
+            total = sum(total_days))
