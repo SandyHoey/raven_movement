@@ -413,24 +413,24 @@ commute_df <- bison_take %>%
 
 
 # Hunting categorical take ----------------------------------------------------
-#adding just high or low periods/years instead of numerical values
-
-#low period is before nov 7
-#low period for bison is years < 1 (which is low values of below 10 in a season)
-
-commute_df <- commute_df %>% 
-  
-  mutate(take_high_low = if_else(final_take_bms == 0, "zero",
-                                 if_else(
-                                   #in the early FWP season (before Nov 7)
-                                   (paste(month, day, sep = "-") >= format(start_hunt, "%m-%d") &
-                                      paste(month, day, sep = "-") <= "11-7"),
-                                   "low",
-                                   "high")),
-         take_high_low = if_else(#in a low bison take year (< 10 in a season)
-                                    month == 3 & bison_daily_take < 1,
-                                    "low",
-                                    take_high_low))
+# #adding just high or low periods/years instead of numerical values
+# 
+# #low period is before nov 7
+# #low period for bison is years < 1 (which is low values of below 10 in a season)
+# 
+# commute_df <- commute_df %>% 
+#   
+#   mutate(take_high_low = if_else(final_take_bms == 0, "zero",
+#                                  if_else(
+#                                    #in the early FWP season (before Nov 7)
+#                                    (paste(month, day, sep = "-") >= format(start_hunt, "%m-%d") &
+#                                       paste(month, day, sep = "-") <= "11-7"),
+#                                    "low",
+#                                    "high")),
+#          take_high_low = if_else(#in a low bison take year (< 10 in a season)
+#                                     month == 3 & bison_daily_take < 1,
+#                                     "low",
+#                                     take_high_low))
 
 # Weekends ----------------------------------------------------------------
 #adding weekend effect for hunting
