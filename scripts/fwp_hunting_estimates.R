@@ -235,9 +235,9 @@ daily_count <- daily_count %>%
 
 #creating a single column with the combined take numbers
 daily_count <- daily_count %>% 
-  mutate(final_take_bms = final_elk_bms + final_deer_bms + final_md_buck_bms)
-  # mutate(final_take = final_elk_take + final_deer_take + final_md_buck_take,
-  #        final_take_bms = final_elk_bms + final_deer_bms + final_md_buck_bms)
+  mutate(final_take_bms = final_elk_bms + final_deer_bms + final_md_buck_bms,
+         final_take = final_elk_take + final_deer_take + final_md_buck_take)
+
 
 
 #plotting take numbers
@@ -254,62 +254,62 @@ daily_count %>%
 
 
 # calculating floating window averages for previous days -------------------------------------------------------------------------
-#only calculating for study periods
-#calculating for early winter period
-
-#making sure the full winter study period is present
-daily_count <- daily_count %>% 
-  
-  #making a single date column
-  mutate(date = make_date(year, month, day)) %>% 
-  
-  #group by year so there is no bleed over between seasons
-  group_by(year) %>% 
-  
-  #completing the date sequence
-  complete(date = seq(as.Date(paste0(cur_group(), "-11-15")),
-                      as.Date(paste0(cur_group(), "-12-15")),
-                      by = "day")) %>% 
-  ungroup %>% 
-  
-  #making sure year, month, day columns are okay
-  mutate(year = year(date),
-         month = month(date),
-         day = day(date),
-         md = paste(month, day, sep = "-"))
-
-
-#function to calculate time period averages for hunting take in previous days
-moving_window_function <- function(window){
-  
-  #making sure the full winter study period is present
-  data <- daily_count %>% 
-    
-    group_by(year) %>% 
-    
-  arrange(year, month, day) %>% 
-    
-    #adding the moving average
-    mutate(!!paste0("bms_window_", window) := 
-             slider::slide_dbl(final_take_bms, mean,
-                               .before = window, .after = -1,
-                               .complete = T, na.rm=T))
-
-  return(data)
-}
-
-daily_count <- moving_window_function(1)
-daily_count <- moving_window_function(3)
-daily_count <- moving_window_function(5) %>%
-  
-  #making sure the later days in the study are represented as a 0
-  mutate(bms_window_1 = if_else(is.nan(bms_window_1), 0, bms_window_1),
-         bms_window_3 = if_else(is.nan(bms_window_3), 0, bms_window_3),
-         bms_window_5 = if_else(is.nan(bms_window_5), 0, bms_window_5))
-
-
-#plotting moving average
-daily_count %>% 
-  ggplot(aes(x = as.Date(paste(2000, md, sep = "-")), y = bms_window_5, 
-             group = year, col = factor(year))) +
-  geom_line()
+# #only calculating for study periods
+# #calculating for early winter period
+# 
+# #making sure the full winter study period is present
+# daily_count <- daily_count %>% 
+#   
+#   #making a single date column
+#   mutate(date = make_date(year, month, day)) %>% 
+#   
+#   #group by year so there is no bleed over between seasons
+#   group_by(year) %>% 
+#   
+#   #completing the date sequence
+#   complete(date = seq(as.Date(paste0(cur_group(), "-11-15")),
+#                       as.Date(paste0(cur_group(), "-12-15")),
+#                       by = "day")) %>% 
+#   ungroup %>% 
+#   
+#   #making sure year, month, day columns are okay
+#   mutate(year = year(date),
+#          month = month(date),
+#          day = day(date),
+#          md = paste(month, day, sep = "-"))
+# 
+# 
+# #function to calculate time period averages for hunting take in previous days
+# moving_window_function <- function(window){
+#   
+#   #making sure the full winter study period is present
+#   data <- daily_count %>% 
+#     
+#     group_by(year) %>% 
+#     
+#   arrange(year, month, day) %>% 
+#     
+#     #adding the moving average
+#     mutate(!!paste0("bms_window_", window) := 
+#              slider::slide_dbl(final_take_bms, mean,
+#                                .before = window, .after = -1,
+#                                .complete = T, na.rm=T))
+# 
+#   return(data)
+# }
+# 
+# daily_count <- moving_window_function(1)
+# daily_count <- moving_window_function(3)
+# daily_count <- moving_window_function(5) %>%
+#   
+#   #making sure the later days in the study are represented as a 0
+#   mutate(bms_window_1 = if_else(is.nan(bms_window_1), 0, bms_window_1),
+#          bms_window_3 = if_else(is.nan(bms_window_3), 0, bms_window_3),
+#          bms_window_5 = if_else(is.nan(bms_window_5), 0, bms_window_5))
+# 
+# 
+# #plotting moving average
+# daily_count %>% 
+#   ggplot(aes(x = as.Date(paste(2000, md, sep = "-")), y = bms_window_5, 
+#              group = year, col = factor(year))) +
+#   geom_line()
