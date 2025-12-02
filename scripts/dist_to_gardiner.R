@@ -39,9 +39,14 @@ sf_ravens_all <- st_as_sf(all_gps, coords=c("utm_easting", "utm_northing"),
 
 
 #reading in Gardiner hunting region shapefile
-gardiner_hunt_poly <- st_read("data/clean/Gardiner_hunt_poly_roads/MDT_road_10k_buffer_5k.shp") %>% 
+mtfwp_hunt_poly <- st_read("data/clean/gardiner_hunt_poly_roads/gardiner_mtfwp_region.shp") %>% 
   #transforming latlong to UTM to match the GPS points
-  st_transform(gardiner_hunt_poly, crs = st_crs(sf_ravens_all))
+  st_transform(crs = st_crs(sf_ravens_all))
+
+bison_hunt_poly <- st_read("data/clean/gardiner_hunt_poly_roads/gardiner_bison_region.shp") %>% 
+  #transforming latlong to UTM to match the GPS points
+  st_transform(crs = st_crs(sf_ravens_all))
+
 
 #reading at Gardiner dump/sewage pond kml
 dump_kml <- st_read("data/raw/Gardiner_dump.kml") %>% 
@@ -49,10 +54,11 @@ dump_kml <- st_read("data/raw/Gardiner_dump.kml") %>%
   st_transform(dump_kml, crs = st_crs(sf_ravens_all))
 
 
-#calculating distance to Gardiner hunting region, Gardiner dump, and north entrance
+#calculating distance to MTFWP hunting region, bison hunting region, Gardiner dump
 #0 == inside the polygon
 all_gps <- all_gps %>% 
-  mutate(dist2gardiner  = as.numeric(st_distance(sf_ravens_all, gardiner_hunt_poly)),
+  mutate(dist2fwp  = as.numeric(st_distance(sf_ravens_all, mtfwp_hunt_poly)),
+         dist2bison = as.numeric(st_distance(sf_ravens_all, bison_hunt_poly)),
          dist2dump = as.numeric(st_distance(sf_ravens_all, dump_kml)))
 
 #importing raven demographic information
