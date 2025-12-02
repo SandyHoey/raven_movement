@@ -304,34 +304,37 @@ commute_df <- commute_df %>%
 ##' march for tribal bison hunting (This actually depends on bison movement)
 
 #reading in hunting dates
-hunting_dates <- readxl::read_xlsx("data/raw/hunting_seasons.xlsx")
+fwp_dates <- readxl::read_xlsx("data/raw/hunting_seasons.xlsx")%>% 
+  dplyr::select(year, start, end) %>% 
+  rename(fwp_start_hunt = start,
+         fwp_end_hunt = end)
+bison_dates <- readr::read_csv("data/raw/bison_hunt.csv") %>% 
+  dplyr::select(year, start_date) %>% 
+  rename(bison_start_hunt = start_date) %>% 
+  mutate(bison_start_hunt = lubridate::mdy(bison_start_hunt),
+         winter_year = year - 1) %>% 
+  dplyr::select(-year)
 
 commute_df <- commute_df %>% 
-  
   #adding month, day columns
   mutate(year = year(date),
          month = month(date),
          day = day(date)) %>% 
-  
   #adding hunting end date
-  left_join(hunting_dates %>% 
-              dplyr::select(year, start, end),
-            by = join_by(year)) %>% 
-  rename(start_hunt = start,
-         end_hunt = end) %>% 
+  left_join(fwp_dates)  %>% 
+  left_join(bison_dates) %>% 
   
   #creating new boolean column for hunting season
     #' TRUE = active hunting season
   mutate(
     #FWP season
     hunt_season = if_else((format(date, "%m-%d") >= 
-                           format(start_hunt, "%m-%d")) &
+                           format(fwp_start_hunt, "%m-%d")) &
                           (format(date, "%m-%d") <= 
-                             format(end_hunt, "%m-%d")), 
-                        TRUE, 
-                        FALSE),
-    #tribal bison season
-    hunt_season = if_else(month == 3, TRUE, hunt_season))
+                             format(fwp_end_hunt, "%m-%d")), 
+                        TRUE, FALSE),
+    # tribal bison season
+    hunt_season = if_else(date >= bison_start_hunt, TRUE, hunt_season))
 
   
 
@@ -354,7 +357,8 @@ commute_df <- commute_df %>%
 
 #reading in daily take data
 bison_daily_take <- readr::read_csv("data/clean/bison_daily_take.csv") %>%
-  rename(bison_take = take)
+  rename(bison_take = take) %>% 
+  mutate(date = lubridate::mdy(date))
 
 #adding to covariate data
 commute_df <- commute_df %>%
@@ -572,9 +576,8 @@ commute_df <- commute_df %>%
                                      lag(terr_bin), 
                                      NA),
     previous_decision_hunt = if_else(days_since_last == 1, 
-                                 lag(hunt_bin), 
-                                 NA))
-
+                                     lag(hunt_bin), 
+                                     NA))
 
 
 # Weather -------------------------------------------------------------
@@ -606,6 +609,6 @@ commute_df <- commute_df %>%
 write.csv(commute_df %>%
             ungroup() %>% 
             #removing unnecessary columns
-            dplyr::select(-c(commute, bison_take, year,
-                             days_since_last)),
+            dplyr::select(-c(commute, bison_take, year, bison_start_hunt, fwp_start_hunt, 
+                             fwp_end_hunt, days_since_last, winter_year, temp_min)),
           "data/clean/commute_data.csv")
