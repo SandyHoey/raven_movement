@@ -27,6 +27,7 @@ gps_in_mcp <- function(data){
 
 dist2poly <- gps_in_mcp(terr_fw_gps)
 
+
 #adding the wolf/hunting periods
   # Oct 25-Nov 14 rifle hunting only
   # Nov 15-Nov 30 wolf + hunting
@@ -34,6 +35,7 @@ dist2poly <- gps_in_mcp(terr_fw_gps)
 dist2poly <- dist2poly %>% 
   mutate(day = day(study_local_timestamp),
          month = month(study_local_timestamp),
+         year = year(study_local_timestamp),
          hunting_period = "neither")
 dist2poly[dist2poly$month == 10 | (dist2poly$month == 11 & dist2poly$day < 15),]$hunting_period <- "hunt"
 dist2poly[dist2poly$month == 11 & dist2poly$day >= 15,]$hunting_period <- "both"
@@ -47,9 +49,9 @@ info_table <- tapply(dist2poly, INDEX = dist2poly$individual_local_identifier,
          info_table <- rep(NA, 4)
          names(info_table) <- c("Gardiner", "Terr", "Other", "Total")
          
-         info_table[1] <- nrow(subset(x, dist2gardiner == 0))
+         info_table[1] <- nrow(subset(x, dist2fwp == 0))
          info_table[2] <- nrow(subset(x, dist2terr == 0))
-         info_table[3] <-  nrow(subset(x, dist2gardiner != 0 & dist2terr != 0))
+         info_table[3] <-  nrow(subset(x, dist2fwp != 0 & dist2terr != 0))
          info_table[4] <- nrow(x)
            
          return(info_table)
@@ -61,6 +63,17 @@ info_table <- tapply(dist2poly, INDEX = dist2poly$individual_local_identifier,
 # 
 #   return(c(sum(x[1:3]), x[4]))
 # })
+
+
+# adding the hunting end dates
+hunt_dates <- readxl::read_xlsx("data/raw/hunting_seasons.xlsx") %>%
+  dplyr::select(year, end) %>% 
+  rename(hunt_end = end)
+dist2poly <- dist2poly %>% 
+  # column with the year of that winter (March 1, 2020 is from winter 2019) 
+  mutate(winter_year = if_else(month %in% c(1:3), year-1, year)) %>% 
+  #adding hunting end date
+  left_join(hunt_dates, by = join_by(winter_year == year))
 
 
 #creating a column that shows if the raven decided to commute or leave terr that day
@@ -75,28 +88,33 @@ commute_list <- tapply(dist2poly, INDEX = dist2poly$individual_local_identifier,
          #pulling unique dates
          dates <- unique(as.Date(x$study_local_timestamp))
          
-         #pulling hunting period for each date
-         hunting_period <- x %>% 
-           group_by(as.Date(study_local_timestamp)) %>% 
-           slice(1) %>% 
-           ungroup %>% 
-           pull(hunting_period)
-         
          tmp_date_df <- data.frame(ID = x[1, "individual_local_identifier"],
-                                   date = dates, hunting_period, 
-                                   commute = NA, dump = NA, n_point = NA) 
+                                   date = dates, commute = NA, dump = NA, n_point = NA) 
          
          #cycling through all the dates for each individual to tell where the
          #individual ended up that day (terr, other, Gardiner)
          for(d in 1:length(dates)){
-           tmp_dayta <- subset(x, as.Date(study_local_timestamp) == dates[d])
+           # filtering to all GPS points for a single day
+           tmp_dayta <- x %>% filter(as.Date(study_local_timestamp) == dates[d])
            
-           if(any(tmp_dayta[,"dist2gardiner"] == 0)){
-             tmp_date_df[d,"commute"] <- 3
-           } else if(any(tmp_dayta[,"dist2terr"] > 1000)){
-             tmp_date_df[d,"commute"] <- 2
-           } else{
-             tmp_date_df[d,"commute"] <- 1
+           # changing the polygon used to determine if a hunting visit happen based on the hunting season
+           # any time after the end of MTFWP season uses the smaller bison polygon
+           if(x[1,"study_local_timestamp"] <= x[1, "hunt_end"]){ # if the GPS date is before the end of rifle hunting season
+             if(any(tmp_dayta[,"dist2fwp"] == 0)){ #make decisions based on larger rifle hunting polygon
+               tmp_date_df[d,"commute"] <- 3
+             } else if(any(tmp_dayta[,"dist2terr"] > 1000)){
+               tmp_date_df[d,"commute"] <- 2
+             } else{
+               tmp_date_df[d,"commute"] <- 1
+             }
+           } else{ #if its after the end of rifle hunting season
+             if(any(tmp_dayta[,"dist2bison"] == 0)){ #make decisions based on the smaller bison hunting polygon
+               tmp_date_df[d,"commute"] <- 3
+             } else if(any(tmp_dayta[,"dist2terr"] > 1000)){
+               tmp_date_df[d,"commute"] <- 2
+             } else{
+               tmp_date_df[d,"commute"] <- 1
+             }
            }
            
            #adding the number of points that day
@@ -151,20 +169,10 @@ pivot_longer(cols = c(terr, mid, Gardiner),
   scale_y_continuous(expand=c(0,0), limits = c(0, 65))
 
 
-#calculating the different combinations of wolf/hunter periods
-commute_list %>% 
-  do.call("rbind",.) %>% 
-  filter(!(individual_local_identifier %in% c("7494", "7485"))) %>% 
-  group_by(hunting_period) %>% 
-  summarise(terr = sum(commute == 1)/n()*100,
-            mid = sum(commute == 2)/n()*100,
-            Gardiner = sum(commute == 3)/n()*100)
-
-
 #calculating the number of commute days that included a visit to the dump
 commute_df %>% 
   filter(commute == 3) %>% 
   group_by(dump) %>% 
   summarise(n())
-668/(668+1877)
-#25% of the time a raven visits the dump when the commute
+713/(713+1980)
+#26.5% of the time a raven visits the dump when they search the hunting area
