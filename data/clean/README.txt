@@ -1,6 +1,8 @@
 Explanation of what each file is used for and each column (column type, units)
 
-gardiner_hunt_poly_roads (shp): a polygon for the Gardiner hunitng region based on a buffer outside Yellowstone boundary and roads as potential hunting access points
+gardiner_hunt_poly_roads (shp): a polygon for the Gardiner hunting region based on a buffer outside Yellowstone boundary and roads as potential hunting access points
+	gardiner_mtfwp_region: 5 km away from all roads 10 km from park boundary. Used for MTFWP rifle huntig season
+	gardiner_bison_region: 1 km away from the two parrallel roads (Hwy 89 & Olf Yellowstone Trail) that lead from Gardiner to Yankee Jim, stopping at the cattle grate. Used for the period after the MTFWP rifle season ends
 
 mcp90_shapefile (shp): exported shapefiles for the raven territories calculated using a 90% minimum convex polygon
 
@@ -16,6 +18,9 @@ all_raven_gps_clean##: the raw raven GPS movement data taken from movebank and c
 	utm.zone: UTM zone that the raven GPS point is in
 	study.local.timestamp (datetime): raven GPS point date and time at UTC-7 (MST) and UTC-6 (MDT)
 
+bison_daily_take (csv): has daily bison take values from the northern range from surveys done by the Bison Project
+	date (date): survey date
+	take (num): number of bison found to be taken that day
 
 commute_data: the movement decisions about if a raven left its territory and visited the Gardiner hunting region and the associated covariates for modeling. File is created and written from covariates.R as a master script of many smaller scripts for specific things.
 	raven_id (chr): the individual identity of the raven, this also seperates ravens that had the same tag (e.g. 7490, 7490_2)
