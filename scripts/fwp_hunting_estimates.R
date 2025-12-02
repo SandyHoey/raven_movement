@@ -236,7 +236,7 @@ daily_count <- daily_count %>%
 #creating a single column with the combined take numbers
 daily_count <- daily_count %>% 
   mutate(final_take_bms = final_elk_bms + final_deer_bms + final_md_buck_bms,
-         final_take = final_elk_take + final_deer_take + final_md_buck_take)
+         final_take = scale_elk_take + scale_deer_take + scale_md_buck_take)
 
 
 
