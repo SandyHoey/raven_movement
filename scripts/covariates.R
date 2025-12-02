@@ -344,72 +344,85 @@ source("scripts/fwp_hunting_estimates.R")
 commute_df <- commute_df %>%
   left_join(daily_count %>%
               dplyr::select(year, month, day, 
-                            final_take_bms, 
-                            contains("window")),
-            by = join_by(year, month, day)) %>% 
-  #adding 0 for all NA days
-  mutate(bms_window_1 = if_else(!is.na(bms_window_1), bms_window_1, 0),
-         bms_window_3 = if_else(!is.na(bms_window_3), bms_window_3, 0),
-         bms_window_5 = if_else(!is.na(bms_window_5), bms_window_5, 0),
-         final_take_bms = if_else(!is.na(final_take_bms), final_take_bms, 0)) 
+                            final_take_bms, final_take),
+            by = join_by(year, month, day))
 
 
 # Tribal bison take --------------------------------------------------------------
-#!!!! some code is included and commented out for using a hunting start date 
-  # calculating daily take
-  # adding the daily biomass to the window columns based on start date of the hunt
+# adding daily bison take values from NPS Bison Project
+# days without recorded values are remaining as 0 since they didn't start survey efforts until bison moved out of the park and became available to take
+
+#reading in daily take data
+bison_daily_take <- readr::read_csv("data/clean/bison_daily_take.csv") %>%
+  rename(bison_take = take)
+
+#adding to covariate data
+commute_df <- commute_df %>%
+  left_join(bison_daily_take) %>%
+  # making NA days 0 instead
+  mutate(bison_take = if_else(is.na(bison_take), 0, bison_take),
+         final_take_bms = if_else(is.na(final_take_bms), 0, final_take_bms),
+         final_take = if_else(is.na(final_take), 0, final_take) ) %>%
+  # adding bison take to main hunter take column and adding bison multiplier for relative biomass
+  mutate(final_take_bms = final_take_bms + bison_take*2.15,
+         final_take = final_take + bison_take)
 
 
-#reading in data
-#year on this data is the year at the time of march, not the hunting season year
-bison_take <- readr::read_csv("data/raw/bison_hunt.csv")
-
-commute_df <- bison_take %>% 
-  
-  #making a single column with the greatest take value from the FEIS or IBMP
-  mutate(bison_daily_take = if_else(is.na(take), ibmp,
-                              if_else(is.na(ibmp), take,
-                                      if_else(take > ibmp, take, ibmp))),
-         
-         #dividing by hunting days - add back in when I get the hunt start dates
-         # end_date = as.Date(paste0(year(start_date), "-3-31")),
-         # bison_daily_take = bison_daily_take/(difftime(end_date, start_date, units = "days") + 1),
-         bison_daily_take = bison_daily_take/31,
-         
-         #making the biomass based around elk weight = 1x
-         bison_daily_bms = bison_daily_take * 2.15) %>% 
-  
-  #joining to commute data 
-  rename(bison_hunt_start = start_date) %>% 
-  dplyr::select(year, bison_hunt_start, bison_daily_take, bison_daily_bms) %>% 
-  right_join(commute_df, by = join_by(year)) %>% 
-  
-  
-  #reorganizing columns to keep raven and date data up front
-  relocate(bison_daily_take, bison_daily_bms,
-           .after = final_take_bms) %>% 
-  relocate(bison_hunt_start, 
-           .after = start_hunt) %>% 
-  
-  #adding the bison biomass number to the moving window columns
-  # {if(month(bison_hunt_start) == 3){
-  #   mutate(bms_window_1 = if_else(month == 3 & day >= day(start(date)), bison_daily_bms,
-  #                                 if_else(month == 3 & day < day(start(date)), 0, bms_window_1)),
-  #          bms_window_3 = if_else(month == 3 & day >= day(start(date)), bison_daily_bms,
-  #                                 if_else(month == 3 & day < day(start(date)), 0, bms_window_3)),
-  #          bms_window_5 = if_else(month == 3 & day >= day(start(date)), bison_daily_bms,
-  #                                 if_else(month == 3 & day < day(start(date)), 0, bms_window_5)))
-  #   } else(
-  #     mutate(bms_window_1 = if_else(month == 3, bison_daily_bms, bms_window_1),
-  #            bms_window_3 = if_else(month == 3, bison_daily_bms, bms_window_3),
-  #            bms_window_5 = if_else(month == 3, bison_daily_bms, bms_window_5))
-  #     )
-  # }
-
-  mutate(bms_window_1 = if_else(month == 3, bison_daily_bms, bms_window_1),
-         bms_window_3 = if_else(month == 3, bison_daily_bms, bms_window_3),
-         bms_window_5 = if_else(month == 3, bison_daily_bms, bms_window_5),
-         final_take_bms = if_else(month == 3, bison_daily_bms, final_take_bms)) 
+# #!!!! some code is included and commented out for using a hunting start date 
+#   # calculating daily take
+#   # adding the daily biomass to the window columns based on start date of the hunt
+# 
+# 
+# #reading in data
+# #year on this data is the year at the time of march, not the hunting season year
+# bison_take <- readr::read_csv("data/raw/bison_hunt.csv")
+# 
+# commute_df <- bison_take %>% 
+#   
+#   #making a single column with the greatest take value from the FEIS or IBMP
+#   mutate(bison_daily_take = if_else(is.na(take), ibmp,
+#                               if_else(is.na(ibmp), take,
+#                                       if_else(take > ibmp, take, ibmp))),
+#          
+#          #dividing by hunting days - add back in when I get the hunt start dates
+#          # end_date = as.Date(paste0(year(start_date), "-3-31")),
+#          # bison_daily_take = bison_daily_take/(difftime(end_date, start_date, units = "days") + 1),
+#          bison_daily_take = bison_daily_take/31,
+#          
+#          #making the biomass based around elk weight = 1x
+#          bison_daily_bms = bison_daily_take * 2.15) %>% 
+#   
+#   #joining to commute data 
+#   rename(bison_hunt_start = start_date) %>% 
+#   dplyr::select(year, bison_hunt_start, bison_daily_take, bison_daily_bms) %>% 
+#   right_join(commute_df, by = join_by(year)) %>% 
+#   
+#   
+#   #reorganizing columns to keep raven and date data up front
+#   relocate(bison_daily_take, bison_daily_bms,
+#            .after = final_take_bms) %>% 
+#   relocate(bison_hunt_start, 
+#            .after = start_hunt) %>% 
+#   
+#   #adding the bison biomass number to the moving window columns
+#   # {if(month(bison_hunt_start) == 3){
+#   #   mutate(bms_window_1 = if_else(month == 3 & day >= day(start(date)), bison_daily_bms,
+#   #                                 if_else(month == 3 & day < day(start(date)), 0, bms_window_1)),
+#   #          bms_window_3 = if_else(month == 3 & day >= day(start(date)), bison_daily_bms,
+#   #                                 if_else(month == 3 & day < day(start(date)), 0, bms_window_3)),
+#   #          bms_window_5 = if_else(month == 3 & day >= day(start(date)), bison_daily_bms,
+#   #                                 if_else(month == 3 & day < day(start(date)), 0, bms_window_5)))
+#   #   } else(
+#   #     mutate(bms_window_1 = if_else(month == 3, bison_daily_bms, bms_window_1),
+#   #            bms_window_3 = if_else(month == 3, bison_daily_bms, bms_window_3),
+#   #            bms_window_5 = if_else(month == 3, bison_daily_bms, bms_window_5))
+#   #     )
+#   # }
+# 
+#   mutate(bms_window_1 = if_else(month == 3, bison_daily_bms, bms_window_1),
+#          bms_window_3 = if_else(month == 3, bison_daily_bms, bms_window_3),
+#          bms_window_5 = if_else(month == 3, bison_daily_bms, bms_window_5),
+#          final_take_bms = if_else(month == 3, bison_daily_bms, final_take_bms)) 
 
 
 # Hunting categorical take ----------------------------------------------------
@@ -593,6 +606,6 @@ commute_df <- commute_df %>%
 write.csv(commute_df %>%
             ungroup() %>% 
             #removing unnecessary columns
-            dplyr::select(-c(commute, bison_daily_take, bison_daily_bms, year,
+            dplyr::select(-c(commute, bison_take, year,
                              days_since_last)),
           "data/clean/commute_data.csv")
