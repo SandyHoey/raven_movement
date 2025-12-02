@@ -280,7 +280,7 @@ daily_count <- daily_count %>%
 
 
 #function to calculate time period averages for hunting take in previous days
-fwp_window_function <- function(window){
+moving_window_function <- function(window){
   
   #making sure the full winter study period is present
   data <- daily_count %>% 
@@ -298,9 +298,9 @@ fwp_window_function <- function(window){
   return(data)
 }
 
-daily_count <- fwp_window_function(1)
-daily_count <- fwp_window_function(3)
-daily_count <- fwp_window_function(5) %>%
+daily_count <- moving_window_function(1)
+daily_count <- moving_window_function(3)
+daily_count <- moving_window_function(5) %>%
   
   #making sure the later days in the study are represented as a 0
   mutate(bms_window_1 = if_else(is.nan(bms_window_1), 0, bms_window_1),
