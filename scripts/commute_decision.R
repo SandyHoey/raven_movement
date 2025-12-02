@@ -88,7 +88,8 @@ commute_list <- tapply(dist2poly, INDEX = dist2poly$individual_local_identifier,
          #pulling unique dates
          dates <- unique(as.Date(x$study_local_timestamp))
          
-         tmp_date_df <- data.frame(ID = x[1, "individual_local_identifier"],
+         tmp_date_df <- data.frame(ID = x[1, "individual_local_identifier"], 
+                                   winter_year = x[1, "winter_year"],
                                    date = dates, commute = NA, dump = NA, n_point = NA) 
          
          #cycling through all the dates for each individual to tell where the
