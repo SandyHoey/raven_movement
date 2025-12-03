@@ -11,7 +11,7 @@
 
 <meta name="author" content="Cameron Ho" />
 
-<meta name="date" content="2025-11-25" />
+<meta name="date" content="2025-12-03" />
 
 <title>ch2 comparing wolf kill databases</title>
 
@@ -1623,7 +1623,7 @@ display: none;
 
 <h1 class="title toc-ignore">ch2 comparing wolf kill databases</h1>
 <h4 class="author">Cameron Ho</h4>
-<h4 class="date">2025-11-25</h4>
+<h4 class="date">2025-12-03</h4>
 
 </div>
 
@@ -1683,27 +1683,17 @@ calculated twice per year for each bird, once in early winter (Nov-Dec)
 and once in late winter (Mar).<br />
 The n active kill is the number of days that the raven has an active
 kill on their territory.</p>
-<pre class="r"><code>data &lt;- readr::read_csv(here(&quot;data&quot;, &quot;clean&quot;, &quot;commute_data.csv&quot;))</code></pre>
-<pre><code>## New names:
-## Rows: 6367 Columns: 36
-## ── Column specification
-## ──────────────────────────────────────────────────────── Delimiter: &quot;,&quot; chr
-## (4): raven_id, hunting_period, take_high_low, study_period dbl (19): ...1,
-## n_point, dist2nentrance, avg_terr_kill_density, rf_avg_terr... lgl (10): dump,
-## terr_bin, hunt_bin, active_kill, rf_active_kill, bison_hunt... date (3): date,
-## start_hunt, end_hunt
-## ℹ Use `spec()` to retrieve the full column specification for this data. ℹ
-## Specify the column types or set `show_col_types = FALSE` to quiet this message.
-## • `` -&gt; `...1`</code></pre>
-<pre class="r"><code>data %&gt;% 
+<pre class="r"><code>data &lt;- readr::read_csv(here(&quot;data&quot;, &quot;clean&quot;, &quot;commute_data.csv&quot;))
+
+data %&gt;% 
   group_by(raven_id) %&gt;% 
   summarize(mean_kill_density = mean(avg_terr_kill_density),
             rf_mean_kill_density = mean(rf_avg_terr_kill_density),
-            n_active_kills = sum(active_kill),
-            rf_n_active_kills = sum(rf_active_kill))</code></pre>
+            n_kill_days = sum(active_kill),
+            rf_n_kill_days = sum(rf_active_kill))</code></pre>
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
-{"columns":[{"label":["raven_id"],"name":[1],"type":["chr"],"align":["left"]},{"label":["mean_kill_density"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["rf_mean_kill_density"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["n_active_kills"],"name":[4],"type":["int"],"align":["right"]},{"label":["rf_n_active_kills"],"name":[5],"type":["int"],"align":["right"]}],"data":[{"1":"7484","2":"0.030555556","3":"0.05555556","4":"9","5":"5"},{"1":"7485","2":"0.000000000","3":"0.04333333","4":"0","5":"0"},{"1":"7489","2":"0.016666667","3":"0.11666667","4":"0","5":"0"},{"1":"7489_2","2":"0.025000000","3":"0.05714286","4":"2","5":"0"},{"1":"7490_3","2":"0.008333333","3":"0.05555556","4":"2","5":"0"},{"1":"7492","2":"0.011111111","3":"0.03333333","4":"6","5":"4"},{"1":"7493_2","2":"0.011111111","3":"0.01666667","4":"3","5":"9"},{"1":"7494","2":"0.000000000","3":"0.06000000","4":"0","5":"7"},{"1":"7495","2":"0.025000000","3":"0.05000000","4":"0","5":"0"},{"1":"7530","2":"0.091666667","3":"0.07777778","4":"36","5":"32"},{"1":"7531","2":"0.016666667","3":"0.01666667","4":"0","5":"0"},{"1":"7561","2":"0.020833333","3":"0.01190476","4":"5","5":"3"},{"1":"7565","2":"0.016666667","3":"0.00000000","4":"0","5":"0"},{"1":"7595","2":"0.013888889","3":"0.06666667","4":"3","5":"2"},{"1":"7640_3","2":"0.010000000","3":"0.01851852","4":"6","5":"8"},{"1":"7652_2","2":"0.022222222","3":"0.02222222","4":"4","5":"1"},{"1":"7665","2":"0.022222222","3":"0.02619048","4":"10","5":"0"},{"1":"7672","2":"0.038888889","3":"0.05000000","4":"6","5":"6"},{"1":"8900","2":"0.006666667","3":"0.03333333","4":"0","5":"0"},{"1":"8902","2":"0.020833333","3":"0.01481481","4":"0","5":"0"}],"options":{"columns":{"min":{},"max":[5]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+{"columns":[{"label":["raven_id"],"name":[1],"type":["chr"],"align":["left"]},{"label":["mean_kill_density"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["rf_mean_kill_density"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["n_kill_days"],"name":[4],"type":["int"],"align":["right"]},{"label":["rf_n_kill_days"],"name":[5],"type":["int"],"align":["right"]}],"data":[{"1":"7484","2":"0.030555556","3":"0.05555556","4":"9","5":"5"},{"1":"7485","2":"0.000000000","3":"0.04333333","4":"0","5":"0"},{"1":"7489","2":"0.016666667","3":"0.11666667","4":"0","5":"0"},{"1":"7489_2","2":"0.025000000","3":"0.05714286","4":"2","5":"0"},{"1":"7490_3","2":"0.008333333","3":"0.05555556","4":"2","5":"0"},{"1":"7492","2":"0.011111111","3":"0.03333333","4":"6","5":"4"},{"1":"7493_2","2":"0.011111111","3":"0.01666667","4":"3","5":"9"},{"1":"7494","2":"0.000000000","3":"0.06000000","4":"0","5":"7"},{"1":"7495","2":"0.025000000","3":"0.05000000","4":"0","5":"0"},{"1":"7530","2":"0.091666667","3":"0.07777778","4":"36","5":"32"},{"1":"7531","2":"0.016666667","3":"0.01666667","4":"0","5":"0"},{"1":"7561","2":"0.020833333","3":"0.01190476","4":"5","5":"3"},{"1":"7565","2":"0.016666667","3":"0.00000000","4":"0","5":"0"},{"1":"7595","2":"0.013888889","3":"0.06666667","4":"3","5":"2"},{"1":"7640_3","2":"0.010000000","3":"0.01851852","4":"6","5":"8"},{"1":"7652_2","2":"0.022222222","3":"0.02222222","4":"4","5":"1"},{"1":"7665","2":"0.022222222","3":"0.02619048","4":"10","5":"0"},{"1":"7672","2":"0.038888889","3":"0.05000000","4":"6","5":"6"},{"1":"8900","2":"0.006666667","3":"0.03333333","4":"0","5":"0"},{"1":"8902","2":"0.020833333","3":"0.01481481","4":"0","5":"0"}],"options":{"columns":{"min":{},"max":[5]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
 <p>This table shows the kill density in their territory and the total
@@ -1712,28 +1702,9 @@ ravens’ territory.</p>
 </div>
 <div id="model" class="section level2">
 <h2>Model</h2>
-<pre class="r"><code>#data for part 1 of conditional model
-ws_model_data &lt;- read_csv(here(&quot;data&quot;, &quot;clean&quot;, &quot;commute_data.csv&quot;)) %&gt;% 
-  
-  #restricting to only winter study months
-  filter((paste(month, day, sep = &quot;-&quot;) &gt;= &quot;11-15&quot; &amp;
-            paste(month, day, sep = &quot;-&quot;) &lt;= &quot;12-15&quot;) |
-          (paste(month, day, sep = &quot;-&quot;) &gt;= &quot;3-1&quot; &amp;
-            paste(month, day, sep = &quot;-&quot;) &lt;= &quot;3-30&quot;)) %&gt;% 
-  
-  #removing days when there is less than 5 GPS point
-  #unless the result is Jardine
-  filter(!(n_point &lt; 5 &amp; terr_bin == F)) %&gt;% 
-  
-  #only columns used in model
-  dplyr::select(terr_bin, raven_id, active_kill, rf_active_kill, bms_window_1, hunt_season, take_high_low, avg_terr_kill_density, rf_avg_terr_kill_density, dist2nentrance,
-                study_period, temp_max, snow_depth, prop_group_left_terr) %&gt;% 
-  
-  #making sure rows are complete
-  filter(complete.cases(.)) </code></pre>
 <div id="wolf-project-database" class="section level4">
 <h4>Wolf project database</h4>
-<pre class="r"><code>mod_wp &lt;- glmer(terr_bin ~ (1|raven_id) + active_kill * scale(bms_window_1) + scale(avg_terr_kill_density) + 
+<pre class="r"><code>mod_wp &lt;- glmer(terr_bin ~ (1|raven_id) + active_kill * scale(final_take_bms1) + scale(avg_terr_kill_density) + 
                          scale(dist2nentrance) + study_period * scale(temp_max) + scale(snow_depth) + scale(prop_group_left_terr),
                        data = ws_model_data,
                        family = &quot;binomial&quot;,
@@ -1743,67 +1714,79 @@ summary(mod_wp)</code></pre>
 <pre><code>## Generalized linear mixed model fit by maximum likelihood (Adaptive
 ##   Gauss-Hermite Quadrature, nAGQ = 40) [glmerMod]
 ##  Family: binomial  ( logit )
-## Formula: terr_bin ~ (1 | raven_id) + active_kill * scale(bms_window_1) +  
+## Formula: terr_bin ~ (1 | raven_id) + active_kill * scale(final_take_bms1) +  
 ##     scale(avg_terr_kill_density) + scale(dist2nentrance) + study_period *  
 ##     scale(temp_max) + scale(snow_depth) + scale(prop_group_left_terr)
 ##    Data: ws_model_data
 ## Control: cntrl
 ## 
 ##       AIC       BIC    logLik -2*log(L)  df.resid 
-##    1132.9    1198.9    -554.5    1108.9      1790 
+##    1139.8    1206.1    -557.9    1115.8      1839 
 ## 
 ## Scaled residuals: 
 ##     Min      1Q  Median      3Q     Max 
-## -7.3531  0.1352  0.2159  0.3718  2.6428 
+## -7.9340  0.1298  0.2116  0.3662  2.5834 
 ## 
 ## Random effects:
 ##  Groups   Name        Variance Std.Dev.
-##  raven_id (Intercept) 2.276    1.509   
-## Number of obs: 1802, groups:  raven_id, 20
+##  raven_id (Intercept) 2.366    1.538   
+## Number of obs: 1851, groups:  raven_id, 20
 ## 
 ## Fixed effects:
-##                                     Estimate Std. Error z value Pr(&gt;|z|)    
-## (Intercept)                          2.79322    0.40079   6.969 3.19e-12 ***
-## active_killTRUE                     -1.33767    0.37331  -3.583 0.000339 ***
-## scale(bms_window_1)                 -0.06588    0.13339  -0.494 0.621367    
-## scale(avg_terr_kill_density)        -0.63913    0.63114  -1.013 0.311223    
-## scale(dist2nentrance)               -0.69849    0.53051  -1.317 0.187961    
-## study_periodlate                    -0.60689    0.20106  -3.018 0.002540 ** 
-## scale(temp_max)                     -0.19326    0.11531  -1.676 0.093748 .  
-## scale(snow_depth)                    0.22528    0.13894   1.621 0.104944    
-## scale(prop_group_left_terr)         -0.05813    0.09620  -0.604 0.545692    
-## active_killTRUE:scale(bms_window_1)  0.22272    0.26801   0.831 0.405957    
-## study_periodlate:scale(temp_max)     0.06657    0.16542   0.402 0.687354    
+##                                         Estimate Std. Error z value Pr(&gt;|z|)
+## (Intercept)                             2.837415   0.406645   6.978    3e-12
+## active_killTRUE                        -1.317684   0.364411  -3.616 0.000299
+## scale(final_take_bms1)                 -0.003683   0.080270  -0.046 0.963404
+## scale(avg_terr_kill_density)           -0.657550   0.638017  -1.031 0.302721
+## scale(dist2nentrance)                  -0.732742   0.537084  -1.364 0.172474
+## study_periodlate                       -0.597260   0.199989  -2.986 0.002822
+## scale(temp_max)                        -0.200454   0.114787  -1.746 0.080756
+## scale(snow_depth)                       0.204726   0.106741   1.918 0.055115
+## scale(prop_group_left_terr)            -0.075176   0.100115  -0.751 0.452715
+## active_killTRUE:scale(final_take_bms1) -0.191134   0.434615  -0.440 0.660099
+## study_periodlate:scale(temp_max)        0.093892   0.164771   0.570 0.568789
+##                                           
+## (Intercept)                            ***
+## active_killTRUE                        ***
+## scale(final_take_bms1)                    
+## scale(avg_terr_kill_density)              
+## scale(dist2nentrance)                     
+## study_periodlate                       ** 
+## scale(temp_max)                        .  
+## scale(snow_depth)                      .  
+## scale(prop_group_left_terr)               
+## active_killTRUE:scale(final_take_bms1)    
+## study_periodlate:scale(temp_max)          
 ## ---
 ## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
 ## 
 ## Correlation of Fixed Effects:
 ##             (Intr) ac_TRUE s(__1) scl(v___) scl(2) stdy_p scl(t_) scl(s_)
-## actv_klTRUE -0.044                                                       
-## scl(bms__1) -0.038 -0.095                                                
-## scl(vg_t__)  0.148 -0.021   0.055                                        
-## scl(dst2nn)  0.144  0.007   0.064  0.681                                 
-## study_prdlt -0.288 -0.055   0.126  0.003     0.002                       
-## scl(tmp_mx)  0.013  0.030  -0.163 -0.008    -0.004 -0.077                
-## scl(snw_dp)  0.130  0.121  -0.615 -0.013    -0.009 -0.504  0.229         
-## scl(prp___) -0.045 -0.015  -0.073 -0.023    -0.043  0.162  0.064  -0.112 
-## a_TRUE:(__1  0.012 -0.183  -0.267 -0.040    -0.036  0.023 -0.004  -0.031 
-## stdy_pr:(_)  0.013  0.036   0.139  0.008     0.006 -0.124 -0.657  -0.020 
+## actv_klTRUE -0.049                                                       
+## scl(fnl__1) -0.038  0.002                                                
+## scl(vg_t__)  0.131 -0.026   0.000                                        
+## scl(dst2nn)  0.124  0.006   0.000  0.681                                 
+## study_prdlt -0.292 -0.014   0.123  0.001     0.002                       
+## scl(tmp_mx)  0.017 -0.005  -0.077 -0.002     0.003 -0.078                
+## scl(snw_dp)  0.152 -0.009  -0.173  0.013     0.023 -0.555  0.171         
+## scl(prp___) -0.051 -0.040  -0.046 -0.023    -0.042  0.172  0.056  -0.199 
+## a_TRUE:(__1 -0.013  0.115  -0.168 -0.005    -0.001  0.049 -0.008  -0.046 
+## stdy_pr:(_)  0.006  0.042   0.090  0.005     0.002 -0.110 -0.658   0.059 
 ##             scl(p___) a_TRUE:
 ## actv_klTRUE                  
-## scl(bms__1)                  
+## scl(fnl__1)                  
 ## scl(vg_t__)                  
 ## scl(dst2nn)                  
 ## study_prdlt                  
 ## scl(tmp_mx)                  
 ## scl(snw_dp)                  
 ## scl(prp___)                  
-## a_TRUE:(__1 -0.012           
-## stdy_pr:(_)  0.038    -0.061</code></pre>
+## a_TRUE:(__1 -0.031           
+## stdy_pr:(_)  0.040    -0.018</code></pre>
 </div>
 <div id="rf-predictive-kill-database" class="section level4">
 <h4>RF predictive kill database</h4>
-<pre class="r"><code>mod_rf &lt;- glmer(terr_bin ~ (1|raven_id) + rf_active_kill * scale(bms_window_1) + scale(rf_avg_terr_kill_density) + 
+<pre class="r"><code>mod_rf &lt;- glmer(terr_bin ~ (1|raven_id) + rf_active_kill * scale(final_take_bms1) + scale(rf_avg_terr_kill_density) + 
                          scale(dist2nentrance) + study_period * scale(temp_max) + scale(snow_depth) + scale(prop_group_left_terr),
                        data = ws_model_data,
                        family = &quot;binomial&quot;,
@@ -1813,55 +1796,67 @@ summary(mod_rf)</code></pre>
 <pre><code>## Generalized linear mixed model fit by maximum likelihood (Adaptive
 ##   Gauss-Hermite Quadrature, nAGQ = 40) [glmerMod]
 ##  Family: binomial  ( logit )
-## Formula: terr_bin ~ (1 | raven_id) + rf_active_kill * scale(bms_window_1) +  
+## Formula: terr_bin ~ (1 | raven_id) + rf_active_kill * scale(final_take_bms1) +  
 ##     scale(rf_avg_terr_kill_density) + scale(dist2nentrance) +  
 ##     study_period * scale(temp_max) + scale(snow_depth) + scale(prop_group_left_terr)
 ##    Data: ws_model_data
 ## Control: cntrl
 ## 
 ##       AIC       BIC    logLik -2*log(L)  df.resid 
-##    1137.4    1203.3    -556.7    1113.4      1790 
+##    1145.0    1211.3    -560.5    1121.0      1839 
 ## 
 ## Scaled residuals: 
 ##     Min      1Q  Median      3Q     Max 
-## -7.1126  0.1386  0.2226  0.3763  3.7325 
+## -7.3789  0.1342  0.2182  0.3693  3.4685 
 ## 
 ## Random effects:
 ##  Groups   Name        Variance Std.Dev.
-##  raven_id (Intercept) 2.028    1.424   
-## Number of obs: 1802, groups:  raven_id, 20
+##  raven_id (Intercept) 2.138    1.462   
+## Number of obs: 1851, groups:  raven_id, 20
 ## 
 ## Fixed effects:
-##                                        Estimate Std. Error z value Pr(&gt;|z|)    
-## (Intercept)                             2.88131    0.38452   7.493 6.71e-14 ***
-## rf_active_killTRUE                     -0.99078    0.37465  -2.645  0.00818 ** 
-## scale(bms_window_1)                    -0.09206    0.13096  -0.703  0.48205    
-## scale(rf_avg_terr_kill_density)         0.40063    0.38877   1.031  0.30277    
-## scale(dist2nentrance)                  -0.29363    0.36689  -0.800  0.42352    
-## study_periodlate                       -0.57310    0.20294  -2.824  0.00474 ** 
-## scale(temp_max)                        -0.18321    0.11411  -1.606  0.10838    
-## scale(snow_depth)                       0.23833    0.13882   1.717  0.08601 .  
-## scale(prop_group_left_terr)            -0.06791    0.09664  -0.703  0.48222    
-## rf_active_killTRUE:scale(bms_window_1)  0.29844    0.29799   1.001  0.31659    
-## study_periodlate:scale(temp_max)        0.05543    0.16587   0.334  0.73824    
+##                                           Estimate Std. Error z value Pr(&gt;|z|)
+## (Intercept)                                2.90793    0.39192   7.420 1.17e-13
+## rf_active_killTRUE                        -0.87243    0.40804  -2.138  0.03251
+## scale(final_take_bms1)                    -0.01600    0.07863  -0.204  0.83872
+## scale(rf_avg_terr_kill_density)            0.38623    0.39603   0.975  0.32944
+## scale(dist2nentrance)                     -0.31449    0.37392  -0.841  0.40030
+## study_periodlate                          -0.54961    0.20210  -2.719  0.00654
+## scale(temp_max)                           -0.19850    0.11372  -1.745  0.08090
+## scale(snow_depth)                          0.19390    0.10810   1.794  0.07287
+## scale(prop_group_left_terr)               -0.08823    0.10046  -0.878  0.37983
+## rf_active_killTRUE:scale(final_take_bms1)  0.29842    0.57918   0.515  0.60638
+## study_periodlate:scale(temp_max)           0.08472    0.16489   0.514  0.60737
+##                                              
+## (Intercept)                               ***
+## rf_active_killTRUE                        *  
+## scale(final_take_bms1)                       
+## scale(rf_avg_terr_kill_density)              
+## scale(dist2nentrance)                        
+## study_periodlate                          ** 
+## scale(temp_max)                           .  
+## scale(snow_depth)                         .  
+## scale(prop_group_left_terr)                  
+## rf_active_killTRUE:scale(final_take_bms1)    
+## study_periodlate:scale(temp_max)             
 ## ---
 ## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
 ## 
 ## Correlation of Fixed Effects:
 ##             (Intr) rf__TRUE s(__1) s(____ scl(2) stdy_p scl(t_) scl(s_) s(___)
-## rf_ctv_TRUE  0.005                                                            
-## scl(bms__1) -0.058 -0.054                                                     
-## scl(rf____)  0.187 -0.009    0.023                                            
-## scl(dst2nn)  0.077  0.022    0.052  0.083                                     
-## study_prdlt -0.300 -0.121    0.121  0.003 -0.001                              
-## scl(tmp_mx)  0.016 -0.013   -0.165 -0.014 -0.002 -0.075                       
-## scl(snw_dp)  0.149  0.087   -0.613  0.001 -0.003 -0.512  0.225                
-## scl(prp___) -0.040  0.017   -0.077  0.008 -0.039  0.153  0.070  -0.113        
-## r__TRUE:(__ -0.005 -0.108   -0.228 -0.020 -0.014  0.061  0.009  -0.045   0.006
-## stdy_pr:(_)  0.018  0.062    0.139  0.011  0.004 -0.142 -0.650  -0.008   0.033
+## rf_ctv_TRUE -0.016                                                            
+## scl(fnl__1) -0.039  0.005                                                     
+## scl(rf____)  0.171 -0.014    0.002                                            
+## scl(dst2nn)  0.066  0.023    0.004  0.083                                     
+## study_prdlt -0.302 -0.037    0.111  0.004 -0.001                              
+## scl(tmp_mx)  0.018 -0.048   -0.077 -0.011  0.005 -0.080                       
+## scl(snw_dp)  0.156 -0.054   -0.164  0.010  0.026 -0.563  0.177                
+## scl(prp___) -0.050  0.021   -0.050  0.006 -0.037  0.171  0.060  -0.202        
+## r__TRUE:(__ -0.036  0.430   -0.103 -0.013  0.004  0.115 -0.045  -0.141   0.041
+## stdy_pr:(_)  0.011  0.055    0.094  0.011  0.001 -0.130 -0.648   0.076   0.035
 ##             r__TRUE:
 ## rf_ctv_TRUE         
-## scl(bms__1)         
+## scl(fnl__1)         
 ## scl(rf____)         
 ## scl(dst2nn)         
 ## study_prdlt         
@@ -1869,9 +1864,10 @@ summary(mod_rf)</code></pre>
 ## scl(snw_dp)         
 ## scl(prp___)         
 ## r__TRUE:(__         
-## stdy_pr:(_) -0.052</code></pre>
-<p>The models have basically the same results. Not sure what to
-think.</p>
+## stdy_pr:(_) -0.028</code></pre>
+<p>The models have basically the same results. Not sure what to think.
+Probably just going to use the RF model since it provides more detail on
+timing than the wolf project database.</p>
 </div>
 </div>
 

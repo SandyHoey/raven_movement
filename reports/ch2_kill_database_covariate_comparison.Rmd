@@ -29,22 +29,22 @@ Here is a basic summary of how the two databases stack up for the various wolf k
 The mean kill density is the average of of the wolf kill density, calculated as the number of wolf kills within 1 km of the territory during the winter study period divided by 30 (days). The density is calculated twice per year for each bird, once in early winter (Nov-Dec) and once in late winter (Mar).  
 The n active kill is the number of days that the raven has an active kill on their territory. 
 
-```{r basic summary, cols.print=5}
+```{r basic summary, message=FALSE, cols.print=5}
 data <- readr::read_csv(here("data", "clean", "commute_data.csv"))
 
 data %>% 
   group_by(raven_id) %>% 
   summarize(mean_kill_density = mean(avg_terr_kill_density),
             rf_mean_kill_density = mean(rf_avg_terr_kill_density),
-            n_active_kills = sum(active_kill),
-            rf_n_active_kills = sum(rf_active_kill))
+            n_kill_days = sum(active_kill),
+            rf_n_kill_days = sum(rf_active_kill))
 
 ```
 This table shows the kill density in their territory and the total number of days with an active kill found by each database within the ravens' territory.
 
 ## Model
-```{r reading in data, results = 'hide', message = FALSE}
-#data for part 1 of conditional model
+```{r reading in data, message=FALSE, include=FALSE, results='hide'}
+## dataset for part 1 of conditional model
 ws_model_data <- read_csv(here("data", "clean", "commute_data.csv")) %>% 
   
   #restricting to only winter study months
@@ -58,7 +58,8 @@ ws_model_data <- read_csv(here("data", "clean", "commute_data.csv")) %>%
   filter(!(n_point < 5 & terr_bin == F)) %>% 
   
   #only columns used in model
-  dplyr::select(terr_bin, raven_id, active_kill, rf_active_kill, bms_window_1, hunt_season, take_high_low, avg_terr_kill_density, rf_avg_terr_kill_density, dist2nentrance,
+  dplyr::select(terr_bin, raven_id, active_kill, rf_active_kill, final_take_bms1, final_take, 
+                hunt_season, avg_terr_kill_density, rf_avg_terr_kill_density, dist2nentrance, 
                 study_period, temp_max, snow_depth, prop_group_left_terr) %>% 
   
   #making sure rows are complete
@@ -66,7 +67,7 @@ ws_model_data <- read_csv(here("data", "clean", "commute_data.csv")) %>%
 ```
 #### Wolf project database
 ```{r wolf project covariate}
-mod_wp <- glmer(terr_bin ~ (1|raven_id) + active_kill * scale(bms_window_1) + scale(avg_terr_kill_density) + 
+mod_wp <- glmer(terr_bin ~ (1|raven_id) + active_kill * scale(final_take_bms1) + scale(avg_terr_kill_density) + 
                          scale(dist2nentrance) + study_period * scale(temp_max) + scale(snow_depth) + scale(prop_group_left_terr),
                        data = ws_model_data,
                        family = "binomial",
@@ -76,7 +77,7 @@ summary(mod_wp)
 ```
 #### RF predictive kill database
 ```{r RF covariate}
-mod_rf <- glmer(terr_bin ~ (1|raven_id) + rf_active_kill * scale(bms_window_1) + scale(rf_avg_terr_kill_density) + 
+mod_rf <- glmer(terr_bin ~ (1|raven_id) + rf_active_kill * scale(final_take_bms1) + scale(rf_avg_terr_kill_density) + 
                          scale(dist2nentrance) + study_period * scale(temp_max) + scale(snow_depth) + scale(prop_group_left_terr),
                        data = ws_model_data,
                        family = "binomial",
@@ -84,4 +85,4 @@ mod_rf <- glmer(terr_bin ~ (1|raven_id) + rf_active_kill * scale(bms_window_1) +
                        control = cntrl)
 summary(mod_rf)
 ```
-The models have basically the same results. Not sure what to think. 
+The models have basically the same results. Not sure what to think. Probably just going to use the RF model since it provides more detail on timing than the wolf project database.
