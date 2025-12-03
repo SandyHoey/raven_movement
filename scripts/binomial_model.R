@@ -13,7 +13,7 @@ ws_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
   #unless the result is Jardine
   filter(!(n_point < 5 & terr_bin == F)) %>% 
   #only columns used in model
-  dplyr::select(terr_bin, raven_id, rf_active_kill, final_take_bms, final_take, 
+  dplyr::select(terr_bin, raven_id, rf_active_kill, final_take_bms, final_take_bms1, final_take, 
                 hunt_season, rf_avg_terr_kill_density, dist2nentrance, 
                 study_period, temp_max, snow_depth, prop_group_left_terr) %>% 
   #making sure rows are complete
@@ -66,7 +66,7 @@ cntrl <- glmerControl(optimizer = "bobyqa", tol = 1e-4, optCtrl=list(maxfun=1000
 # 0 = stayed on territory
 
 #model with biomass number
-mod_terr_bms <- glmer(terr_bin ~ (1|raven_id) + rf_active_kill * scale(final_take_bms) + scale(rf_avg_terr_kill_density) + 
+mod_terr_bms <- glmer(terr_bin ~ (1|raven_id) + rf_active_kill * scale(final_take_bms1) + scale(rf_avg_terr_kill_density) + 
                          scale(dist2nentrance) + study_period * scale(temp_max) + scale(snow_depth) + scale(prop_group_left_terr),
                        data = ws_model_data,
                        family = "binomial",
