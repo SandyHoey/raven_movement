@@ -25,7 +25,7 @@ cntrl <- glmerControl(optimizer = "bobyqa", tol = 1e-4, optCtrl=list(maxfun=1000
 I am using a conditional binomial model to determine what factors impact movement decisions of territorial common ravens during the winter in Yellowstone. I will look at if various predictors impact if a raven decided to leaves its territory, and if it did, if it visit the Gardiner hunting region or not. The largest predictors here revolve around food availability of carrion created by human hunting activity and wolves.  
 <br>
 There are two data sets, one for each part of the conditional model. The first one includes all of the days during the Yellowstone Wolf Project winter study periods (Nov 15- Dec 15 & Mar 1 - Mar 30) because my main predictor is the presence of wolf kills within a ravens territory and the carcass data is most reliable for that period of time due to GPS collar fix rates.  
-The second data set includes all winter from the start of the hunting season (varies by year, but always in the last week of October) to the end of March (end of late winter study). I can include these other periods because I am no longer considering wolf kills as a predictor because the raven at this point in the conditional model has already decided to leave its territory. This also allows me to have more data on days with low or no hunter gutpile availability from January and February.  
+The second data set includes all winter from the start of the  hunting season (varies by year, but always in the last week of October) to the end of March (end of late winter study). I can include these other periods because I am no longer considering wolf kills as a predictor because the raven at this point in the conditional model has already decided to leave its territory. This also allows me to have more data on days with low or no hunter gutpile availability from January and February.  
 For both data sets, all data points are excluded if that raven had less than 5 GPS points and the movement decisions was the negative for that binomial model (didn't leaves its territory or didn't visit the hunting area).
 ```{r reading in data, results = 'hide', message = FALSE}
 ## dataset for part 1 of conditional model
@@ -42,7 +42,8 @@ ws_model_data <- read_csv(here("data", "clean", "commute_data.csv")) %>%
   filter(!(n_point < 5 & terr_bin == F)) %>% 
   
   #only columns used in model
-  dplyr::select(terr_bin, raven_id, rf_active_kill, bms_window_1, hunt_season, take_high_low, rf_avg_terr_kill_density, dist2nentrance,
+  dplyr::select(terr_bin, raven_id, rf_active_kill, final_take_bms1, final_take, 
+                hunt_season, rf_avg_terr_kill_density, dist2nentrance, 
                 study_period, temp_max, snow_depth, prop_group_left_terr) %>% 
   
   #making sure rows are complete
@@ -61,16 +62,16 @@ hunt_model_data <- read_csv(here("data", "clean", "commute_data.csv")) %>%
   
   
   #only columns used in model
-  dplyr::select(hunt_bin, raven_id, bms_window_1, hunt_season, take_high_low, dist2nentrance, study_period, temp_max, snow_depth, prop_group_visit_hunt) %>% 
+  dplyr::select(hunt_bin, raven_id, final_take_bms1, final_take, hunt_season,
+                dist2nentrance, study_period, temp_max, snow_depth, prop_group_visit_hunt) %>% 
   
   #making sure rows are complete
   filter(complete.cases(.)) 
 ```
 Here is a description of all the model covariates
 - rf_active_kill: if a kill detected through the RF predictive model is present on the ravens territory or not
-- bms_window_1: the estimated available biomass from human hunting
-- hunt_season: if it is currently within the hunting season or not
-- take_high_low: a categorical value for if human hunting take was high (>1), low (<1), or 0
+- final_take_bms1: the estimated available biomass from human hunting adjusted for relative weights of various species (the multiplier for each is 0.3\*deer = 1\*elk = 2.15\*bison). The biomass from the previous day is rolled over at 0.25x rate
+- hunt_season: if it is currently within the hunting season or not. The hunting season for MTFWP is defined by policy. The bison hunting season starts when bison are regularly taken from the surveys done by the Bison Project since that hunt's timing is dictated by weather and migration  
 - rf_avg_terr_kill_density: the average number of kills per 30 days during early or late winter study period
 - dist2nentrance: distance from raven territory to the north entrance station
 - study_period: early or late winter study
@@ -86,22 +87,24 @@ terr_bin
 1 = left territory  
 0 = stayed on territory  
 <br>
-I am reporting the results from two different models that use a different covariate to represent the hunting availability. The first on is the hunting biomass, which is a more fine scale daily estimate of hunter take. This relies on elk movements tracked using GPS collars to add variation to the MTFWP hunting season. The bison take estimate depends on daily surveys performed by the Bison Project. 
-I report both of these models because the biomass covariate has so much uncertainty in how it is calculated during the MTFWP season since it doesn't actually quantify the number of daily kills. It tries to account for variation by using elk movement. It is very possible that someone doesn't like or believe it is calculated correctly. By also including the hunting season model we can show that the overall hunting period itself, regardless of the daily biomass availability, has an effect on decision making. Then, we can say that we tried to get finer scaled using the biomass covariate. The results are similar enough that it is believable and doesn't drastically change interpretation, but a reader can disregard that part if they want. 
+I am reporting the results from two different models that use a different covariate to represent the hunting availability. The first on is the hunting biomass, which is a more fine scale daily estimate of hunter take. This relies on elk movements tracked using GPS collars to add variation to the MTFWP hunting season. The bison take estimate depends on daily surveys performed by the NPS Bison Project. 
+I report both of these models because the biomass covariate has so much uncertainty in how it is calculated during the MTFWP season since it doesn't actually quantify the number of daily kills. It tries to account for daily variation in take by using elk movement to proxy how many individuals are available to be taken. It also includes a multiplier for the relative biomass (numbers in covariate explanation above) that has elk as the baseline and deer and bison multiplied to be greater or less than elk. It is very possible that a reader doesn't like or believe it is calculated correctly. By also including the hunting season model we can show that the overall hunting period itself, regardless of the daily biomass availability, has an effect on decision making. Then, we can say that we tried to get finer scaled using the biomass covariate. The results are similar enough that it is believable and doesn't drastically change interpretation, but a reader can disregard that part if they want.  
+Another idea is that I can go for something inbetween and at least remove the relative weight of the animals from the calculation and just have the estimated take number. It seems like this leads to pretty similar results, though it won't be shown here. 
 <br>
 1. bms_window: The most specific is the a measure of the available biomass.
 ```{r (1) bms_window model}
-mod_terr_bms1 <- glmer(terr_bin ~ (1|raven_id) + rf_active_kill * scale(bms_window_1) + scale(rf_avg_terr_kill_density) + 
+mod_terr_bms <- glmer(terr_bin ~ (1|raven_id) + rf_active_kill * scale(final_take_bms1) + scale(rf_avg_terr_kill_density) + 
                          scale(dist2nentrance) + study_period * scale(temp_max) + scale(snow_depth) + scale(prop_group_left_terr),
                        data = ws_model_data,
                        family = "binomial",
                        nAGQ = 40,
                        control = cntrl)
-summary(mod_terr_bms1)
+summary(mod_terr_bms)
 ```
-2. hunt_season: The least specific is just whether it is within the hunting season
+2. hunt_season: The least specific is just whether it is within the hunting season.  
+One massive thing to note here is that i have removed the interaction effect. When I updated the data with the bison specific polygon and the bison hunting start date, it made standard error for the interaction 160. That's pretty terrible. 
 ```{r (1) hunting season model}
-mod_terr_hseason <- glmer(terr_bin ~ (1|raven_id) + rf_active_kill * hunt_season + scale(rf_avg_terr_kill_density) + 
+mod_terr_hseason <- glmer(terr_bin ~ (1|raven_id) + rf_active_kill + hunt_season + scale(rf_avg_terr_kill_density) + 
                             scale(dist2nentrance) + study_period * scale(temp_max) + scale(snow_depth) + scale(prop_group_left_terr),
                          data = ws_model_data,
                          family = "binomial",
@@ -109,13 +112,13 @@ mod_terr_hseason <- glmer(terr_bin ~ (1|raven_id) + rf_active_kill * hunt_season
                          control = cntrl)
 summary(mod_terr_hseason)
 ```
-Model AIc comparisons. 
+Model AIC comparisons. 
 ```{r (1) comparing hunting covariate models}
-AIC(mod_terr_bms1) #equally good
-AIC(mod_terr_hseason) #equally good
+AIC(mod_terr_bms)
+AIC(mod_terr_hseason) #better
 ```
-It actually didn't matter which hunting covariate I used because they were both not significant. Instead, as expected, in most of the models the presence of an active kill within 1 km of a ravens territory lead to less chance of the raven leaving its territory. The interaction term in both models was not significant, meaning that the presence of an active kill did not change the impact hunter gutpile availability had on raven movement.  
-The binary hunting season covariate in the second model did lead to a change in the significance of the active kill covariate. This is because the added interaction term (with active wolf kill) had a high standard error, even though the effect size and direction were basically the same.  
+It seems like it does matter what hunting covariate I use. The ravens did respond positively to the overall hunting season, but not the relative available hunter biomass. While the direction of the effects is the same, there was no evidence that the actually amount of biomass mattered when deciding whether to leave their territories or now. It seem more important that there may be biomass available at all.  
+Following predictions, the active kill covariate is important with an active kill within 1 km of their territory reducing the chances of the raven deciding to leave.  
 The average kill density in a ravens territory did not impact movement decisions. So they don't consider the past or prior knowledge of their territory and are only responding to more immediate stimuli. This makes sense when considering that a high productivity territory is still unlikely to have a kill made each day. Then their response to no immediate kills in their territory is to leave, which is still a gamble since you don't know what the food situation will be like in Gardiner or elsewhere; however, in most cases those human sites will still be less of a gamble than a raven in a high productivity territory.  
 The study period being early or late winter has a negative effect in the late winter in both models, which follows my prediction about how pre-breeding behaviors would impact raven movement by keeping them on territory more often.  
 The maximum daily temperature had a negative effect in both models. Higher temperatures lowered the chance of a raven leaving its territory. A good reason for this might be that the colder days require more energy to maintain body temperature, so a more guaranteed food sources is taken. Then on warmer days when temperature regulation is easier, they don't risk as much by staying on their territory. An interaction between temperature and study period was tested to tell if ravens were influenced by temperature differently at different times of year and the effect was insignificant and is not included here.  
@@ -124,7 +127,7 @@ One super interesting thing to note is that I ran this model with the group trav
 Here is the bootstrapped parameter confidence intervals for model 1 using the biomass estimate as the hunting covariate. 
 ```{r (1) bootstrap, echo=FALSE, warning=FALSE}
 #bootstrapping parameter values from model simulations
-boot_param_CI(nsim = 1000, model = mod_terr_bms1, data = ws_model_data)[[3]]
+boot_param_CI(nsim = 500, model = mod_terr_bms, data = ws_model_data)[[3]]
 ```
 
 ## Part 2 of conditional model
@@ -141,15 +144,16 @@ I don't consider study period anymore because, again, in this part of the condit
 <br>
 1. bms_window: The most specific is the a measure of the available biomass.
 ```{r (2) bms_window model}
-mod_hunt_bms1 <- glmer(hunt_bin ~ (1|raven_id) + scale(bms_window_1) + scale(dist2nentrance) + 
+mod_hunt_bms <- glmer(hunt_bin ~ (1|raven_id) + scale(final_take_bms1) + scale(dist2nentrance) + 
                          scale(prop_group_visit_hunt) + scale(temp_max) + scale(snow_depth),
                        data = hunt_model_data,
                        family = "binomial",
                        nAGQ = 40,
                        control = cntrl)
-summary(mod_hunt_bms1)
+summary(mod_hunt_bms)
 ```
-2. hunt_season: The least specific is just whether it is within the hunting season
+2. hunt_season: The least specific is just whether it is within the hunting season  
+There is no issues with inflated standard errors here because this model does not include any of the wolf kill covariates.
 ```{r (2) hunting season model}
 mod_hunt_hseason <- glmer(hunt_bin ~ (1|raven_id) + hunt_season + scale(dist2nentrance) + 
                             scale(prop_group_visit_hunt) + scale(temp_max) + scale(snow_depth),
@@ -161,18 +165,18 @@ summary(mod_hunt_hseason)
 ```
 Model AIC comparison.
 ```{r (2) comparing hunting covariate models}
-AIC(mod_hunt_bms1)
-AIC(mod_hunt_hseason) #equally good
+AIC(mod_hunt_bms)
+AIC(mod_hunt_hseason) #better
 ```
-In both of the models the hunting covariate was significant and followed the trend of more hunting, more likely the raven is to visit the hunting area.  
+In both of the models the hunting covariate was significant and followed the trend of more hunting, more likely the raven is to visit the hunting area after it has decided to leave its territory.  
 The distance to the hunting area was also always significant with ravens holding territories closer to the hunting area visiting more frequently. Makes sense that the less time and energy it takes to get there makes it more worth checking out the area. For some ravens that are really close, it also gives them the advantage of potentially being able to hear gunshots that indicate potential hunter success.    
-The proportion of other ravens that are visiting the hunting area has a positive effect. When considered in conjunction with the effect of the group covariate in part 1 of the conditional model: ravens aren't influenced by other ravens when deciding to leave their territory; however, if they do choose to leave they are often visiting the same destinations as the rest of the ravens that leave their territories. So if they choose to leave, which is a decision based on abiotic factors like weather and available local food, they are utilizing social cues and shared information.  
+The proportion of other ravens that are visiting the hunting area has a positive effect. When considered in conjunction with the effect of the group covariate in part 1 of the conditional model: ravens aren't influenced by other ravens when deciding to leave their territory; however, if they do choose to leave they are often visiting the same destinations as the rest of the ravens that leave their territories. So if they choose to leave, which is a decision based on abiotic factors like weather and available local food, they then utilize social cues and shared information.  
 The maximum daily temperature had a negative effect in both models, lowering the chance of a raven visiting the hunting area if it decided to leave its territory during warmer weather.  
-The effect of snow depth is more uncertain from these models since only model 1 found a significant effect and the other model was not significant. The effect direction was the same though.  
+The effect of snow depth is more uncertain from these models since only model 1 found a significant effect and the other model was not significant. The effect direction was the same though and matches with the effect found by Walker et al.  
 Here is the bootstrapped parameter confidence intervals for model 1 using the biomass estimate as the hunting covariate. 
 ```{r (2) bootstrap, echo=FALSE, warning=FALSE}
 #bootstrapping parameter values from model simulations
-boot_param_CI(nsim = 1000, model = mod_hunt_bms1, data = hunt_model_data)[[3]]
+boot_param_CI(nsim = 500, model = mod_hunt_bms, data = hunt_model_data)[[3]]
 ```
 
 ## Figures
@@ -231,7 +235,7 @@ Map A shows the all GPS points made by each of the three ravens. Map B shows the
   
 ![](individual_examples.jpg)
 <br>
-Here is a heat map of the raven GPS points outside the park from November and March along with a polygon denoting the area used to determine if a raven attempted to search for hunter created resources during the MTFWP rifle hunting season and the tribal bison hunt (hereafter Gardiner hunting region). The Gardiner hunting region is defined as the space 5 km from all roads within 10 km north of the national park boundary. This space has a high density of hunting activity in close proximity to the northern range of the park. The 5 km buffer around roads was used as a reasonable distance for a hunter to travel. There is certainly successful hunting attempts in the areas outside this polygon, but the relative number of those will be low compared to hunting within the polygon.  
+Here is a heat map of the raven GPS points outside the park from November and March along with a polygon denoting the area used to determine if a raven attempted to search for hunter created resources during the MTFWP rifle hunting season and the tribal bison hunt. There is a separate polygon for the MTFWP rifle hunting season and the tribal bison hunt. The MTFWP hunting region is defined as the space 5 km from all roads within 10 km north of the national park boundary. This space has a high density of hunting activity in close proximity to the northern range of the park. The 5 km buffer around roads was used as a reasonable distance for a hunter to travel. There is certainly successful hunting attempts in the areas outside this polygon, but the relative number of those will be low compared to hunting within the polygon. The bison hunting region is much smaller because of bison movement and hunter effort. The bison are restricted in their movement and rarely, if ever, travel beyond the cattle grate that is place at the south end of Yankee Jim canyon. Bison hunting happens almost exclusively along the road, since the main migration path of the bison out of the park is funneled along the roadway at Beattie Gulch. Plus, if someone did successfully harvest a bison in the backcountry, that hike out would be awful, even with a large group due to the size of bison.
 This polygon does include the town of Gardiner along with the local landfill and water treatment ponds that ravens have been documented using as locations to forage since I made the assumption that a dominant territorial raven visiting this area would always attempt to find hunter offal, even if unsuccessful. 26% of trips to the Gardiner hunting region during the hunting season resulted in at least 1 GPS point at the landfill and water treatment pond.  
 ![](hunting_heatmap.jpg)
 <br>
