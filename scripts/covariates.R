@@ -311,7 +311,7 @@ fwp_dates <- readxl::read_xlsx("data/raw/hunting_seasons.xlsx")%>%
 bison_dates <- readr::read_csv("data/raw/bison_hunt.csv") %>% 
   dplyr::select(year, start_date) %>% 
   rename(bison_start_hunt = start_date) %>% 
-  mutate(bison_start_hunt = lubridate::mdy(bison_start_hunt),
+  mutate(bison_start_hunt = mdy(bison_start_hunt),
          winter_year = year - 1) %>% 
   dplyr::select(-year)
 
@@ -344,10 +344,20 @@ commute_df <- commute_df %>%
 
 source("scripts/fwp_hunting_estimates.R")
 
+#adding column for rolled over biomass form previous day
+daily_count <- daily_count %>%
+  arrange(year, month, day) %>% 
+  mutate(fwp_bms1 = if_else(!is.na(lag(year)), # if it isn't the first row, which doesn't have a previous row
+                              if_else(year == lag(year),  # if the previous row is from the same winter
+                                      final_take_bms + lag(final_take_bms) * 0.25, # multiple previous row by 0.25 and add as a rollover from previous day
+                                      final_take_bms), #(ifelse2) else, just use the biomass for that day
+                              final_take_bms))  #(ifelse1) else, just use the biomass for that day %>% 
+  
+#adding to main data frame
 commute_df <- commute_df %>%
   left_join(daily_count %>%
               dplyr::select(year, month, day, 
-                            final_take_bms, final_take),
+                            final_take_bms, final_take, fwp_bms1),
             by = join_by(year, month, day))
 
 
@@ -358,17 +368,35 @@ commute_df <- commute_df %>%
 #reading in daily take data
 bison_daily_take <- readr::read_csv("data/clean/bison_daily_take.csv") %>%
   rename(bison_take = take) %>% 
-  mutate(date = lubridate::mdy(date))
+  mutate(
+    date = mdy(date),
+    #creating biomass column
+    bison_biomass = bison_take*2.15,
+    #creating winter year column
+    winter_year = if_else(month(date) %in% c(11,12), year(date), year(date) - 1)) %>% 
+  #creating slight rollover of biomass from previous day
+  arrange(date) %>% 
+  mutate(bison_bms1 = if_else(!is.na(lag(date)), # if it isn't the first row, which doesn't have a previous row
+                              if_else(winter_year == lag(winter_year),  # if the previous row is from the same winter
+                                      bison_biomass + lag(bison_biomass) * 0.25, # multiple previous row by 0.25 and add as a rollover from previous day
+                                      bison_biomass), #(ifelse2) else, just use the biomass for that day
+                              bison_biomass)) %>%  #(ifelse1) else, just use the biomass for that day %>% 
+  dplyr::select(-winter_year)
+  
 
 #adding to covariate data
 commute_df <- commute_df %>%
   left_join(bison_daily_take) %>%
   # making NA days 0 instead
   mutate(bison_take = if_else(is.na(bison_take), 0, bison_take),
+         bison_biomass = if_else(is.na(bison_biomass), 0, bison_biomass),
+         bison_bms1 = if_else(is.na(bison_bms1), 0, bison_bms1),
          final_take_bms = if_else(is.na(final_take_bms), 0, final_take_bms),
-         final_take = if_else(is.na(final_take), 0, final_take) ) %>%
+         final_take = if_else(is.na(final_take), 0, final_take),
+         fwp_bms1 = if_else(is.na(fwp_bms1), 0, fwp_bms1),) %>%
   # adding bison take to main hunter take column and adding bison multiplier for relative biomass
-  mutate(final_take_bms = final_take_bms + bison_take*2.15,
+  mutate(final_take_biomass = final_take_bms + bison_biomass,
+         final_take_bms1 = fwp_bms1 + bison_bms1,
          final_take = final_take + bison_take)
 
 
@@ -448,14 +476,6 @@ commute_df <- commute_df %>%
 #                                     month == 3 & bison_daily_take < 1,
 #                                     "low",
 #                                     take_high_low))
-
-# Weekends ----------------------------------------------------------------
-#adding weekend effect for hunting
-
-commute_df <- commute_df %>% 
-  
-  mutate(weekend = if_else(weekdays(date) %in% c("Saturday", "Sunday"), TRUE, FALSE))
-
 
 # Clearing up tagged pairs ------------------------------------------------
 
@@ -610,5 +630,5 @@ write.csv(commute_df %>%
             ungroup() %>% 
             #removing unnecessary columns
             dplyr::select(-c(commute, bison_take, year, bison_start_hunt, fwp_start_hunt, 
-                             fwp_end_hunt, days_since_last, winter_year, temp_min)),
+                             fwp_end_hunt, fwp_bms1, bison_bms1, days_since_last, winter_year, temp_min)),
           "data/clean/commute_data.csv")
