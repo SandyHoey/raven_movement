@@ -194,12 +194,12 @@ daily_count <- daily_count %>%
   
   mutate(
     #going to be using elk weight as a baseline
-    #bison are 2.15x elk
-    #deer are .3x elk
+    #bison are 2.5x elk
+    #deer are .35x elk
     final_elk_bms = scale_elk_take,
-    final_deer_bms = scale_deer_take * .3,
+    final_deer_bms = scale_deer_take * .35,
     final_md_buck_bms = if_else(!is.na(scale_md_buck_take), #if the value is not NA (still buck season)
-                                scale_md_buck_take * .3, #add the value
+                                scale_md_buck_take * .35, #add the value
                                 0) #otherwise leave the NA
     )
   
