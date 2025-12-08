@@ -76,6 +76,7 @@ source("scripts/home_range_mcp.R")
 mean(mcp90@data$area)
 sd(mcp90@data$area)
 
+
 # daily proportion visiting Gardiner based on daily temperature
 #' based on all decision days, not filtered modeling data
 all %>% 
@@ -90,6 +91,7 @@ all %>%
   ggplot(aes(y = visit_hunt_prop, x = temp_max)) +
   geom_point() + 
   geom_smooth(method = "lm")
+
 
 # individuals' Gardiner visits based on distance to hunting
  #' based on all decision days, not filtered modeling data
