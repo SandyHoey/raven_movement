@@ -125,9 +125,13 @@ The maximum daily temperature had a negative effect in both models. Higher tempe
 Snow depth had the same effect found from the Walker et al. study that greater snow depth increased the chances of the raven being in anthropogenic hunting areas (leaving their territory). This isn't a perfect conclusion though because even though they leave their territory, they could still be staying in the national park. However, it does agree with the alternative logic that higher snow depth leads to ungulate migration and more potential hunting availability. So this might be a cue that they are not following or attempting to gain knowledge about actual hunting availability (hence a lack of effect for the actual hunting covariate) and are instead following proxies for it. snow depth and the hunting biomass covariates have a high correlation in the model output. This is likely because the biomass calculation takes into account elk migration timing, which is heavily influenced by snow depth.  
 One super interesting thing to note is that I ran this model with the group travel covariate before adding the temperature, and the group travel stopped being significant after the addition of the temperature. So it would seem like they don't take into account the other ravens that much and instead are all responding to the same stimuli.  
 Here is the bootstrapped parameter confidence intervals for model 1 using the biomass estimate as the hunting covariate. 
-```{r (1) bootstrap, echo=FALSE, warning=FALSE}
+```{r (1) bootstrap (biomass), echo=FALSE, warning=FALSE}
 #bootstrapping parameter values from model simulations
-boot_param_CI(nsim = 500, model = mod_terr_bms, data = ws_model_data)[[3]]
+boot_param_CI(nsim = 1000, model = mod_terr_bms, data = ws_model_data)[[3]]
+```
+```{r (1) bootstrap (season), echo=FALSE, warning=FALSE}
+#bootstrapping parameter values from model simulations
+boot_param_CI(nsim = 1000, model = mod_terr_hseason, data = ws_model_data)[[3]]
 ```
 
 ## Part 2 of conditional model
@@ -176,7 +180,7 @@ The effect of snow depth is more uncertain from these models since only model 1 
 Here is the bootstrapped parameter confidence intervals for model 1 using the biomass estimate as the hunting covariate. 
 ```{r (2) bootstrap, echo=FALSE, warning=FALSE}
 #bootstrapping parameter values from model simulations
-boot_param_CI(nsim = 500, model = mod_hunt_bms, data = hunt_model_data)[[3]]
+boot_param_CI(nsim = 1000, model = mod_hunt_bms, data = hunt_model_data)[[3]]
 ```
 
 ## Figures
