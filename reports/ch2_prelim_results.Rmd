@@ -70,7 +70,7 @@ hunt_model_data <- read_csv(here("data", "clean", "commute_data.csv")) %>%
 ```
 Here is a description of all the model covariates
 - rf_active_kill: if a kill detected through the RF predictive model is present on the ravens territory or not
-- final_take_bms1: the estimated available biomass from human hunting adjusted for relative weights of various species (the multiplier for each is 0.3\*deer = 1\*elk = 2.15\*bison). The biomass from the previous day is rolled over at 0.25x rate
+- final_take_bms1: the estimated available biomass from human hunting adjusted for relative weights of various species (the multiplier for each is 0.35\*deer, 1\*elk, 2.15\*bison). The biomass from the previous day is rolled over at 0.25x rate
 - hunt_season: if it is currently within the hunting season or not. The hunting season for MTFWP is defined by policy. The bison hunting season starts when bison are regularly taken from the surveys done by the Bison Project since that hunt's timing is dictated by weather and migration  
 - rf_avg_terr_kill_density: the average number of kills per 30 days during early or late winter study period
 - dist2nentrance: distance from raven territory to the north entrance station
