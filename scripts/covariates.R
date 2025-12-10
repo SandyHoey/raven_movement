@@ -632,4 +632,5 @@ write.csv(commute_df %>%
             #removing unnecessary columns
             dplyr::select(-c(commute, bison_take, year, bison_start_hunt, fwp_start_hunt, 
                              fwp_end_hunt, fwp_bms1, bison_bms1, winter_year, temp_min)),
-          "data/clean/commute_data.csv")
+          "data/clean/commute_data.csv",
+          row.names = F)
