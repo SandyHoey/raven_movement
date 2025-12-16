@@ -127,11 +127,11 @@ One super interesting thing to note is that I ran this model with the group trav
 Here is the bootstrapped parameter confidence intervals for model 1 using the biomass estimate as the hunting covariate. 
 ```{r (1) bootstrap (biomass), echo=FALSE, warning=FALSE}
 #bootstrapping parameter values from model simulations
-boot_param_CI(nsim = 1000, model = mod_terr_bms, data = ws_model_data)[[3]]
+boot_param_CI(nsim = 1, model = mod_terr_bms, data = ws_model_data)[[3]]
 ```
 ```{r (1) bootstrap (season), echo=FALSE, warning=FALSE}
 #bootstrapping parameter values from model simulations
-boot_param_CI(nsim = 1000, model = mod_terr_hseason, data = ws_model_data)[[3]]
+boot_param_CI(nsim = 1, model = mod_terr_hseason, data = ws_model_data)[[3]]
 ```
 
 ## Part 2 of conditional model
@@ -180,11 +180,11 @@ The effect of snow depth is more uncertain from these models since only model 1 
 Here is the bootstrapped parameter confidence intervals for model 1 using the biomass estimate as the hunting covariate. 
 ```{r (2) bootstrap (biomass), echo=FALSE, warning=FALSE}
 #bootstrapping parameter values from model simulations
-boot_param_CI(nsim = 1000, model = mod_hunt_bms, data = hunt_model_data)[[3]]
+boot_param_CI(nsim = 1, model = mod_hunt_bms, data = hunt_model_data)[[3]]
 ```
 ```{r (2) bootstrap (season), echo=FALSE, warning=FALSE}
 #bootstrapping parameter values from model simulations
-boot_param_CI(nsim = 1000, model = mod_hunt_hseason, data = hunt_model_data)[[3]]
+boot_param_CI(nsim = 1, model = mod_hunt_hseason, data = hunt_model_data)[[3]]
 ```
 ## Figures
 Here is a table that shows the number of times raven made each decision. Beth had the idea to make some kind of heat map similar to the map below that has individual examples of ravens GPS points, but for raven decisions. This would be so there was some, more easily understandable (the giant mass of GPS points is hard to comprehend and compare), visual example. The Gardiner hunting region and the territory would be heat map areas and then the times that the raven left its territory but didn't go to Gardiner would leave the GPS points like map 1.B. This would mean that you could only have 1 raven per map so that the heat map reflected that individuals decisions.
