@@ -23,7 +23,7 @@ cntrl <- glmerControl(optimizer = "bobyqa", tol = 1e-4, optCtrl=list(maxfun=1000
 
 # Modeling
 I am using a conditional binomial model to determine what factors impact movement decisions of territorial common ravens during the winter in Yellowstone. I will look at if various predictors impact if a raven decided to leaves its territory, and if it did, if it visit the Gardiner hunting region or not. The largest predictors here revolve around food availability of carrion created by human hunting activity and wolves.  
-<br>
+
 There are two data sets, one for each part of the conditional model. The first one includes all of the days during the Yellowstone Wolf Project winter study periods (Nov 15- Dec 15 & Mar 1 - Mar 30) because my main predictor is the presence of wolf kills within a ravens territory and the carcass data is most reliable for that period of time due to GPS collar fix rates.  
 The second data set includes all winter from the start of the  hunting season (varies by year, but always in the last week of October) to the end of March (end of late winter study). I can include these other periods because I am no longer considering wolf kills as a predictor because the raven at this point in the conditional model has already decided to leave its territory. This also allows me to have more data on days with low or no hunter gutpile availability from January and February.  
 For both data sets, all data points are excluded if that raven had less than 5 GPS points and the movement decisions was the negative for that binomial model (didn't leaves its territory or didn't visit the hunting area).
@@ -69,24 +69,25 @@ hunt_model_data <- read_csv(here("data", "clean", "commute_data.csv")) %>%
   filter(complete.cases(.)) 
 ```
 Here is a description of all the model covariates
-- rf_active_kill: if a kill detected through the RF predictive model is present on the ravens territory or not
-- final_take_bms1: the estimated available biomass from human hunting adjusted for relative weights of various species (the multiplier for each is 0.35\*deer, 1\*elk, 2.15\*bison). The biomass from the previous day is rolled over at 0.25x rate
-- hunt_season: if it is currently within the hunting season or not. The hunting season for MTFWP is defined by policy. The bison hunting season starts when bison are regularly taken from the surveys done by the Bison Project since that hunt's timing is dictated by weather and migration  
-- rf_avg_terr_kill_density: the average number of kills per 30 days during early or late winter study period
+
+- `rf_active_kill`: if a kill detected through the RF predictive model is present on the ravens territory or not
+- `final_take_bms`: the estimated available biomass from human hunting adjusted for relative weights of various species (the multiplier for each is 0.35\*deer, 1\*elk, 2.15\*bison). The biomass from the previous day is rolled over at 0.25x rate
+- `hunt_season`: if it is currently within the hunting season or not. The hunting season for MTFWP is defined by policy. The bison hunting season starts when bison are regularly taken from the surveys done by the Bison Project since that hunt's timing is dictated by weather and migration  
+- `rf_avg_terr_kill_density`: the average number of kills per 30 days during early or late winter study period
 - dist2nentrance: distance from raven territory to the north entrance station
-- study_period: early or late winter study
-- temp_max: daily maximum temperature
-- snow_depth: daily snow depth
-prop_group_left_terr: the proportion of other ravens that left their territory
-prop_group_visit_hunt: the proportion of other ravens that visited the Gardiner hunting region
+- `study_period`: early or late winter study
+- `temp_max`: daily maximum temperature
+- `snow_depth`: daily snow depth
+- `prop_group_left_terr`: the proportion of other ravens that left their territory
+- `prop_group_visit_hunt`: the proportion of other ravens that visited the Gardiner hunting region
 ## Part 1 of conditional model
 The first part of the conditional model predicts if a raven will leaves it territory or not.  
-<br>
+
 DEPENDENT VARIABLE  
 terr_bin  
 1 = left territory  
 0 = stayed on territory  
-<br>
+
 I am reporting the results from two different models that use a different covariate to represent the hunting availability. The first on is the hunting biomass, which is a more fine scale daily estimate of hunter take. This relies on elk movements tracked using GPS collars to add variation to the MTFWP hunting season. The bison take estimate depends on daily surveys performed by the NPS Bison Project. 
 I report both of these models because the biomass covariate has so much uncertainty in how it is calculated during the MTFWP season since it doesn't actually quantify the number of daily kills. It tries to account for daily variation in take by using elk movement to proxy how many individuals are available to be taken. It also includes a multiplier for the relative biomass (numbers in covariate explanation above) that has elk as the baseline and deer and bison multiplied to be greater or less than elk. It is very possible that a reader doesn't like or believe it is calculated correctly. By also including the hunting season model we can show that the overall hunting period itself, regardless of the daily biomass availability, has an effect on decision making. Then, we can say that we tried to get finer scaled using the biomass covariate. The results are similar enough that it is believable and doesn't drastically change interpretation, but a reader can disregard that part if they want.  
 Another idea is that I can go for something inbetween and at least remove the relative weight of the animals from the calculation and just have the estimated take number. It seems like this leads to pretty similar results, though it won't be shown here. 
@@ -136,16 +137,16 @@ boot_param_CI(nsim = 50, model = mod_terr_hseason, data = ws_model_data)[[3]]
 
 ## Part 2 of conditional model
 The second part of the conditional model predicts if, when a raven left its territory, if it visited the Gardiner hunting region.  
-<br>
+
 DEPENDENT VARIABLE  
 hunt_bin  
 1 = visited hunting  
 0 = visited other place  
-<br>
+
 Again, I am looking at models with both hunting covariates. However, this time I removed the wolf kill and study period covariates.  
 I don't consider wolf kills anymore because, at this point in the model, the raven has already left its territory. It is true that a raven could travel to a wolf kill outside of its territory, but I am interested in the decision to travel to the Gardiner hunting region, so those other options don't matter as much. That includes other cities and towns. This part of the conditional model acknowledges their presence, but isn't really interested in them specifically.  
 I don't consider study period anymore because, again, in this part of the conditional model the raven has already decided to leave its territory. The breeding behavior hypothesis was that ravens would want to **stay on their territory** more during late winter to perform breeding behaviors. This doesn't matter anymore here.  
-<br>
+
 1. bms_window: The most specific is the a measure of the available biomass.
 ```{r (2) bms_window model}
 mod_hunt_bms <- glmer(hunt_bin ~ (1|raven_id) + scale(final_take_bms1) + scale(dist2nentrance) + 
@@ -232,7 +233,7 @@ raven_decisions %>%
   theme_classic()
 
 ```
-<br>
+
 Here is an visual example of three different ravens with territories at different distances from the Gardiner hunting region area and their GPS points.  
 Of the three ravens, the orange raven with its territory at Old Faithful is the only one that doesn't visit the hunting area which is why it looks the same in both maps. Instead, its trips are consistently to the closer town of West Yellowstone, presumably to feed on human refuse. It probably makes this decision because the time investment to travel up to the Gardiner hunting region is not worth it when an alternative location with consistent foraging is nearby.  
 Even though purple is a similar distance to West Yellowstone where orange visits frequently, it  chooses to travel to the north instead. It probably makes this choice because unlike orange, the time investment is about the same between the two locations. And Gardiner has a much higher level of hunting offering a potentially better foraging opportunity while also have human refuse as a back up. Almost all trips north for purple resulted in a visit to the Gardiner hunting region, and the few remaining points up north are probably because of a missed fix in the hunting area. Most of the time when the purple chooses to leave its territory, but not visit the Gardiner hunting region, it is actually still hanging out around its territory but just outside of the 1 kilometer around the 90% minimum convex polygon I am currently considering their territory.  
@@ -241,11 +242,11 @@ One super interesting thing to note is that you would think that there would be 
 Map A shows the all GPS points made by each of the three ravens. Map B shows the GPS points for the three ravens when they choose to exit their territories (highlighted in red), but did not visit the Gardiner hunting region.
   
 ![](individual_examples.jpg)
-<br>
+
 Here is a heat map of the raven GPS points outside the park from November and March along with a polygon denoting the area used to determine if a raven attempted to search for hunter created resources during the MTFWP rifle hunting season and the tribal bison hunt. There is a separate polygon for the MTFWP rifle hunting season and the tribal bison hunt. The MTFWP hunting region is defined as the space 5 km from all roads within 10 km north of the national park boundary. This space has a high density of hunting activity in close proximity to the northern range of the park. The 5 km buffer around roads was used as a reasonable distance for a hunter to travel. There is certainly successful hunting attempts in the areas outside this polygon, but the relative number of those will be low compared to hunting within the polygon. The bison hunting region is much smaller because of bison movement and hunter effort. The bison are restricted in their movement and rarely, if ever, travel beyond the cattle grate that is place at the south end of Yankee Jim canyon. Bison hunting happens almost exclusively along the road, since the main migration path of the bison out of the park is funneled along the roadway at Beattie Gulch. Plus, if someone did successfully harvest a bison in the backcountry, that hike out would be awful, even with a large group due to the size of bison.
 This polygon does include the town of Gardiner along with the local landfill and water treatment ponds that ravens have been documented using as locations to forage since I made the assumption that a dominant territorial raven visiting this area would always attempt to find hunter offal, even if unsuccessful. 26% of trips to the Gardiner hunting region during the hunting season resulted in at least 1 GPS point at the landfill and water treatment pond.  
 ![](hunting_heatmap.jpg)
-<br>
+
 Here is a map of the relevant polygons used including the study area of Yellowstone National Park, the northern range of Yellowstone, and raven territories calculated using 90% minimum convex polygons of their breeding season GPS data. All raven used for this study have territories within the boundary of the national park. In 2 cases where a territorial pair had both individuals GPS tagged, only the female was used since the GPS fix rate was higher due to better battery levels resulting from less coverage of the solar panel during the winter.  
 ![](study_area.jpg)
 ## Wolf kill visits
