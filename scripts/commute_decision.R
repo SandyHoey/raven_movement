@@ -1,10 +1,18 @@
+#categorizes the movement decisions of ravens into 3  groups
+  # leave terr
+  # visit hunting region
+  # visit other location
+
+# reading in raven territories
 source("scripts/home_range_mcp.R")
+
+# reading in raven GPS data with distances to various locations
 source("scripts/dist_to_gardiner.R")
 
 
-#calculating distance to territory
-#using 90% mcp
-#distance calculated in meters
+# calculating distance to territory
+# using 90% mcp
+# distance calculated in meters
 gps_in_mcp <- function(data){
   ID <- mcp90$id
   
@@ -28,7 +36,7 @@ gps_in_mcp <- function(data){
 dist2poly <- gps_in_mcp(terr_fw_gps)
 
 
-#adding the wolf/hunting periods
+# adding the wolf/hunting periods
   # Oct 25-Nov 14 rifle hunting only
   # Nov 15-Nov 30 wolf + hunting
   # Dec 1-Dec 15 wolf only
@@ -43,7 +51,7 @@ dist2poly[dist2poly$month == 12 & dist2poly$day <= 15,]$hunting_period <- "wolf"
 
 
 
-#getting the number of points in territory and Gardiner 
+# getting the number of points in territory and Gardiner 
 info_table <- tapply(dist2poly, INDEX = dist2poly$individual_local_identifier,
        FUN = function(x){
          info_table <- rep(NA, 4)
@@ -58,7 +66,7 @@ info_table <- tapply(dist2poly, INDEX = dist2poly$individual_local_identifier,
        })
 
 
-#number of points adds up properly
+# number of points adds up properly
 # lapply(info_table, function(x){
 # 
 #   return(c(sum(x[1:3]), x[4]))
@@ -76,24 +84,24 @@ dist2poly <- dist2poly %>%
   left_join(hunt_dates, by = join_by(winter_year == year))
 
 
-#creating a column that shows if the raven decided to commute or leave terr that day
-#3 = has a least 1 point that day in Gardiner poly
-#2 = has at least 1 point farther than 1 km from terr poly , but none in Gardiner poly
-#1 = only has points in terr poly
+# creating a column that shows if the raven decided to commute or leave terr that day
+# 3 = has a least 1 point that day in Gardiner poly
+# 2 = has at least 1 point farther than 1 km from terr poly , but none in Gardiner poly
+# 1 = only has points in terr poly
 ID <- unique(dist2poly$individual_local_identifier)
 
 commute_list <- tapply(dist2poly, INDEX = dist2poly$individual_local_identifier,
        FUN = function(x){
          
-         #pulling unique dates
+         # pulling unique dates
          dates <- unique(as.Date(x$study_local_timestamp))
          
          tmp_date_df <- data.frame(ID = x[1, "individual_local_identifier"], 
                                    winter_year = x[1, "winter_year"],
                                    date = dates, commute = NA, dump = NA, n_point = NA) 
          
-         #cycling through all the dates for each individual to tell where the
-         #individual ended up that day (terr, other, Gardiner)
+         # cycling through all the dates for each individual to tell where the
+         # individual ended up that day (terr, other, Gardiner)
          for(d in 1:length(dates)){
            # filtering to all GPS points for a single day
            tmp_dayta <- x %>% filter(as.Date(study_local_timestamp) == dates[d])
@@ -101,15 +109,15 @@ commute_list <- tapply(dist2poly, INDEX = dist2poly$individual_local_identifier,
            # changing the polygon used to determine if a hunting visit happen based on the hunting season
            # any time after the end of MTFWP season uses the smaller bison polygon
            if(x[1,"study_local_timestamp"] <= x[1, "hunt_end"]){ # if the GPS date is before the end of rifle hunting season
-             if(any(tmp_dayta[,"dist2fwp"] == 0)){ #make decisions based on larger rifle hunting polygon
+             if(any(tmp_dayta[,"dist2fwp"] == 0)){ # make decisions based on larger rifle hunting polygon
                tmp_date_df[d,"commute"] <- 3
              } else if(any(tmp_dayta[,"dist2terr"] > 1000)){
                tmp_date_df[d,"commute"] <- 2
              } else{
                tmp_date_df[d,"commute"] <- 1
              }
-           } else{ #if its after the end of rifle hunting season
-             if(any(tmp_dayta[,"dist2bison"] == 0)){ #make decisions based on the smaller bison hunting polygon
+           } else{ # if its after the end of rifle hunting season
+             if(any(tmp_dayta[,"dist2bison"] == 0)){ # make decisions based on the smaller bison hunting polygon
                tmp_date_df[d,"commute"] <- 3
              } else if(any(tmp_dayta[,"dist2terr"] > 1000)){
                tmp_date_df[d,"commute"] <- 2
@@ -118,10 +126,10 @@ commute_list <- tapply(dist2poly, INDEX = dist2poly$individual_local_identifier,
              }
            }
            
-           #adding the number of points that day
+           # adding the number of points that day
            tmp_date_df[d, "n_point"] <- nrow(tmp_dayta)
            
-           #adding if any of the points were at the dump/sewage
+           # adding if any of the points were at the dump/sewage
            if(any(tmp_dayta[,"dist2dump"] == 0)){ 
              tmp_date_df[d, "dump"] <- TRUE
              } else(
@@ -135,7 +143,7 @@ commute_list <- tapply(dist2poly, INDEX = dist2poly$individual_local_identifier,
 commute_df <- do.call("rbind", commute_list)
 
 
-#plotting raven commute decision per day
+# plotting raven commute decision per day
 #layout(matrix(1:20, nrow=4, ncol=5))
 # sapply(commute_list, 
 #        FUN = function(x){
@@ -145,8 +153,8 @@ commute_df <- do.call("rbind", commute_list)
 # })
 
 
-#calculating the percentage of points in each commute category
-#did remove the old faithful birds
+# calculating the percentage of points in each commute category
+# did remove the old faithful birds
 commute_percent <- commute_list %>% 
   do.call("rbind",.) %>% 
   mutate(month = month(.$date)) %>% 
@@ -157,7 +165,7 @@ commute_percent <- commute_list %>%
             Gardiner = sum(commute == 3)/n()*100)
   
 
-#plotting the percentage of each commute category by month
+# plotting the percentage of each commute category by month
 commute_percent %>% 
 pivot_longer(cols = c(terr, mid, Gardiner), 
                names_to = "commute", values_to = "percent") %>% 
@@ -170,10 +178,22 @@ pivot_longer(cols = c(terr, mid, Gardiner),
   scale_y_continuous(expand=c(0,0), limits = c(0, 65))
 
 
-#calculating the number of commute days that included a visit to the dump
-commute_df %>% 
-  filter(commute == 3) %>% 
-  group_by(dump) %>% 
-  summarise(n())
-713/(713+1980)
-#26.5% of the time a raven visits the dump when they search the hunting area
+# calculating the number of commute days that included a visit to the dump
+  # all ravens
+  commute_df %>% 
+    filter(commute == 3) %>% 
+    group_by(dump) %>% 
+    summarise(n())
+  713/(713+1980)
+  # 26.5% of the time a raven visits the dump when they search the hunting area
+  # individual basis
+  commute_df %>% 
+    filter(commute == 3) %>% 
+    group_by(individual_local_identifier) %>% 
+    summarise(no_visit = sum(dump == F),
+              visit = sum(dump == T)) %>% 
+    mutate(prop_visit_dump = visit/(visit + no_visit)) %>% 
+    summarize(mean = mean(prop_visit_dump),
+              min = min(prop_visit_dump),
+              max = max(prop_visit_dump),
+              sd = sd(prop_visit_dump))
