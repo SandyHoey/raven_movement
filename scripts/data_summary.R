@@ -6,45 +6,45 @@ library(ggplot2)
 
 # reading in data ---------------------------------------------------------
 
-#all data without filters
-all <- readr::read_csv("data/clean/commute_data.csv")
-
 ## dataset for part 1 of conditional model
 ws_model_data <- readr::read_csv("data/clean/commute_data.csv") %>% 
-  
-  #restricting to only winter study months
+  # restricting to only winter study months
   filter((paste(month, day, sep = "-") >= "11-15" &
             paste(month, day, sep = "-") <= "12-15") |
            (paste(month, day, sep = "-") >= "3-1" &
               paste(month, day, sep = "-") <= "3-30")) %>% 
-  
-  #making sure rows are complete
-  filter(
-    #previous_day history
-    !is.na(previous_decision_terr)) %>% 
-  
-  #removing days when there is less than 5 GPS point
-  #unless the result is Jardine
-  filter(!(n_point < 5 & terr_bin == F))
+  # removing days when there is less than 5 GPS point
+  # unless the result is Jardine
+  filter(!(n_point < 5 & terr_bin == F)) %>% 
+  # only columns used in model
+  dplyr::select(terr_bin, raven_id, dump, date, rf_active_kill, final_take_bms, final_take_bms1, final_take, 
+                hunt_season, rf_avg_terr_kill_density, dist2nentrance, 
+                study_period, temp_max, snow_depth, prop_group_left_terr) %>% 
+  # making sure rows are complete
+  filter(complete.cases(.)) 
 
 
 ## dataset for part 2 of conditional model
-hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>% 
-  
-  #making sure rows are complete
-  filter(
-    #previous_day history
-    !is.na(previous_decision_terr),
-    #temperature
-    !is.na(temp_max)) %>%
-  
-  #only have days ravens decided to leave territory
+hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
+  # only have days ravens decided to leave territory
   filter(terr_bin == 1) %>% 
-  
-  #removing days when there is less than 5 GPS point
-  #unless the result is Jardine
-  filter(!(n_point < 5 & hunt_bin == F))
+  # removing days when there is less than 5 GPS point
+  # unless the result is Jardine
+  filter(!(n_point < 5 & hunt_bin == F)) %>% 
+  # only columns used in model
+  dplyr::select(hunt_bin, raven_id, dump, date, final_take_bms, final_take, hunt_season,
+                dist2nentrance, study_period, temp_max, snow_depth, prop_group_visit_hunt) %>% 
+  # making sure rows are complete
+  filter(complete.cases(.)) 
 
+## all data with filters
+  # combines both data sets and removes duplicates
+all <- ws_model_data %>% 
+  bind_rows(hunt_model_data) %>% 
+  group_by(raven_id, date) %>% 
+  slice(1) %>% 
+  ungroup
+  
 
 # summary data ------------------------------------------------------------
 
@@ -75,6 +75,58 @@ sd(all$n_point)
 source("scripts/home_range_mcp.R")
 mean(mcp90@data$area)
 sd(mcp90@data$area)
+
+# percent of trips to Gardiner included visit to the dump (all winter)
+all %>% 
+  filter(hunt_bin == TRUE) %>% 
+  group_by(dump) %>% 
+  summarise(n())
+474/(474+913)
+# 34.17%
+
+# average percent trip to dump (all winter)
+all_dump <- all %>% 
+  filter(hunt_bin == TRUE) %>% 
+  group_by(raven_id) %>% 
+  summarise(no_visit = sum(dump == F),
+            visit = sum(dump == T)) %>% 
+  mutate(prop_visit_dump = visit/(visit + no_visit))
+all_dump %>% 
+  summarize(mean = mean(prop_visit_dump),
+            min = min(prop_visit_dump),
+            max = max(prop_visit_dump),
+            sd = sd(prop_visit_dump))
+
+# percent of trips to Gardiner included visit to the dump (hunting seasons)
+all %>% 
+  filter(
+    #only during the hunitng season
+    hunt_season == TRUE,
+    #only on trips to Gardiner
+    hunt_bin == TRUE) %>% 
+  group_by(dump) %>% 
+  summarise(n())
+264/(264+710)
+# 27.1%
+
+# average percent trip to dump (hunting season)
+hunt_dump <- all %>% 
+  filter(
+    #only during the hunitng season
+    hunt_season == TRUE,
+    #only on trips to Gardiner
+    hunt_bin == TRUE) %>% 
+  group_by(raven_id) %>% 
+  summarise(no_visit = sum(dump == F),
+            visit = sum(dump == T)) %>% 
+  mutate(prop_visit_dump = visit/(visit + no_visit),
+         season = "hunt")
+hunt_dump %>% 
+  summarize(mean = mean(prop_visit_dump),
+            min = min(prop_visit_dump),
+            max = max(prop_visit_dump),
+            sd = sd(prop_visit_dump))
+
 
 
 # daily proportion visiting Gardiner based on daily temperature
