@@ -164,6 +164,40 @@ hunt_wolf_kills <- hunt_gps %>%
   mutate(prop_visit = days_visit/total_days)
 
 
+# combining for all days leaving territory --------------------------------
+
+leave_terr_wolf_kills <- hunt_wolf_kills %>% 
+  # combining tables
+  bind_rows(leave_no_hunt_wolf_kills) %>% 
+  # removing prop_visit column
+  dplyr::select(-prop_visit) %>% 
+  # adding days together
+  group_by(raven_id) %>% 
+  summarize(days_visit = sum(days_visit), total_days = sum(total_days)) %>% 
+  # calculating proportion 
+  mutate(prop_visit = days_visit/total_days) %>% 
+  # adding days visiting carcass + hunting area
+  left_join(hunt_wolf_kills %>% 
+              # only relevant columns
+              dplyr::select(raven_id, days_visit) %>% 
+              # renaming to avoid conflict
+              rename(hunt_days_visit = days_visit)) %>%
+  # calculating percent of wolf kill visits also had hunt visits
+  mutate(prop_hunt_visit = hunt_days_visit/days_visit)
+  
+
+# average days with visit to wolf kills when leaving territory
+mean(leave_terr_wolf_kills$prop_visit)
+range(leave_terr_wolf_kills$prop_visit)
+sd(leave_terr_wolf_kills$prop_visit)
+
+
+# average days visiting wolf kills that also had hunt visits
+mean(leave_terr_wolf_kills$prop_hunt_visit)
+range(leave_terr_wolf_kills$prop_hunt_visit)
+sd(leave_terr_wolf_kills$prop_hunt_visit)
+
+
 # other stuff -------------------------------------------------------------
 
 mean(leave_no_hunt_wolf_kills$prop_visit)
