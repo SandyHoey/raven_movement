@@ -10,14 +10,14 @@ wp_kills <- readr::read_csv(here("data/raw/wolf_project_carcass_data.csv")) %>%
   janitor::clean_names() %>% 
   # removing cat kills
   filter(cod %like% "WOLF") %>% 
-  #getting best coordinates
+  # getting best coordinates
   mutate(easting = case_when(!is.na(ground_east) ~ ground_east,
                              !is.na(aerial_east) ~ aerial_east,
                              !is.na(est_ground_east) ~ est_ground_east),
          northing = case_when(!is.na(ground_north) ~ ground_north,
                               !is.na(aerial_north) ~ aerial_north,
                               !is.na(est_ground_north) ~ est_ground_north),
-         #fixing date column format
+         # fixing date column format
          dod = lubridate::mdy(dod))
 
 rf_kills <- readr::read_rds(here("data/raw/mergedkills_wolf_winter_RF_spec95.rds")) %>% janitor::clean_names() %>% ungroup
@@ -82,27 +82,27 @@ leave_no_hunt_wolf_kills <- leave_no_hunt_gps %>%
   st_drop_geometry() %>% 
   # only GPS points within 500 m of kill
   filter(dist2kill < 500) %>% 
-  #a single row for each raven/day
+  # a single row for each raven/day
   group_by(raven_id, date) %>% 
   slice(1) %>% 
   # remove date grouping (only ID)
   ungroup(date) %>% 
   summarize(days_visit = n()) %>% 
-  #adding the total number of days the raven left the territory by didn't visit hunting
+  # adding the total number of days the raven left the territory by didn't visit hunting
   left_join(leave_no_hunt_gps %>% 
               st_drop_geometry %>% 
               group_by(raven_id, date) %>% 
               slice(1) %>% 
               ungroup(date) %>% 
               summarize(total_days = n())) %>% 
-  #calculating proportion of days visiting wolf kill outside territory without visiting the hunting area
+  # calculating proportion of days visiting wolf kill outside territory without visiting the hunting area
   mutate(prop_visit = days_visit/total_days)
 
 
 # visiting the hunting area -------------------------------------------------------------------------
 
 hunt_gps <- readr::read_csv(here("data/clean/raven_gps_covariates.csv")) %>% 
-  #only days with visit to hunting area
+  # only days with visit to hunting area
   filter(hunt_bin == 1) %>% 
   # only useful columns
   dplyr::select(individual_local_identifier, study_local_timestamp, utm_easting, utm_northing) %>%
@@ -134,7 +134,7 @@ for(i in 1:nrow(hunt_gps)){
            as.numeric(difftime(tmp_gps$date, dod, 
                                units = "days")) >= 0)
   
-  #if there are no kills, then make distance NA
+  # if there are no kills, then make distance NA
   if(nrow(tmp_kills) > 0){
     # calculating distance, but only for the closest wolf kill
     hunt_gps[i, "dist2kill"] <- as.numeric(min(st_distance(tmp_gps, tmp_kills, units = "meters")))
@@ -142,25 +142,25 @@ for(i in 1:nrow(hunt_gps)){
 }
 
 
-# how many days each raven has GPS points are within 500 meters
+# how many days each raven has GPS points within 500 meters of a wolf kill
 hunt_wolf_kills <- hunt_gps %>% 
   st_drop_geometry() %>% 
   # only GPS points within 500 m of kill
   filter(dist2kill < 500) %>% 
-  #a single row for each raven/day
+  # a single row for each raven/day
   group_by(raven_id, date) %>% 
   slice(1) %>% 
   # remove date grouping (only ID)
   ungroup(date) %>% 
   summarize(days_visit = n()) %>% 
-  #adding the total number of days the raven left the territory by didn't visit hunting
+  # adding the total number of days the raven left the territory by didn't visit hunting
   left_join(hunt_gps %>% 
               st_drop_geometry %>% 
               group_by(raven_id, date) %>% 
               slice(1) %>% 
               ungroup(date) %>% 
               summarize(total_days = n())) %>% 
-  #calculating proportion of days visiting wolf kill outside territory without visiting the hunting area
+  # calculating proportion of days visiting wolf kill outside territory without visiting the hunting area
   mutate(prop_visit = days_visit/total_days)
 
 
