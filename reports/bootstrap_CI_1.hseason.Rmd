@@ -71,5 +71,5 @@ summary(mod_terr_hseason)
 ```
 ```{r (1) bootstrap (season), echo=FALSE, warning=FALSE}
 #bootstrapping parameter values from model simulations
-boot_param_CI(nsim = 20000, model = mod_terr_hseason, data = ws_model_data)[[3]]
+boot_param_CI(nsim = 10000, model = mod_terr_hseason, data = ws_model_data)[[3]]
 ```
