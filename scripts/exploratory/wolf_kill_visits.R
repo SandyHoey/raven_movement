@@ -64,9 +64,9 @@ for(i in 1:nrow(leave_no_hunt_gps)){
   tmp_gps <- leave_no_hunt_gps[i,]
   
   tmp_kills <- wolf_kills %>% 
-    # only kills that were made within last 2 weeks
+    # only kills that were made within last 1 weeks
     filter(as.numeric(difftime(tmp_gps$date, dod, 
-                    units = "days")) <= 14,
+                    units = "days")) <= 7,
            as.numeric(difftime(tmp_gps$date, dod, 
                                units = "days")) >= 0)
   
