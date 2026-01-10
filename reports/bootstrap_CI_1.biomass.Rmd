@@ -60,14 +60,14 @@ hunt_model_data <- read_csv(here("data", "clean", "commute_data.csv")) %>%
   #making sure rows are complete
   filter(complete.cases(.)) 
 ```
-```{r (1) hunting season model}
-mod_terr_hseason <- glmer(terr_bin ~ (1|raven_id) + rf_active_kill + hunt_season + scale(rf_avg_terr_kill_density) + 
-                            scale(dist2nentrance) + study_period * scale(temp_max) + scale(snow_depth) + scale(prop_group_left_terr),
-                         data = ws_model_data,
-                         family = "binomial",
-                         nAGQ = 40,
-                         control = cntrl)
-summary(mod_terr_hseason)
+```{r (1) bms_window model}
+mod_terr_bms <- glmer(terr_bin ~ (1|raven_id) + rf_active_kill * scale(final_take_bms1) + scale(rf_avg_terr_kill_density) + 
+                         scale(dist2nentrance) + study_period * scale(temp_max) + scale(snow_depth) + scale(prop_group_left_terr),
+                       data = ws_model_data,
+                       family = "binomial",
+                       nAGQ = 40,
+                       control = cntrl)
+summary(mod_terr_bms)
 ```
 ```{r (1) bootstrap (biomass), echo=FALSE, warning=FALSE}
 #bootstrapping parameter values from model simulations
