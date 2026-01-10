@@ -1,0 +1,33 @@
+---
+title: "bootstrap_CI_2.biomass"
+output: pdf_document
+date: "2026-01-10"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(here)
+library(readr)
+library(dplyr)
+library(lme4)
+library(tidyr)
+library(myFunctions) #custom bootstrap function
+library(ggplot2)
+
+#optimizer for glmer
+cntrl <- glmerControl(optimizer = "bobyqa", tol = 1e-4, optCtrl=list(maxfun=100000))
+
+```
+```{r (2) bms_window model}
+mod_hunt_bms <- glmer(hunt_bin ~ (1|raven_id) + scale(final_take_bms1) + scale(dist2nentrance) + 
+                         scale(prop_group_visit_hunt) + scale(temp_max) + scale(snow_depth),
+                       data = hunt_model_data,
+                       family = "binomial",
+                       nAGQ = 40,
+                       control = cntrl)
+summary(mod_hunt_bms)
+```
+```{r (2) bootstrap (biomass), echo=FALSE, warning=FALSE}
+#bootstrapping parameter values from model simulations
+boot_param_CI(nsim = 50, model = mod_hunt_bms, data = hunt_model_data)[[3]]
+```
