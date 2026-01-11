@@ -18,6 +18,26 @@ library(ggplot2)
 cntrl <- glmerControl(optimizer = "bobyqa", tol = 1e-4, optCtrl=list(maxfun=100000))
 
 ```
+```{r}
+## dataset for part 2 of conditional model
+hunt_model_data <- read_csv(here("data", "clean", "commute_data.csv")) %>%
+
+  #only have days ravens decided to leave territory
+  filter(terr_bin == 1) %>% 
+  
+  #removing days when there is less than 5 GPS point
+  #unless the result is Jardine
+  filter(!(n_point < 5 & hunt_bin == F)) %>% 
+  
+  
+  #only columns used in model
+  dplyr::select(hunt_bin, raven_id, final_take_bms1, final_take, hunt_season,
+                dist2nentrance, study_period, temp_max, snow_depth, prop_group_visit_hunt) %>% 
+  
+  #making sure rows are complete
+  filter(complete.cases(.)) 
+
+```
 ```{r (2) hunting season model}
 mod_hunt_hseason <- glmer(hunt_bin ~ (1|raven_id) + hunt_season + scale(dist2nentrance) + 
                             scale(prop_group_visit_hunt) + scale(temp_max) + scale(snow_depth),
