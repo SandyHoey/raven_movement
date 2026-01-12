@@ -50,6 +50,13 @@ mod_terr_hseason <- glmer(terr_bin ~ (1|raven_id) + rf_active_kill + hunt_season
 summary(mod_terr_hseason)
 ```
 ```{r (1) bootstrap (season), echo=FALSE, warning=FALSE}
+#creating labels for covariate names in plot
+cov_labs <- c("Hunting Season", "Wolf Kill", "Distance",
+              "Proportion Traveling", "Kill Density", "Snow Depth",
+              "Max Temp", "Study Period", "Study Period * Max Temp")
+
 #bootstrapping parameter values from model simulations
-boot_param_CI(nsim = 10000, model = mod_terr_hseason, data = ws_model_data)[[3]]
+boot_param_CI(nsim = 10000, model = mod_terr_hseason, data = ws_model_data)[[3]] +
+  scale_y_discrete(label = cov_labs) +
+  labs(x = "Predicted Probaiblity")
 ```

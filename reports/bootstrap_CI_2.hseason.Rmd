@@ -48,5 +48,12 @@ mod_hunt_hseason <- glmer(hunt_bin ~ (1|raven_id) + hunt_season + scale(dist2nen
 summary(mod_hunt_hseason)
 ```
 ```{r (2) bootstrap (season), echo=FALSE, warning=FALSE}
+#creating labels for covariate names in plot
+cov_labs <- c("Hunting Season", "Distance", "Proportion Traveling",
+              "Snow Depth", "Max Temp")
+
 #bootstrapping parameter values from model simulations
-boot
+boot_param_CI(nsim = 1, model = mod_hunt_hseason, data = hunt_model_data)[[3]] +
+  scale_y_discrete(label = cov_labs) +
+  labs(x = "Predicted Probaiblity")
+```

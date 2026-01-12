@@ -47,6 +47,12 @@ mod_hunt_bms <- glmer(hunt_bin ~ (1|raven_id) + scale(final_take_bms1) + scale(d
 summary(mod_hunt_bms)
 ```
 ```{r (2) bootstrap (biomass), echo=FALSE, warning=FALSE}
+#creating labels for covariate names in plot
+cov_labs <- c("Distance", "Hunting Biomass", "Proportion Traveling",
+              "Snow Depth", "Max Temp")
+
 #bootstrapping parameter values from model simulations
-boot_param_CI(nsim = 50, model = mod_hunt_bms, data = hunt_model_data)[[3]]
+boot_param_CI(nsim = 10000, model = mod_hunt_bms, data = hunt_model_data)[[3]] +
+  scale_y_dsicrete(label = cov_labs) +
+  labs(x = "Predicted Probaiblity")
 ```
