@@ -166,10 +166,22 @@ read_csv("data/clean/all_raven_gps_clean29.csv") %>%
 source("scripts/exploratory/wolf_kill_visits.R")
 
 # kills on days ravens left territory, but didn't visit hunting
-write.csv(wolf_kills %>% 
-            filter(used_nohunt == TRUE), "data/clean/rf_used_kills_nohunt.csv")
+write.csv(wolf_kills %>%
+            # removing sf geometry
+            bind_cols(., st_coordinates(.)) %>% 
+            rename(easting = X, northing = Y) %>% 
+            st_drop_geometry() %>% 
+            filter(used_nohunt == TRUE), 
+          "data/clean/rf_used_kills_nohunt.csv",
+          row.names = F)
 
 # kills on days ravens left territory, and visited hunting
 write.csv(wolf_kills %>% 
-            filter(used_hunt == TRUE), "data/clean/rf_used_kills_hunt.csv")
+            # removing sf geometry
+            bind_cols(., st_coordinates(.)) %>% 
+            rename(easting = X, northing = Y) %>% 
+            st_drop_geometry() %>% 
+            filter(used_hunt == TRUE), 
+          "data/clean/rf_used_kills_hunt.csv",
+          row.names = F)
   
