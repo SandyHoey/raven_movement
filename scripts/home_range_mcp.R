@@ -10,13 +10,13 @@ library(mapview)
 
 # reading in all raven points
 # removing columns with NA coords
-allGPS <- read_csv("data/clean/all_raven_gps_clean29.csv")
+allGPS <- read_csv("data/clean/all_raven_gps_clean29.csv") %>% janitor::clean_names()
 allGPS <- subset(allGPS, !is.na(utm_easting))
 
 
 # importing demographic information
-# terr: territorial birds inside the park (inclduing interrior birds)
-# trans: birds that transitioned between breeder and nonbreeder
+# terr: territorial birds inside the park (including interior birds)
+# trans: birds that transitioned between breeder and non breeder
 # 7485 (Old Faithful) transitioned more than once
   # currently using only the first breeding period (old faithful sinclair)
   # she also went back to a different territory in 2024 (old faithful snotel)
