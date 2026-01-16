@@ -62,3 +62,6 @@ rsconnect/
 /data/raw/ravenGPS_movebank.csv
 /data/raw/ravenGPS_movebank_BACKUP.csv
 /data/raw/elk_GPS_2025-09-03_BJS.csv
+
+# removing backup data files
+/data/clean/commute_data_BACKUP.csv
