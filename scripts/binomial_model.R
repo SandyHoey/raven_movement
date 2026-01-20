@@ -22,19 +22,22 @@ ws_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
 
 ## dataset for part 2 of conditional model
 hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
+  # restricting to only winter study months
+  filter((paste(month, day, sep = "-") >= "11-15" &
+            paste(month, day, sep = "-") <= "12-15") |
+           (paste(month, day, sep = "-") >= "3-1" &
+              paste(month, day, sep = "-") <= "3-30")) %>% 
   # only have days ravens decided to leave territory
   filter(terr_bin == 1) %>% 
   # removing days when there is less than 5 GPS point
   # unless the result is Jardine
   filter(!(n_point < 5 & hunt_bin == F)) %>% 
   # only columns used in model
-  dplyr::select(hunt_bin, raven_id, final_take_bms, final_take, hunt_season,
+  dplyr::select(hunt_bin, raven_id, visit_kill, final_take_bms, final_take, hunt_season,
                 dist2nentrance, study_period, temp_max, snow_depth, prop_group_visit_hunt) %>% 
   
   # making sure rows are complete
   filter(complete.cases(.)) 
-
-  
 
 
 # checking correlation between biomass covariates --------------------
@@ -139,7 +142,7 @@ summary(mod_hunt_bms)
 
 
 # model with hunting season (changes study period, p value and effect direction)
-mod_hunt_hseason <- glmer(hunt_bin ~ (1|raven_id) + hunt_season + scale(dist2nentrance) + 
+mod_hunt_hseason <- glmer(hunt_bin ~ (1|raven_id) + hunt_season + visit_kill + scale(dist2nentrance) + 
                             scale(prop_group_visit_hunt) + scale(temp_max) + scale(snow_depth),
                           data = hunt_model_data,
                           family = "binomial",
@@ -149,7 +152,7 @@ summary(mod_hunt_hseason)
 
 
 # model with raw hunting take (no adjustment for varying weights)
-mod_hunt_take <- glmer(hunt_bin ~ (1|raven_id) + final_take + scale(dist2nentrance) + 
+mod_hunt_take <- glmer(hunt_bin ~ (1|raven_id) + final_take + visit_kill + scale(dist2nentrance) + 
                             scale(prop_group_visit_hunt) + scale(temp_max) + scale(snow_depth),
                      data = hunt_model_data,
                      family = "binomial",                       
