@@ -252,7 +252,7 @@ Here is a map of the relevant polygons used including the study area of Yellowst
 ## Wolf kill visits
 I looked at how often ravens were visiting wolf kills when they left their territory because it looked like they didn't visit kills that often when they left their territory but didn't visit the Gardiner hunting region (map 1.B). This currently includes both the RF predicted wolf kills and the wolf project kill database to have the maximum coverage of possible kills. 
 ```{r wolf kill visits off territory, message=FALSE}
-source(here("scripts", "exploratory", "wolf_kill_visits.R"))
+source(here("scripts", "wolf_kill_visits.R"))
 
 # table for days visiting wolf kills with no hunting visit
 leave_no_hunt_wolf_kills
