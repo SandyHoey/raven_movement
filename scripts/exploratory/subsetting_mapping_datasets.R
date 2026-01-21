@@ -163,7 +163,7 @@ read_csv("data/clean/all_raven_gps_clean29.csv") %>%
   
 
 # location of wolf kills visited by ravens when leaving their territory
-source("scripts/exploratory/wolf_kill_visits.R")
+source("scripts/wolf_kill_visits.R")
 
 # kills on days ravens left territory, but didn't visit hunting
 write.csv(wolf_kills %>%
