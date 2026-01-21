@@ -293,8 +293,12 @@ commute_df <- commute_df %>%
     # wolf project kill database
     active_kill = active_kill_fctn(in_terr_kill_list, days_since = 2, 
                                    start = "dod", end = "dod"),
-    # RF predicted kills
+    # RF predicted kills (1 day after wolves leave)
     rf_active_kill = active_kill_fctn(rf_in_terr_kill_list, days_since = 1, 
+                                      start = "kill_start_date", end = "kill_end_date"),
+                                      
+    # RF predicted kills (3 days after wolves leave)
+    rf_active_kill_3 = active_kill_fctn(rf_in_terr_kill_list, days_since = 3, 
                                       start = "kill_start_date", end = "kill_end_date"))
 
 
