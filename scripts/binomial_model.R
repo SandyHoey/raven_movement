@@ -57,7 +57,7 @@ library(myFunctions) #custom bootstrap function
 
 # optimizer for glmer
 cntrl <- glmerControl(optimizer = "bobyqa", tol = 1e-4, optCtrl=list(maxfun=100000))
-
+ 
 
 # part 1 of conditional model (stay/leave territory) ---------------------------------------------
 # modeling first part of conditional binomial model
