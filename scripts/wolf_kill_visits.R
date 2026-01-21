@@ -7,35 +7,45 @@ library(lubridate)
 `%like%` <- data.table::`%like%`
 
 # reading in wolf kill data (both wolf project database and RF predictive)
-wp_kills <- readr::read_csv(here("data/raw/wolf_project_carcass_data.csv")) %>% 
-  janitor::clean_names() %>% 
-  # removing cat kills
-  filter(cod %like% "WOLF") %>% 
-  # getting best coordinates
-  mutate(easting = case_when(!is.na(ground_east) ~ ground_east,
-                             !is.na(aerial_east) ~ aerial_east,
-                             !is.na(est_ground_east) ~ est_ground_east),
-         northing = case_when(!is.na(ground_north) ~ ground_north,
-                              !is.na(aerial_north) ~ aerial_north,
-                              !is.na(est_ground_north) ~ est_ground_north),
-         # fixing date column format
-         dod = lubridate::mdy(dod))
+# wp_kills <- readr::read_csv(here("data/raw/wolf_project_carcass_data.csv")) %>% 
+#   janitor::clean_names() %>% 
+#   # removing cat kills
+#   filter(cod %like% "WOLF") %>% 
+#   # getting best coordinates
+#   mutate(easting = case_when(!is.na(ground_east) ~ ground_east,
+#                              !is.na(aerial_east) ~ aerial_east,
+#                              !is.na(est_ground_east) ~ est_ground_east),
+#          northing = case_when(!is.na(ground_north) ~ ground_north,
+#                               !is.na(aerial_north) ~ aerial_north,
+#                               !is.na(est_ground_north) ~ est_ground_north),
+#          # fixing date column format
+#          dod = lubridate::mdy(dod))
 
 source(here("scripts/clean_rf_data.R"))
 
-# creating a single combined kill dataframe with the start date and coordinates
-wolf_kills <- wp_kills %>% 
-  # only useful columns
+wolf_kills <- kill_data_rf %>% 
+  rename(dod = kill_start_date) %>% 
   dplyr::select(dod, easting, northing) %>% 
-  # adding RF predictive kills
-  bind_rows(kill_data_rf %>% 
-              rename(dod = kill_start_date) %>% 
-              dplyr::select(dod, easting, northing)) %>% 
   filter(complete.cases(.)) %>% 
   st_as_sf(coords = c("easting", "northing"), crs = "+proj=utm +zone=12") %>% 
   # creating a column for if the kill was found by a raven
   mutate(used_nohunt = FALSE,
          used_hunt = FALSE)
+
+
+# creating a single combined kill dataframe with the start date and coordinates
+# wolf_kills <- wp_kills %>% 
+#   # only useful columns
+#   dplyr::select(dod, easting, northing) %>% 
+#   # adding RF predictive kills
+#   bind_rows(kill_data_rf %>% 
+#               rename(dod = kill_start_date) %>% 
+#               dplyr::select(dod, easting, northing)) %>% 
+#   filter(complete.cases(.)) %>% 
+#   st_as_sf(coords = c("easting", "northing"), crs = "+proj=utm +zone=12") %>% 
+#   # creating a column for if the kill was found by a raven
+#   mutate(used_nohunt = FALSE,
+#          used_hunt = FALSE)
 
 
 # leaving the territory, but not visiting the hunting area-------------------------------------------------------------------------
