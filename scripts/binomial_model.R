@@ -81,7 +81,7 @@ summary(mod_terr_bms)
 # model with hunting season (changes result for active_kill)
 # including the interaction effect messes with active_kill because of high error with interaction term
 # with the new polygon and updated bison hunting season, this is even more out of control
-mod_terr_hseason <- glmer(terr_bin ~ (1|raven_id) + rf_active_kill_3 + hunt_season + scale(rf_avg_terr_kill_density) + 
+mod_terr_hseason <- glmer(terr_bin ~ (1|raven_id) + rf_active_kill + hunt_season + scale(rf_avg_terr_kill_density) + 
                             scale(dist2nentrance) + study_period * scale(temp_max) + scale(snow_depth) + scale(prop_group_left_terr),
                          data = ws_model_data,
                          family = "binomial",
