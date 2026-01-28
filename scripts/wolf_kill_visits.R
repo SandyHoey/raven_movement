@@ -253,25 +253,13 @@ leave_terr_wolf_kills <- hunt_wolf_kills %>%
   
 
 # average days with visit to wolf kills when leaving territory
-mean(leave_terr_wolf_kills$prop_visit)
-range(leave_terr_wolf_kills$prop_visit)
-sd(leave_terr_wolf_kills$prop_visit)
+mean(leave_terr_wolf_kills$prop_visit, na.rm = T)
+range(leave_terr_wolf_kills$prop_visit, na.rm = T)
+sd(leave_terr_wolf_kills$prop_visit, na.rm = T)
 
 
 # average days visiting wolf kills that also had hunt visits
-mean(leave_terr_wolf_kills$prop_hunt_visit)
-range(leave_terr_wolf_kills$prop_hunt_visit)
-sd(leave_terr_wolf_kills$prop_hunt_visit)
+mean(leave_terr_wolf_kills$prop_hunt_visit, na.rm = T)
+range(leave_terr_wolf_kills$prop_hunt_visit, na.rm = T)
+sd(leave_terr_wolf_kills$prop_hunt_visit, na.rm = T)
 
-
-# other stuff -------------------------------------------------------------
-
-mean(leave_no_hunt_wolf_kills$prop_visit)
-leave_no_hunt_wolf_kills %>% 
-  summarize(visit = sum(days_visit),
-            total = sum(total_days))
-
-mean(hunt_wolf_kills$prop_visit)
-hunt_wolf_kills %>% 
-  summarize(visit = sum(days_visit),
-            total = sum(total_days))
