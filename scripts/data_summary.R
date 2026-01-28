@@ -74,7 +74,20 @@ sd(all$n_point)
 # average home range size
 source("scripts/home_range_mcp.R")
 mean(mcp90@data$area)
+range(mcp90@data$area)
 sd(mcp90@data$area)
+
+
+# wolf kills available on territory
+kills_available <- ws_model_data %>% 
+  group_by(raven_id) %>% 
+  summarize(available_kills = sum(rf_active_kill),
+            total_days = n()) %>% 
+  mutate(prop_available = available_kills/total_days)
+mean(kills_available$prop_available)
+range(kills_available$prop_available)
+sd(kills_available$prop_available)
+
 
 # percent of trips to Gardiner included visit to the dump (all winter)
 all %>% 
@@ -83,6 +96,7 @@ all %>%
   summarise(n())
 474/(474+913)
 # 34.17%
+
 
 # average percent trip to dump (all winter)
 all_dump <- all %>% 
@@ -97,6 +111,7 @@ all_dump %>%
             max = max(prop_visit_dump),
             sd = sd(prop_visit_dump))
 
+
 # percent of trips to Gardiner included visit to the dump (hunting seasons)
 all %>% 
   filter(
@@ -108,6 +123,7 @@ all %>%
   summarise(n())
 264/(264+710)
 # 27.1%
+
 
 # average percent trip to dump (hunting season)
 hunt_dump <- all %>% 
