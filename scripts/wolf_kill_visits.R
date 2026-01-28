@@ -25,7 +25,7 @@ source(here("scripts/clean_rf_data.R"))
 
 wolf_kills <- kill_data_rf %>% 
   rename(dod = kill_start_date) %>% 
-  dplyr::select(dod, easting, northing) %>% 
+  dplyr::select(dod, kill_end_date, easting, northing) %>% 
   filter(complete.cases(.)) %>% 
   st_as_sf(coords = c("easting", "northing"), crs = "+proj=utm +zone=12") %>% 
   # creating a column for if the kill was found by a raven
@@ -70,22 +70,34 @@ leave_no_hunt_gps <- readr::read_csv(here("data/clean/raven_gps_outside_terr_no_
   filter(complete.cases(.)) %>% 
   # add crs
   st_drop_geometry() %>% 
-  st_as_sf(coords = c("easting", "northing"), crs = "+proj=utm +zone=12")
+  st_as_sf(coords = c("easting", "northing"), crs = "+proj=utm +zone=12") %>% 
+  # adding column with distance to closest wolf kill
+  mutate(dist2kill = NA)
+  
 
-
-# adding column with distance to closest wolf kill
 # wolf kills are available for 1 week after dod
-leave_no_hunt_gps$dist2kill <- NA
 # loop comparing each GPS point to all wolf kills
+# looping through each GPS point to see if there is an active kill that day
 for(i in 1:nrow(leave_no_hunt_gps)){
   tmp_gps <- leave_no_hunt_gps[i,]
   
+  # calculating time difference in days to start of carcass (0 = kill on that day) for all kills in territory
+  time_diff_start <- difftime(as.Date(tmp_gps$date),
+                              wolf_kills %>% 
+                                pull(dod), 
+                              units = "days") %>% as.numeric()
+  
+  # calculating time difference in days to end of carcass for all kills in territory
+  # for RF predictive, this is the cluster end date
+  time_diff_end <- difftime(as.Date(tmp_gps$date),
+                            wolf_kills %>% 
+                              pull(kill_end_date), 
+                            units = "days") %>% as.numeric()
+  
   tmp_kills <- wolf_kills %>% 
-    # only kills that were made within last 1 week
-    filter(as.numeric(difftime(tmp_gps$date, dod, 
-                    units = "days")) <= 7,
-           as.numeric(difftime(tmp_gps$date, dod, 
-                               units = "days")) >= 0)
+    # only kills that were wolves are present or were at least 1 day ago
+    filter(time_diff_start >= 0 & time_diff_end <= 1)
+
   
   #if there are no kills, then make distance NA
   if(nrow(tmp_kills) > 0){
@@ -160,12 +172,22 @@ hunt_gps$dist2kill <- NA
 for(i in 1:nrow(hunt_gps)){
   tmp_gps <- hunt_gps[i,]
   
+  # calculating time difference in days to start of carcass (0 = kill on that day) for all kills in territory
+  time_diff_start <- difftime(as.Date(tmp_gps$date),
+                              wolf_kills %>% 
+                                pull(dod), 
+                              units = "days") %>% as.numeric()
+  
+  # calculating time difference in days to end of carcass for all kills in territory
+  # for RF predictive, this is the cluster end date
+  time_diff_end <- difftime(as.Date(tmp_gps$date),
+                            wolf_kills %>% 
+                              pull(kill_end_date), 
+                            units = "days") %>% as.numeric()
+  
   tmp_kills <- wolf_kills %>% 
-    # only kills that were made within last 1 week
-    filter(as.numeric(difftime(tmp_gps$date, dod, 
-                               units = "days")) <= 7,
-           as.numeric(difftime(tmp_gps$date, dod, 
-                               units = "days")) >= 0)
+    # only kills that were wolves are present or were at least 1 day ago
+    filter(time_diff_start >= 0 & time_diff_end <= 1)
   
   #if there are no kills, then make distance NA
   if(nrow(tmp_kills) > 0){
