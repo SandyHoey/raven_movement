@@ -259,26 +259,25 @@ active_kill_fctn <- function(data, days_since, start, end){
                                
                                # looping through each GPS point to see if there is an active kill that day
                                for(i in 1:nrow(x)){
-                                 tmp_GPS <- x[i,]
+                                 tmp_gps <- x[i,]
                                  
                                  # calculating time difference in days to start of carcass (0 = kill on that day) for all kills in territory
-                                 time_diff_start <- difftime(as.Date(tmp_GPS$date),
+                                 time_diff_start <- difftime(as.Date(tmp_gps$date),
                                                              tmp_kills %>% 
                                                                pull(start), 
-                                                             units = "days") %>% 
-                                   as.numeric()
+                                                             units = "days") %>% as.numeric()
+                                 
                                  # calculating time difference in days to end of carcass for all kills in territory
                                   # for wolf project database this is the same as start 
                                   # for RF predictive, this is the cluster end date
-                                 time_diff_end <- difftime(as.Date(tmp_GPS$date),
+                                 time_diff_end <- difftime(as.Date(tmp_gps$date),
                                                            tmp_kills %>% 
                                                              pull(end), 
-                                                           units = "days") %>% 
-                                   as.numeric()
+                                                           units = "days") %>% as.numeric()
                                  
                                  # if GPS point is after the kill is made and before the days_since argument for any of the kills in territory
                                   # active_kill is TRUE
-                                 if(sum(time_diff_start >= 0 & time_diff_end <= days_since) >= 1){
+                                 if(any(time_diff_start >= 0 & time_diff_end <= days_since) == TRUE){
                                    x[i, "active_kill"] <- TRUE
                                  }
                                }
