@@ -9,10 +9,10 @@ library(ggplot2)
 ## dataset for part 1 of conditional model
 ws_model_data <- readr::read_csv("data/clean/commute_data.csv") %>% 
   # restricting to only winter study months
-  filter((paste(month, day, sep = "-") >= "11-15" &
-            paste(month, day, sep = "-") <= "12-15") |
-           (paste(month, day, sep = "-") >= "3-1" &
-              paste(month, day, sep = "-") <= "3-30")) %>% 
+  filter((month > 11 | (month == 11 & day >= 15)) &
+           (month < 12 | (month == 12 & day <= 15)) |
+           (month > 3 | (month == 3 & day >= 1)) &
+           (month < 3 | (month == 3 & day <= 30))) %>% 
   # removing days when there is less than 5 GPS point
   # unless the result is Jardine
   filter(!(n_point < 5 & terr_bin == F)) %>% 
@@ -28,10 +28,10 @@ ws_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
 ## dataset for part 2 of conditional model
 hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
   # restricting to only winter study months
-  filter((paste(month, day, sep = "-") >= "11-15" &
-            paste(month, day, sep = "-") <= "12-15") |
-           (paste(month, day, sep = "-") >= "3-1" &
-              paste(month, day, sep = "-") <= "3-30")) %>% 
+  filter((month > 11 | (month == 11 & day >= 15)) &
+           (month < 12 | (month == 12 & day <= 15)) |
+           (month > 3 | (month == 3 & day >= 1)) &
+           (month < 3 | (month == 3 & day <= 30))) %>% 
   # only have days ravens decided to leave territory
   filter(terr_bin == 1) %>% 
   # removing days when there is less than 5 GPS point
