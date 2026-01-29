@@ -109,8 +109,8 @@ mod_terr <- glmer(terr_bin ~ (1|raven_id) + rf_active_kill * final_take_bms1 + h
 summary(mod_terr)
 
 AIC(mod_terr_bms)
-AIC(mod_terr_hseason) #best
-AIC(mod_terr)
+AIC(mod_terr_hseason)
+AIC(mod_terr) #best
 
 
 # bootstrap -------------------------------
@@ -259,7 +259,7 @@ summary(mod_hunt_bms)
 
 
 # model with hunting season (changes study period, p value and effect direction)
-mod_hunt_hseason <- glmer(hunt_bin ~ (1|raven_id) + visit_kill * hunt_season + dist2nentrance + 
+mod_hunt_hseason <- glmer(hunt_bin ~ (1|raven_id) + visit_kill + hunt_season + dist2nentrance + 
                             prop_group_visit_hunt + temp_max + snow_depth,
                           data = hunt_model_data,
                           family = "binomial",
