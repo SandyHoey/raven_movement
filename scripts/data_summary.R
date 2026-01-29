@@ -53,7 +53,7 @@ length(unique(ws_model_data$raven_id))
 
 
 # decision days
-nrow(all) #total days
+nrow(ws_model_data) #total days
 mean(table(ws_model_data$raven_id))
 sd(table(ws_model_data$raven_id))
 max(table(ws_model_data$raven_id))
@@ -99,13 +99,12 @@ ws_model_data %>%
 
 
 # average percent trip to dump
-all_dump <- ws_model_data %>% 
+ws_model_data %>% 
   filter(hunt_bin == TRUE) %>% 
   group_by(raven_id) %>% 
   summarise(no_visit = sum(dump == F),
             visit = sum(dump == T)) %>% 
-  mutate(prop_visit_dump = visit/(visit + no_visit))
-all_dump %>% 
+  mutate(prop_visit_dump = visit/(visit + no_visit)) %>% 
   summarize(mean = mean(prop_visit_dump),
             min = min(prop_visit_dump),
             max = max(prop_visit_dump),
