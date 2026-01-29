@@ -15,17 +15,15 @@ source("scripts/commute_decision.R")
 #1 = only has points within 1 km of territory poly
 
 
-# removing 7646 because there aren't enough winter points
-# removing 7653 and 7596 because Canada
+
 commute_df <- commute_df %>% 
-  
   # renaming raven_id
   rename(raven_id = individual_local_identifier) %>% 
-  
+  # removing 7646 because there aren't enough winter points
+  # removing 7653 and 7596 because Canada
   filter(raven_id != "7646",
          raven_id != "7653",
          raven_id != "7596") %>% 
-  
   # creating new binary columns for traveling to Gardiner or staying in territory
   mutate(
     # terr_bin
@@ -37,7 +35,9 @@ commute_df <- commute_df %>%
     # F = visited other place
     hunt_bin = if_else(commute == 3, TRUE, FALSE)) %>% 
   # removing days with less than 5 GPS points if the decision is negative
-  filter(!(n_point < 5 & terr_bin == FALSE & hunt_bin == FALSE))
+  filter(!(n_point < 5 & terr_bin == FALSE & hunt_bin == FALSE)) %>% 
+  # stopping at March 2024 since rf predictions aren't available for 2025
+  filter(winter_year <= 2024)
 
 
 # Distance to north entrance ---------------------------
@@ -48,18 +48,14 @@ north_entrance_utm <- data.frame(easting = 523575, northing = 4985810) %>%
 
 # getting centroid of each ravens territory
 terr_center <- mcp90 %>% 
-  
   # extracting the polygon coordinates from the mcp
   ggplot2::fortify() %>% 
-  
   # getting centroid by averaging
   group_by(id) %>% 
   rename(easting = long, northing = lat) %>% 
   summarize(easting = mean(easting), northing = mean(northing)) %>% 
-  
   # transforming to utm
   st_as_sf(coords = c("easting", "northing"), crs = st_crs(north_entrance_utm)) %>% 
-  
   # calculating distance from terr center to north entrance
   mutate(., dist2nentrance = as.numeric(st_distance(., north_entrance_utm))) %>% 
   st_drop_geometry
