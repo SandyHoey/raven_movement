@@ -49,26 +49,26 @@ hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
 # summary data ------------------------------------------------------------
 
 # total number of ravens included in study
-length(unique(all$raven_id))
+length(unique(ws_model_data$raven_id))
 
 
 # decision days
 nrow(all) #total days
-mean(table(all$raven_id))
-sd(table(all$raven_id))
-max(table(all$raven_id))
-min(table(all$raven_id))
+mean(table(ws_model_data$raven_id))
+sd(table(ws_model_data$raven_id))
+max(table(ws_model_data$raven_id))
+min(table(ws_model_data$raven_id))
 
 
 # data date range
-range(all$date)
+range(ws_model_data$date)
 
 
 # number of GPS points per day
-hist(all$n_point, 
-     breaks = 1:max(all$n_point))
-mean(all$n_point)
-sd(all$n_point)
+hist(ws_model_data$n_point, 
+     breaks = 1:max(ws_model_data$n_point))
+mean(ws_model_data$n_point)
+sd(ws_model_data$n_point)
 
 
 # average home range size
