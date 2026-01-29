@@ -62,10 +62,10 @@ leave_no_hunt_gps <- readr::read_csv(here("data/clean/raven_gps_outside_terr_no_
   # remove time from date column
   mutate(date = as.Date(date)) %>%
   # restricting time frame to winter study periods
-  filter((paste(month(date), day(date), sep = "-") >= "11-15" &
-            paste(month(date), day(date), sep = "-") <= "12-15") |
-           (paste(month(date), day(date), sep = "-") >= "3-1" &
-              paste(month(date), day(date), sep = "-") <= "3-30")) %>% 
+  filter((month(date) > 11 | (month(date) == 11 & day(date) >= 15)) &
+           (month(date) < 12 | (month(date) == 12 & day(date) <= 15)) |
+           (month(date) > 3 | (month(date) == 3 & day(date) >= 1)) &
+           (month(date) < 3 | (month(date) == 3 & day(date) <= 30))) %>% 
   # only complete rows
   filter(complete.cases(.)) %>% 
   # add crs
@@ -154,10 +154,10 @@ hunt_gps <- readr::read_csv(here("data/clean/raven_gps_covariates.csv")) %>%
   # remove time from date column
   mutate(date = as.Date(date)) %>%
   # restricting time frame to winter study periods
-  filter((paste(month(date), day(date), sep = "-") >= "11-15" &
-            paste(month(date), day(date), sep = "-") <= "12-15") |
-           (paste(month(date), day(date), sep = "-") >= "3-1" &
-              paste(month(date), day(date), sep = "-") <= "3-30")) %>% 
+  filter((month(date) > 11 | (month(date) == 11 & day(date) >= 15)) &
+           (month(date) < 12 | (month(date) == 12 & day(date) <= 15)) |
+           (month(date) > 3 | (month(date) == 3 & day(date) >= 1)) &
+           (month(date) < 3 | (month(date) == 3 & day(date) <= 30))) %>% 
   # only complete rows
   filter(complete.cases(.)) %>% 
   # add crs
