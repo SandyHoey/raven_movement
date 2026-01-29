@@ -1,4 +1,4 @@
-#creating data sets to make maps (probably in ArcGIS) about raven movements
+# creating data sets to make maps (probably in ArcGIS) about raven movements
 
 library(dplyr)
 library(readr)
@@ -7,8 +7,8 @@ library(sf)
 library(lubridate)
 library(suncalc)
 
-#calculating sunlight times for all GPS points because I'm to lazy to do it for ecah data set seperately
-#especially because it reuqires lat/long instead of utm
+# calculating sunlight times for all GPS points because I'm to lazy to do it for each data set seperately
+# especially because it requires lat/long instead of utm
 sunlight <- read_csv("data/clean/all_raven_gps_clean29.csv") %>%
   clean_names() %>% 
   mutate(date = as.Date(study_local_timestamp)) %>% 
@@ -17,7 +17,7 @@ sunlight <- read_csv("data/clean/all_raven_gps_clean29.csv") %>%
   getSunlightTimes(data = .,
                  keep = c("sunrise", "sunset"),
                  tz = "MST") %>% 
-  #getting rid of duplicates
+  # getting rid of duplicates
   group_by(date) %>% 
   slice(1) %>% 
   ungroup
@@ -29,137 +29,137 @@ sunlight <- read_csv("data/clean/all_raven_gps_clean29.csv") %>%
 source("scripts/dist_to_gardiner.R")
 rm(list = setdiff(ls(), c("terr_fw_gps", "sunlight")))
 
-#reading in raven GPS data
+# reading in raven GPS data
 terr_fw_gps <- terr_fw_gps %>% 
-  #transforming to sf object
+  # transforming to sf object
   st_as_sf(coords=c("utm_easting", "utm_northing"), 
            crs="+proj=utm +zone=12") %>% 
-  #extracting date 
+  # extracting date 
   mutate(date = as.Date(study_local_timestamp)) %>% 
-  #only daytime points
+  # only daytime points
   left_join(sunlight) %>% 
   mutate(study_local_timestamp = as.POSIXct(study_local_timestamp, tz = "MST")) %>% 
   filter(study_local_timestamp > sunrise,
          study_local_timestamp < sunset) %>% 
-  #removing lat/long columns
+  # removing lat/long columns
   dplyr::select(-c(lat, lon))
 
 
-#reading in Yellowstone polygon
+# reading in Yellowstone polygon
 park_poly <- st_read("data/raw/parkpoly.kml") %>% 
   st_transform(crs = st_crs(terr_fw_gps))
 
 
-#only GPS points outside of YNP during November
+# only GPS points outside of YNP during November
 raven_gps_outside_ynp <- terr_fw_gps %>% 
-  #calculate distance to Yellowstone (0 == inside park)
+  # calculate distance to Yellowstone (0 == inside park)
   st_distance(park_poly) %>% 
   as.vector %>% 
-  #adding back to gps data as a column
+  # adding back to gps data as a column
   bind_cols(terr_fw_gps %>% 
-              #adding utm back
+              # adding utm back
               mutate(utm_easting = st_coordinates(.)[,1],
                      utm_northing = st_coordinates(.)[,2]) %>% 
-              #removing geometry
+              # removing geometry
               st_drop_geometry) %>% 
   rename(distance_ynp = ...1) %>%
-  #filtering to only distances > 0 (not inside the park)
+  # filtering to only distances > 0 (not inside the park)
   filter(distance_ynp > 0) %>% 
-  #remove date column since it ArcGIS is the worst
+  # remove date column since it ArcGIS is the worst
   dplyr::select(-date)
 
 
-#only November
+# only November
 raven_gps_outside_ynp %>% 
   filter(month(study_local_timestamp) == 11) %>% 
-  write.csv("data/clean/nov_gps_outside_ynp.csv")
+  write.csv("data/clean/nov_gps_outside_ynp.csv", row.names = F)
 
 
-#only March
+# only March
 raven_gps_outside_ynp %>% 
   filter(month(study_local_timestamp) == 3) %>% 
-  write.csv("data/clean/mar_gps_outside_ynp.csv")
+  write.csv("data/clean/mar_gps_outside_ynp.csv", row.names = F)
 
 
 # raven GPS to map based on model covariates -----------------
 
-#reading in commute data
+# reading in commute data
 commute_df_covariates <- read_csv("data/clean/commute_data.csv") %>% 
-  #selecting useful columns
+  # selecting useful columns
   dplyr::select(raven_id, date, hunt_bin, dist2nentrance, temp_max)
 
 
-#raven GPS data with covariates to map by
+# raven GPS data with covariates to map by
 read_csv("data/clean/all_raven_gps_clean29.csv") %>% 
   clean_names() %>% 
-  #only useful columns
+  # only useful columns
   dplyr::select(individual_local_identifier, utm_easting, utm_northing, study_local_timestamp) %>%
-  #extracting date
+  # extracting date
   mutate(date = as.Date(study_local_timestamp)) %>% 
-  #adding commute data to GPS points
+  # adding commute data to GPS points
   left_join(commute_df_covariates, by = join_by(individual_local_identifier == raven_id, 
                                                 date)) %>%
-  #only daytime points
+  # only daytime points
   left_join(sunlight) %>% 
   mutate(study_local_timestamp = as.POSIXct(study_local_timestamp, tz = "MST")) %>% 
   filter(study_local_timestamp > sunrise,
          study_local_timestamp < sunset) %>% 
-  #only complete rows
+  # only complete rows
   na.omit %>%
-  #only winter points
+  # only winter points
   filter(month(date) %in% c(10:12, 1:3)) %>% 
-  #remove date column since it ArcGIS is terrible
+  # remove date column since it ArcGIS is terrible
   dplyr::select(-date) %>% 
-  #write out dataset
-  write.csv("data/clean/raven_gps_covariates.csv")
+  # write out dataset
+  write.csv("data/clean/raven_gps_covariates.csv", row.names = F)
 
 
 
 # raven GPS to map days ravens left territory, but didn't visit hunting --------
 
-#reading function that calculates distance of GPS points to territory
+# reading function that calculates distance of GPS points to territory
 source("scripts/commute_decision.R")
 rm(list = setdiff(ls(), c("mcp90", "gps_in_mcp", "sunlight")))
 
 
-#reading in commute data
+# reading in commute data
 commute_df_intermediate <- read_csv("data/clean/commute_data.csv") %>% 
-  #selecting useful columns
+  # selecting useful columns
   dplyr::select(raven_id, date, terr_bin, hunt_bin) %>% 
-  #filter movement decision for left territory, but didn't visit hunting
+  # filter movement decision for left territory, but didn't visit hunting
   filter(terr_bin == TRUE, hunt_bin == FALSE)
 
 
-#raven movement data outside of territory
+# raven movement data outside of territory
 read_csv("data/clean/all_raven_gps_clean29.csv") %>% 
   clean_names() %>% 
-  #selecting useful columns
+  # selecting useful columns
   dplyr::select(individual_local_identifier, utm_easting, utm_northing, study_local_timestamp) %>%
-  #only complete rows
+  # only complete rows
   na.omit %>% 
-  #calculating distance to territory
+  # calculating distance to territory
   gps_in_mcp() %>% 
-  #only GPS outside of territory (> 1000 meters)
+  # only GPS outside of territory (> 1000 meters)
   filter(dist2terr > 1000) %>% 
   dplyr::select(-dist2terr) %>% 
-  #extracting date
+  # extracting date
   mutate(date = as.Date(study_local_timestamp)) %>% 
-  #adding commute decisions to each GPS point
+  # adding commute decisions to each GPS point
   left_join(commute_df_intermediate %>% 
               dplyr::select(raven_id, date, terr_bin, hunt_bin), 
             by = join_by(individual_local_identifier == raven_id, 
                          date)) %>% 
-  #only daytime points
+  # only daytime points
   left_join(sunlight) %>%
   mutate(study_local_timestamp = as.POSIXct(study_local_timestamp, tz = "MST")) %>% 
   filter(study_local_timestamp > sunrise,
            study_local_timestamp < sunset) %>% 
-  #only complete rows
+  # only complete rows
   na.omit %>% 
-  #remove date column since it ArcGIS is terrible
+  # remove date column since it ArcGIS is terrible
   dplyr::select(-date) %>% 
-  #write out datatset
-  write.csv("data/clean/raven_gps_outside_terr_no_hunt.csv")
+  # write out datatset
+  write.csv("data/clean/raven_gps_outside_terr_no_hunt.csv", row.names = F)
   
 
 # location of wolf kills visited by ravens when leaving their territory
