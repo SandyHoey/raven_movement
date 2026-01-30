@@ -116,7 +116,7 @@ AIC(mod_terr) #best
 # bootstrap -------------------------------
 
 # bootstrapping parameter values from model simulations
-boot_terr <- boot_param_CI(nsim = 5, model = mod_terr, data = ws_model_data,
+boot_terr <- boot_param_CI(nsim = 500, model = mod_terr, data = ws_model_data,
                            newData = expand.grid(rf_active_kill = c(TRUE, FALSE),
                                                  hunt_season = c(TRUE, FALSE),
                                                  final_take_bms1 = 0,
