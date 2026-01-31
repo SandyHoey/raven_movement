@@ -2,6 +2,7 @@
 
 library(dplyr)
 library(ggplot2)
+library(ggpattern)
 
 
 # reading in data ---------------------------------------------------------
@@ -16,11 +17,6 @@ ws_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
   # removing days when there is less than 5 GPS point
   # unless the result is Jardine
   filter(!(n_point < 5 & terr_bin == F)) %>% 
-  # scaling continuous variables
-  mutate(final_take_bms = scale(final_take_bms), final_take_bms1 = scale(final_take_bms1),
-         final_take = scale(final_take), rf_avg_terr_kill_density = scale(rf_avg_terr_kill_density),
-         dist2nentrance = scale(dist2nentrance), temp_max = scale(temp_max),
-         snow_depth = scale(snow_depth), prop_group_left_terr = scale(prop_group_left_terr)) %>% 
   # making sure rows are complete
   filter(complete.cases(.)) 
 
@@ -37,11 +33,6 @@ hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
   # removing days when there is less than 5 GPS point
   # unless the result is Jardine
   filter(!(n_point < 5 & hunt_bin == F)) %>% 
-  # scaling continuous variables
-  mutate(final_take_bms = scale(final_take_bms), final_take_bms1 = scale(final_take_bms1),
-         final_take = scale(final_take), dist2nentrance = scale(dist2nentrance), 
-         temp_max = scale(temp_max), snow_depth = scale(snow_depth), 
-         prop_group_visit_hunt = scale(prop_group_visit_hunt)) %>% 
   # making sure rows are complete
   filter(complete.cases(.))
 
@@ -71,11 +62,47 @@ mean(ws_model_data$n_point)
 sd(ws_model_data$n_point)
 
 
+# proportion of days leaving territory
+ws_model_data %>% 
+  group_by(raven_id) %>% 
+  summarize(leave = sum(terr_bin),
+            n = n()) %>% 
+  mutate(prop_leave = leave/n) %>% 
+  summarize(mean = mean(prop_leave),
+            min = min(prop_leave),
+            max = max(prop_leave),
+            sd = sd(prop_leave))
+
+
+# proportion of days of territory visiting hunting
+hunt_model_data %>% 
+  group_by(raven_id) %>% 
+  summarize(hunt = sum(hunt_bin),
+            n = n()) %>% 
+  mutate(prop_hunt = hunt/n) %>% 
+  summarize(mean = mean(prop_hunt),
+            min = min(prop_hunt),
+            max = max(prop_hunt),
+            sd = sd(prop_hunt))
+  
+
+
 # average home range size
 source("scripts/home_range_mcp.R")
 mean(mcp90@data$area)
 range(mcp90@data$area)
 sd(mcp90@data$area)
+
+# average distance to hunting
+ws_model_data %>% 
+  group_by(raven_id) %>% 
+  slice(1) %>%
+  ungroup %>% 
+  summarize(mean = mean(dist2nentrance),
+            max = max(dist2nentrance),
+            min = min(dist2nentrance),
+            sd = sd(dist2nentrance))
+  
 
 
 # wolf kills available on territory
@@ -98,7 +125,7 @@ ws_model_data %>%
 # 16%
 
 
-# average percent trip to dump
+# average percent trip to hunting included a trip to the dump
 ws_model_data %>% 
   filter(hunt_bin == TRUE) %>% 
   group_by(raven_id) %>% 
@@ -111,7 +138,7 @@ ws_model_data %>%
             sd = sd(prop_visit_dump))
 
 
-# percent of trips to Gardiner included visit to the dump (hunting seasons)
+# average percent of trips to Gardiner included visit to the dump (hunting seasons)
 ws_model_data %>% 
   filter(
     # only during the hunting season
@@ -250,3 +277,56 @@ decision_table %>%
   coord_cartesian(xlim = c(0, 1.1), clip = "off") +
   theme_classic()
 
+
+# stacked barplot showing raven decisions including wolf kill presence
+# table showing raven decisions
+ws_model_data %>% 
+  group_by(raven_id) %>% 
+  summarize(terr_kill = sum(terr_bin == FALSE & active_kill == TRUE),
+            terr_nokill = sum(terr_bin == FALSE & active_kill == FALSE),
+            other_kill = sum(terr_bin == TRUE & hunt_bin == FALSE & visit_kill == TRUE),
+            other_nokill = sum(terr_bin == TRUE & hunt_bin == FALSE & visit_kill == FALSE),
+            hunt_kill = sum(hunt_bin == TRUE & visit_kill == TRUE),
+            hunt_nokill = sum(hunt_bin == TRUE & visit_kill == FALSE)) %>% 
+  # adding column for total sample size for each raven
+  mutate(n = hunt_kill + hunt_nokill + other_kill + other_nokill + terr_kill + terr_nokill) %>% 
+  # switching to long format
+  pivot_longer(cols = c(hunt_kill, hunt_nokill, other_kill, other_nokill, terr_kill, terr_nokill),
+               names_to = "decision") %>%  
+  # adding column for presence of kill
+  mutate(kill = rep(c("TRUE", "FALSE"), 60)) %>% 
+  # setting graphing data
+  ggplot(aes(x = value, y = raven_id, fill = decision, pattern = kill)) +
+  # creating proportion stacked barplot
+  geom_bar_pattern(position = "fill", stat = "identity",
+           colour = "black", linewidth = 0.2,
+           pattern_fill = "black", pattern_density = 0.05, pattern_spacing = 0.02) +
+  # changing labels of plot
+  labs(title = "Raven movement decisions",
+       x = "Proportion",
+       y = "Raven ID",
+       fill = "Movement\ndecision") +
+  scale_pattern_manual(values = c("TRUE" = "stripe", "FALSE" = "none"), 
+                       # removing pattern legend
+                       guide = "none") +
+  # custom color/texture scheme
+  scale_fill_manual(values = c(terr_kill = "#e7e1ef", terr_nokill = "#e7e1ef",
+                               other_kill = "#c994c7", other_nokill = "#c994c7",
+                               hunt_kill = "#dd1c77", hunt_nokill = "#dd1c77"),
+                    # removing repeats in legend
+                    breaks = c("hunt_nokill", "other_nokill", "terr_nokill"),
+                    # changing name of legend items
+                    labels = c("hunting", "other", "territory")) +
+  # removing pattern from fill legend
+  guides(fill = guide_legend(override.aes = list(pattern = "none"))) +
+  # removing space between axis and barplot
+  scale_x_continuous(expand = c(0, 0)) +
+  # adding sample size to right axis
+  geom_text(data = decision_table, aes(x = 1.01, y = raven_id, label = n),
+            inherit.aes = FALSE, hjust = 0, size = 3) + 
+  # adding label for sample size column
+  annotate("text", x = 1, y = Inf, label = "Sample size",
+           hjust = 0, vjust = -0.3, size = 3) +
+  # adjusting plot axis to show the extra text
+  coord_cartesian(xlim = c(0, 1.1), clip = "off") +
+  theme_classic()
