@@ -330,3 +330,117 @@ ws_model_data %>%
   # adjusting plot axis to show the extra text
   coord_cartesian(xlim = c(0, 1.1), clip = "off") +
   theme_classic()
+
+
+
+# decisions between months ------------------------------------------------
+# getting commute_df
+source("scripts/commute_decision.R")
+
+# calculating the percentage of points in each commute category by individual and month
+commute_month <- commute_df %>% 
+  # adding month column
+  mutate(month = month(date)) %>% 
+  # changing name of ID column
+  rename(raven_id = individual_local_identifier) %>% 
+  # removing days when there are < 5 GPS points
+  filter(n_point < 5) %>% 
+  # getting proportion travel decisions by bird
+  group_by(raven_id, month) %>% 
+  summarize(territory = sum(commute == 1)/n(),
+            other = sum(commute == 2)/n(),
+            hunting = sum(commute == 3)/n()) %>% 
+  ungroup
+
+# plotting the average proportion of each commute category by month
+commute_month %>% 
+  # long data
+  pivot_longer(cols = c(territory, other, hunting), 
+               names_to = "commute", values_to = "prop") %>% 
+  # creating averages per month with sd bars
+  group_by(month, commute) %>% 
+  summarize(mean_prop = mean(prop), 
+            sd = sd(prop)) %>%
+  ungroup %>% 
+  # ordering months
+  mutate(month = fct_relevel(as.character(month), c("9", "10", "11", "12", "1", "2", "3"))) %>% 
+  # plotting
+  ggplot(aes(x = month, y = mean_prop, 
+             group = commute, col = commute,
+             ymin = mean_prop - sd, ymax = mean_prop + sd)) +
+  geom_line(lwd = 1) +
+  ggborderline::geom_borderline(lwd = 1.1, bordercolor = "black" ) +
+  # changing labels
+  labs(y = "Porportion of days",
+       x = "Month",
+       color = "Decision") +
+  # setting aesthetic theme
+  theme_classic() +
+  # setting y limits
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 1)) +
+  # custom color/texture scheme
+  scale_color_manual(values = c(territory = "#e7e1ef",
+                                other = "#c994c7",
+                                hunting = "#dd1c77")) 
+# saving plot so the lines are less pixelated
+ggsave("monthly_decision.svg", device = "svg", path = "reports", )
+
+
+
+# calculating the proportion individuals making each commute decision by days in October
+commute_day <- commute_df %>% 
+  filter(month(date) %in% 8:11) %>% 
+  # adding month column
+  mutate(day = day(date),
+         month = month(date),
+         year = year(date)) %>% 
+  # changing name of ID column
+  rename(raven_id = individual_local_identifier) %>% 
+  # removing days when there are < 5 GPS points
+  filter(n_point < 5) %>% 
+  # getting proportion travel decisions by bird
+  group_by(year, month, day) %>% 
+  summarize(territory = sum(commute == 1)/n(),
+            other = sum(commute == 2)/n(),
+            hunting = sum(commute == 3)/n()) %>% 
+  ungroup
+
+# plotting the proportion of individual making a commute category by days in October
+commute_day %>% 
+  # long data
+  pivot_longer(cols = c(territory, other, hunting), 
+               names_to = "commute", values_to = "prop") %>% 
+  # creating averages per day with sd bars
+  group_by(month, day, commute) %>% 
+  summarize(mean_prop = mean(prop), 
+            sd = sd(prop)) %>%
+  ungroup %>% 
+  # plotting
+  ggplot(aes(x = day, y = mean_prop, 
+             group = commute, col = commute,
+             ymin = mean_prop - sd, ymax = mean_prop + sd)) +
+  geom_line(lwd = 1) +
+  # adding black border to line
+  ggborderline::geom_borderline(lwd = 1.1, bordercolor = "black" ) +
+  # separate plots by month
+  facet_wrap(~month,
+             # changing numbers ot names of months
+             labeller = labeller(month = c("8" = "August",
+                                           "9" = "September",
+                                           "10" = "October",
+                                           "11" = "November"))) + 
+  # changing labels
+  labs(y = "Porportion of ravens",
+       x = "Day",
+       color = "Decision") +
+  # setting aesthetic theme
+  theme_classic() +
+  # setting y limits
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 1)) +
+  # custom color/texture scheme
+  scale_color_manual(values = c(territory = "#e7e1ef",
+                                other = "#c994c7",
+                                hunting = "#dd1c77"),
+                     name = "Decision") 
+# saving plot so the lines are less pixelated
+ggsave("daily_decision.svg", device = "svg", path = "reports", )
