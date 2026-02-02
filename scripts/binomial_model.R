@@ -11,7 +11,7 @@ ws_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
            (month < 3 | (month == 3 & day <= 30))) %>% 
   # removing days when there is less than 5 GPS point
   # unless the result is Jardine
-  filter(!(n_point < 5 & terr_bin == F)) %>% 
+  filter(!(n_point < 10 & terr_bin == F)) %>% 
   # only columns used in model
   dplyr::select(terr_bin, raven_id, rf_active_kill, rf_active_kill_3, final_take_bms, final_take_bms1, final_take, 
                 hunt_season, rf_avg_terr_kill_density, dist2nentrance, 
@@ -36,7 +36,7 @@ hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
   filter(terr_bin == 1) %>% 
   # removing days when there is less than 5 GPS point
   # unless the result is Jardine
-  filter(!(n_point < 5 & hunt_bin == F)) %>% 
+  filter(!(n_point < 10 & hunt_bin == F)) %>% 
   # only columns used in model
   dplyr::select(hunt_bin, raven_id, visit_kill, final_take_bms, final_take_bms1, final_take, hunt_season,
                 dist2nentrance, study_period, temp_max, snow_depth, prop_group_visit_hunt) %>% 
@@ -182,14 +182,14 @@ AIC(mod_hunt) #best
 
 # bootstrap -------------------------------
 
-# bootstrapping parameter values from model simulations
+# prediction for kill visit and hunting season
 boot_hunt <- boot_param_CI(nsim = 500, model = mod_hunt, data = hunt_model_data, 
                            newData = expand.grid(visit_kill = c(TRUE, FALSE),
-                                                 hunt_season = TRUE,
+                                                 hunt_season = c(TRUE, FALSE),
                                                  final_take_bms1 = 0,
                                                  dist2nentrance = 0,
                                                  temp_max = 0,
-                                                 snow_depth = seq(-2,2,0.1),
+                                                 snow_depth = 0,
                                                  prop_group_visit_hunt = 0))
 
 # parameter estimates
@@ -209,6 +209,17 @@ boot_hunt[[3]]
       labs(title = "Visiting hunting region",
            x = "Found Kill",
            y = "Predicted Probability"))
+
+
+# prediction for kill visit and snow depth
+boot_hunt <- boot_param_CI(nsim = 500, model = mod_hunt, data = hunt_model_data, 
+                           newData = expand.grid(visit_kill = c(TRUE, FALSE),
+                                                 hunt_season = TRUE,
+                                                 final_take_bms1 = 0,
+                                                 dist2nentrance = 0,
+                                                 temp_max = 0,
+                                                 snow_depth = seq(-2,2,0.1),
+                                                 prop_group_visit_hunt = 0))
 
   # visit kill and snow depth
   (hunt_plot <- boot_hunt[[4]] %>% 
