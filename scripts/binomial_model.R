@@ -119,9 +119,24 @@ boot_terr <- boot_param_CI(nsim = 5, model = mod_terr, data = ws_model_data,
                                                  prop_group_left_terr = 0))
 
 # view effect plot
-boot_terr[[3]]
+boot_terr[[3]] + 
+  scale_y_discrete(limits = c("study_periodlate:temp_max", "rf_active_killTRUE:final_take_bms1", 
+                              "prop_group_left_terr", "snow_depth", "temp_max", "study_periodlate", 
+                              "dist2nentrance", "rf_avg_terr_kill_density", "hunt_seasonTRUE", 
+                              "final_take_bms1", "rf_active_killTRUE"),
+                   labels = c("study_periodlate:temp_max" = "Study period * Max temp",
+                              "rf_active_killTRUE:final_take_bms1" = "Active kill * Hunting biomass", 
+                              "prop_group_left_terr" = "Proportion traveling",
+                              "snow_depth" = "Snow depth", 
+                              "temp_max" = "Max temperature", 
+                              "study_periodlate" = "Study period", 
+                              "dist2nentrance" = "Distance", 
+                              "rf_avg_terr_kill_density" = "Kill density",
+                              "hunt_seasonTRUE" = "Hunting season", 
+                              "final_take_bms1" = "Hunting biomass", 
+                              "rf_active_killTRUE" = "Active kill"))
 
-
+  
 # plotting predictions for wolf kills and hunting season
 (terr_plot <- boot_terr[[4]] %>% 
     # plotting
@@ -133,8 +148,12 @@ boot_terr[[3]]
     geom_errorbar(width = .1) +
     labs(title = "Leaving territory",
          x = "Active wolf kill",
-         y = "Predicted Probability"))
-
+         y = "Predicted Probability")) +
+  # custom color/texture scheme
+  scale_color_manual(values = c("TRUE" = "#006CD1", "FALSE" = "#DC3220")) +
+  # removing legend
+  guides(color = "none") +
+  theme_classic()
 
 
 # PART 2 of conditional model (visit Gardiner/other) ----------------------
@@ -168,7 +187,7 @@ summary(mod_hunt_hseason)
 
 # model with all hunting covariates
 mod_hunt <- glmer(hunt_bin ~ (1|raven_id) + visit_kill * final_take_bms1 + hunt_season + dist2nentrance + 
-                    prop_group_visit_hunt + temp_max + snow_depth,
+                    temp_max + snow_depth, prop_group_visit_hunt,
                   data = hunt_model_data,
                   family = "binomial",
                   nAGQ = 40,
@@ -183,7 +202,7 @@ AIC(mod_hunt) #best
 # bootstrap -------------------------------
 
 # prediction for kill visit and hunting season
-boot_hunt <- boot_param_CI(nsim = 500, model = mod_hunt, data = hunt_model_data, 
+boot_hunt <- boot_param_CI(nsim = 5, model = mod_hunt, data = hunt_model_data, 
                            newData = expand.grid(visit_kill = c(TRUE, FALSE),
                                                  hunt_season = c(TRUE, FALSE),
                                                  final_take_bms1 = 0,
@@ -193,7 +212,18 @@ boot_hunt <- boot_param_CI(nsim = 500, model = mod_hunt, data = hunt_model_data,
                                                  prop_group_visit_hunt = 0))
 
 # parameter estimates
-boot_hunt[[3]]
+boot_hunt[[3]] +
+  scale_y_discrete(limits = c("visit_killTRUE:final_take_bms1", "prop_group_visit_hunt", 
+                              "snow_depth", "temp_max", "dist2nentrance", 
+                               "hunt_seasonTRUE", "final_take_bms1", "visit_killTRUE"),
+                   labels = c("visit_killTRUE:final_take_bms1" = "Visit kill * Hunting biomass", 
+                              "prop_group_visit_hunt" = "Proportion traveling",
+                              "snow_depth" = "Snow depth", 
+                              "temp_max" = "Max temperature", 
+                              "dist2nentrance" = "Distance", 
+                              "hunt_seasonTRUE" = "Hunting season", 
+                              "final_take_bms1" = "Hunting biomass", 
+                              "visit_killTRUE" = "Visit kill"))
 
 
 # plotting predictions for wolf kills and hunting season
@@ -207,12 +237,18 @@ boot_hunt[[3]]
                  labeller = labeller(hunt_season = c("FALSE" = "No Hunting", "TRUE" = "Hunting"))) +
       geom_errorbar(width = .1) +
       labs(title = "Visiting hunting region",
-           x = "Found Kill",
-           y = "Predicted Probability"))
+           x = "Visit Kill",
+           y = "Predicted Probability")) +
+    # custom color/texture scheme
+    scale_color_manual(values = c("TRUE" = "#006CD1", "FALSE" = "#DC3220")) +
+    theme_classic() +
+    # removing legend
+    guides(color = "none")
+
 
 
 # prediction for kill visit and snow depth
-boot_hunt <- boot_param_CI(nsim = 500, model = mod_hunt, data = hunt_model_data, 
+boot_hunt <- boot_param_CI(nsim = 5, model = mod_hunt, data = hunt_model_data, 
                            newData = expand.grid(visit_kill = c(TRUE, FALSE),
                                                  hunt_season = TRUE,
                                                  final_take_bms1 = 0,
@@ -221,14 +257,19 @@ boot_hunt <- boot_param_CI(nsim = 500, model = mod_hunt, data = hunt_model_data,
                                                  snow_depth = seq(-2,2,0.1),
                                                  prop_group_visit_hunt = 0))
 
-  # visit kill and snow depth
-  (hunt_plot <- boot_hunt[[4]] %>% 
-      # plotting
-      ggplot(aes(x = snow_depth, y = mean, col = visit_kill,
-                 ymin = lower, ymax = upper)) +
-      geom_point() +
-      geom_errorbar(width = .1) +
-      labs(title = "Visiting hunting region",
-           x = "Scaled Snow Depth",
-           y = "Predicted Probability"))
+# visit kill and snow depth
+(hunt_plot <- boot_hunt[[4]] %>% 
+    # plotting
+    ggplot(aes(x = snow_depth, y = mean, col = visit_kill,
+               ymin = lower, ymax = upper)) +
+    geom_point() +
+    geom_errorbar(width = .1) +
+    labs(title = "Visiting hunting region",
+         x = "Scaled Snow Depth",
+         y = "Predicted Probability")) +
+  # custom color/texture scheme
+  scale_color_manual(values = c("TRUE" = "#006CD1", "FALSE" = "#DC3220")) +
+  # changing legend title
+  guides(color = guide_legend(title = "Visit kill")) +
+  theme_classic()
 
