@@ -16,7 +16,7 @@ ws_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
            (month < 3 | (month == 3 & day <= 30))) %>% 
   # removing days when there is less than 5 GPS point
   # unless the result is Jardine
-  filter(!(n_point < 5 & terr_bin == F)) %>% 
+  filter(!(n_point < 10 & terr_bin == F)) %>% 
   # making sure rows are complete
   filter(complete.cases(.)) 
 
@@ -32,7 +32,7 @@ hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
   filter(terr_bin == 1) %>% 
   # removing days when there is less than 5 GPS point
   # unless the result is Jardine
-  filter(!(n_point < 5 & hunt_bin == F)) %>% 
+  filter(!(n_point < 10 & hunt_bin == F)) %>% 
   # making sure rows are complete
   filter(complete.cases(.))
 
