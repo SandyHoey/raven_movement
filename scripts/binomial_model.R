@@ -107,7 +107,7 @@ AIC(mod_terr) #best
 # bootstrap -------------------------------
 
 # bootstrapping parameter values from model simulations
-boot_terr <- boot_param_CI(nsim = 5, model = mod_terr, data = ws_model_data,
+boot_terr <- boot_param_CI(nsim = 10, model = mod_terr, data = ws_model_data,
                            newData = expand.grid(rf_active_kill = c(TRUE, FALSE),
                                                  hunt_season = c(TRUE, FALSE),
                                                  final_take_bms1 = 0,
@@ -187,7 +187,7 @@ summary(mod_hunt_hseason)
 
 # model with all hunting covariates
 mod_hunt <- glmer(hunt_bin ~ (1|raven_id) + visit_kill * final_take_bms1 + hunt_season + dist2nentrance + 
-                    temp_max + snow_depth, prop_group_visit_hunt,
+                    temp_max + snow_depth + prop_group_visit_hunt,
                   data = hunt_model_data,
                   family = "binomial",
                   nAGQ = 40,
@@ -202,7 +202,7 @@ AIC(mod_hunt) #best
 # bootstrap -------------------------------
 
 # prediction for kill visit and hunting season
-boot_hunt <- boot_param_CI(nsim = 5, model = mod_hunt, data = hunt_model_data, 
+boot_hunt <- boot_param_CI(nsim = 500, model = mod_hunt, data = hunt_model_data, 
                            newData = expand.grid(visit_kill = c(TRUE, FALSE),
                                                  hunt_season = c(TRUE, FALSE),
                                                  final_take_bms1 = 0,
@@ -248,7 +248,7 @@ boot_hunt[[3]] +
 
 
 # prediction for kill visit and snow depth
-boot_hunt <- boot_param_CI(nsim = 5, model = mod_hunt, data = hunt_model_data, 
+boot_hunt <- boot_param_CI(nsim = 50, model = mod_hunt, data = hunt_model_data, 
                            newData = expand.grid(visit_kill = c(TRUE, FALSE),
                                                  hunt_season = TRUE,
                                                  final_take_bms1 = 0,
