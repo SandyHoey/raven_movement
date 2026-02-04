@@ -1,4 +1,4 @@
-#gets basic statistics about the data for reporting in the beginning of the results
+# gets basic statistics about the data for reporting in the beginning of the results
 
 library(dplyr)
 library(ggplot2)
@@ -36,6 +36,20 @@ hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
   # making sure rows are complete
   filter(complete.cases(.))
 
+# adding raven sex to winter study model data
+ws_model_data <- readxl::read_excel("data/raw/ravens_banding_tagging.xlsx", sheet = 1) %>% 
+  janitor::clean_names() %>% 
+  # only relevant colmuns
+  dplyr::select(tag_id, sex_based_on_dna) %>% 
+  # adding to model data
+  right_join(ws_model_data, by = join_by(tag_id == raven_id)) %>% 
+  # better column name
+  rename(sex = sex_based_on_dna,
+         raven_id = tag_id)
+  
+  
+  
+
 
 # summary data ------------------------------------------------------------
 
@@ -60,6 +74,7 @@ hist(ws_model_data$n_point,
      breaks = 1:max(ws_model_data$n_point))
 mean(ws_model_data$n_point)
 sd(ws_model_data$n_point)
+
 
 
 # proportion of days leaving territory
