@@ -103,11 +103,11 @@ AIC(mod_terr_bms)
 AIC(mod_terr_hseason)
 AIC(mod_terr) #best
 
-confint(mod_terr)
+
 # bootstrap -------------------------------
 
 # bootstrapping parameter values from model simulations
-boot_terr <- boot_param_CI(nsim = 5, model = mod_terr, data = ws_model_data, pred_CI = TRUE,
+boot_terr <- boot_param_CI(nsim = 500, model = mod_terr, data = ws_model_data, pred_CI = TRUE,
                            newData = expand.grid(rf_active_kill = c(TRUE, FALSE),
                                                  hunt_season = c(TRUE, FALSE),
                                                  final_take_bms1 = 0,
@@ -120,6 +120,7 @@ boot_terr <- boot_param_CI(nsim = 5, model = mod_terr, data = ws_model_data, pre
 
 # view effect plot
 boot_terr[[3]] + 
+  # changing name and order of y axis
   scale_y_discrete(limits = c("study_periodlate:temp_max", "rf_active_killTRUE:final_take_bms1", 
                               "prop_group_left_terr", "snow_depth", "temp_max", "study_periodlate", 
                               "dist2nentrance", "rf_avg_terr_kill_density", "hunt_seasonTRUE", 
@@ -134,7 +135,9 @@ boot_terr[[3]] +
                               "rf_avg_terr_kill_density" = "Kill density",
                               "hunt_seasonTRUE" = "Hunting season", 
                               "final_take_bms1" = "Hunting biomass", 
-                              "rf_active_killTRUE" = "Active kill"))
+                              "rf_active_killTRUE" = "Active kill")) +
+  # removing title
+  ggtitle("", subtitle = "")
 ggsave("coef_terr.svg", device = "svg", path = "reports")
 
   
@@ -154,7 +157,9 @@ ggsave("coef_terr.svg", device = "svg", path = "reports")
   scale_color_manual(values = c("TRUE" = "#006CD1", "FALSE" = "#DC3220")) +
   # removing legend
   guides(color = "none") +
-  theme_classic()
+  theme_classic() +
+  # removing title
+  ggtitle("", subtitle = "")
 ggsave("pred_terr_hseason.svg", device = "svg", path = "reports")
 
 
@@ -215,6 +220,7 @@ boot_hunt <- boot_param_CI(nsim = 500, model = mod_hunt, data = hunt_model_data,
 
 # parameter estimates
 boot_hunt[[3]] +
+  # changing name and order of y axis
   scale_y_discrete(limits = c("visit_killTRUE:final_take_bms1", "prop_group_visit_hunt", 
                               "snow_depth", "temp_max", "dist2nentrance", 
                                "hunt_seasonTRUE", "final_take_bms1", "visit_killTRUE"),
@@ -225,27 +231,30 @@ boot_hunt[[3]] +
                               "dist2nentrance" = "Distance", 
                               "hunt_seasonTRUE" = "Hunting season", 
                               "final_take_bms1" = "Hunting biomass", 
-                              "visit_killTRUE" = "Visit kill"))
+                              "visit_killTRUE" = "Visit kill")) +
+  # removing title
+  ggtitle("", subtitle = "")
 ggsave("coef_hunt.svg", device = "svg", path = "reports")
 
 
 # plotting predictions for wolf kills and hunting season
-  # visit kill and hunting season
-  (hunt_plot <- boot_hunt[[4]] %>% 
-      # plotting
-      ggplot(aes(x = visit_kill, y = mean, col = visit_kill,
-                 ymin = lower, ymax = upper)) +
-      geom_point() +
-      facet_wrap(~hunt_season, 
-                 labeller = labeller(hunt_season = c("FALSE" = "No Hunting", "TRUE" = "Hunting"))) +
-      geom_errorbar(width = .1) +
-      labs(title = "Visiting hunting region",
-           x = "Visit Kill",
-           y = "Predicted Probability")) +
-    # custom color/texture scheme
-    scale_color_manual(values = c("TRUE" = "#006CD1", "FALSE" = "#DC3220")) +
-    theme_classic() +
-    # removing legend
-    guides(color = "none")
+(hunt_plot <- boot_hunt[[4]] %>% 
+    # plotting
+    ggplot(aes(x = visit_kill, y = mean, col = visit_kill,
+               ymin = lower, ymax = upper)) +
+    geom_point() +
+    facet_wrap(~hunt_season, 
+               labeller = labeller(hunt_season = c("FALSE" = "No Hunting", "TRUE" = "Hunting"))) +
+    geom_errorbar(width = .1) +
+    labs(title = "Visiting hunting region",
+         x = "Visit Kill",
+         y = "Predicted Probability")) +
+  # custom color/texture scheme
+  scale_color_manual(values = c("TRUE" = "#006CD1", "FALSE" = "#DC3220")) +
+  theme_classic() +
+  # removing legend
+  guides(color = "none") +
+  # removing title
+  ggtitle("", subtitle = "")
 ggsave("pred_hunt_hseason.svg", device = "svg", path = "reports")
 
