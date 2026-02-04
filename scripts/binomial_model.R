@@ -103,11 +103,11 @@ AIC(mod_terr_bms)
 AIC(mod_terr_hseason)
 AIC(mod_terr) #best
 
-
+confint(mod_terr)
 # bootstrap -------------------------------
 
 # bootstrapping parameter values from model simulations
-boot_terr <- boot_param_CI(nsim = 10, model = mod_terr, data = ws_model_data,
+boot_terr <- boot_param_CI(nsim = 5, model = mod_terr, data = ws_model_data, pred_CI = TRUE,
                            newData = expand.grid(rf_active_kill = c(TRUE, FALSE),
                                                  hunt_season = c(TRUE, FALSE),
                                                  final_take_bms1 = 0,
@@ -135,6 +135,7 @@ boot_terr[[3]] +
                               "hunt_seasonTRUE" = "Hunting season", 
                               "final_take_bms1" = "Hunting biomass", 
                               "rf_active_killTRUE" = "Active kill"))
+ggsave("coef_terr.svg", device = "svg", path = "reports")
 
   
 # plotting predictions for wolf kills and hunting season
@@ -154,6 +155,7 @@ boot_terr[[3]] +
   # removing legend
   guides(color = "none") +
   theme_classic()
+ggsave("pred_terr_hseason.svg", device = "svg", path = "reports")
 
 
 # PART 2 of conditional model (visit Gardiner/other) ----------------------
@@ -202,7 +204,7 @@ AIC(mod_hunt) #best
 # bootstrap -------------------------------
 
 # prediction for kill visit and hunting season
-boot_hunt <- boot_param_CI(nsim = 500, model = mod_hunt, data = hunt_model_data, 
+boot_hunt <- boot_param_CI(nsim = 500, model = mod_hunt, data = hunt_model_data, pred_CI = TRUE, 
                            newData = expand.grid(visit_kill = c(TRUE, FALSE),
                                                  hunt_season = c(TRUE, FALSE),
                                                  final_take_bms1 = 0,
@@ -224,6 +226,7 @@ boot_hunt[[3]] +
                               "hunt_seasonTRUE" = "Hunting season", 
                               "final_take_bms1" = "Hunting biomass", 
                               "visit_killTRUE" = "Visit kill"))
+ggsave("coef_hunt.svg", device = "svg", path = "reports")
 
 
 # plotting predictions for wolf kills and hunting season
@@ -244,32 +247,5 @@ boot_hunt[[3]] +
     theme_classic() +
     # removing legend
     guides(color = "none")
-
-
-
-# prediction for kill visit and snow depth
-boot_hunt <- boot_param_CI(nsim = 50, model = mod_hunt, data = hunt_model_data, 
-                           newData = expand.grid(visit_kill = c(TRUE, FALSE),
-                                                 hunt_season = TRUE,
-                                                 final_take_bms1 = 0,
-                                                 dist2nentrance = 0,
-                                                 temp_max = 0,
-                                                 snow_depth = seq(-2,2,0.1),
-                                                 prop_group_visit_hunt = 0))
-
-# visit kill and snow depth
-(hunt_plot <- boot_hunt[[4]] %>% 
-    # plotting
-    ggplot(aes(x = snow_depth, y = mean, col = visit_kill,
-               ymin = lower, ymax = upper)) +
-    geom_point() +
-    geom_errorbar(width = .1) +
-    labs(title = "Visiting hunting region",
-         x = "Scaled Snow Depth",
-         y = "Predicted Probability")) +
-  # custom color/texture scheme
-  scale_color_manual(values = c("TRUE" = "#006CD1", "FALSE" = "#DC3220")) +
-  # changing legend title
-  guides(color = guide_legend(title = "Visit kill")) +
-  theme_classic()
+ggsave("pred_hunt_hseason.svg", device = "svg", path = "reports")
 
