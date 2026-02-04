@@ -247,7 +247,7 @@ hunt_model_data %>%
 # stacked barplot showing raven decisions
 decision_table %>% 
   # switching to long format
-  pivot_longer(cols = c(hunt, other, terr),
+  tidyr::pivot_longer(cols = c(hunt, other, terr),
                names_to = "decision") %>% 
   # setting graphing data
   ggplot(aes(x = value, y = raven_id, fill = decision)) +
@@ -291,7 +291,7 @@ ws_model_data %>%
   # adding column for total sample size for each raven
   mutate(n = hunt_kill + hunt_nokill + other_kill + other_nokill + terr_kill + terr_nokill) %>% 
   # switching to long format
-  pivot_longer(cols = c(hunt_kill, hunt_nokill, other_kill, other_nokill, terr_kill, terr_nokill),
+  tidyr::pivot_longer(cols = c(hunt_kill, hunt_nokill, other_kill, other_nokill, terr_kill, terr_nokill),
                names_to = "decision") %>%  
   # adding column for presence of kill
   mutate(kill = rep(c("TRUE", "FALSE"), 60)) %>% 
@@ -300,7 +300,8 @@ ws_model_data %>%
   # creating proportion stacked barplot
   geom_bar_pattern(position = "fill", stat = "identity",
            colour = "black", linewidth = 0.2,
-           pattern_fill = "black", pattern_density = 0.05, pattern_spacing = 0.02) +
+           pattern_fill = "black", pattern_color = "transparent",
+           pattern_size = 0.01, pattern_spacing = 0.03, pattern_angle = 45) +
   # changing labels of plot
   labs(title = "Raven movement decisions",
        x = "Proportion",
@@ -310,9 +311,9 @@ ws_model_data %>%
                        # removing pattern legend
                        guide = "none") +
   # custom color/texture scheme
-  scale_fill_manual(values = c(terr_kill = "#e7e1ef", terr_nokill = "#e7e1ef",
-                               other_kill = "#c994c7", other_nokill = "#c994c7",
-                               hunt_kill = "#dd1c77", hunt_nokill = "#dd1c77"),
+  scale_fill_manual(values = c(terr_kill = "#E69F00", terr_nokill = "#E69F00",
+                               other_kill = "#56B4E9", other_nokill = "#56B4E9",
+                               hunt_kill = "#0072B2", hunt_nokill = "#0072B2"),
                     # removing repeats in legend
                     breaks = c("hunt_nokill", "other_nokill", "terr_nokill"),
                     # changing name of legend items
@@ -330,6 +331,8 @@ ws_model_data %>%
   # adjusting plot axis to show the extra text
   coord_cartesian(xlim = c(0, 1.1), clip = "off") +
   theme_classic()
+ggsave("decision_barplot.svg", device = "svg", path = "reports")
+
 
 
 
@@ -379,11 +382,11 @@ commute_month %>%
   # setting y limits
   scale_y_continuous(expand = c(0, 0), limits = c(0, 1)) +
   # custom color/texture scheme
-  scale_color_manual(values = c(territory = "#e7e1ef",
-                                other = "#c994c7",
-                                hunting = "#dd1c77")) 
+  scale_color_manual(values = c(territory = "#E69F00",
+                                other = "#56B4E9",
+                                hunting = "#0072B2")) 
 # saving plot so the lines are less pixelated
-ggsave("monthly_decision.svg", device = "svg", path = "reports", )
+ggsave("monthly_decision.svg", device = "svg", path = "reports")
 
 
 
@@ -438,9 +441,9 @@ commute_day %>%
   # setting y limits
   scale_y_continuous(expand = c(0, 0), limits = c(0, 1)) +
   # custom color/texture scheme
-  scale_color_manual(values = c(territory = "#e7e1ef",
-                                other = "#c994c7",
-                                hunting = "#dd1c77"),
+  scale_color_manual(values = c(territory = "#E69F00",
+                                other = "#56B4E9",
+                                hunting = "#0072B2"),
                      name = "Decision") 
 # saving plot so the lines are less pixelated
-ggsave("daily_decision.svg", device = "svg", path = "reports", )
+ggsave("daily_decision.svg", device = "svg", path = "reports")
