@@ -1,4 +1,4 @@
-#gets basic statistics about the data for reporting in the beginning of the results
+# gets basic statistics about the data for reporting in the beginning of the results
 
 library(dplyr)
 library(ggplot2)
@@ -36,6 +36,20 @@ hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
   # making sure rows are complete
   filter(complete.cases(.))
 
+# adding raven sex to winter study model data
+ws_model_data <- readxl::read_excel("data/raw/ravens_banding_tagging.xlsx", sheet = 1) %>% 
+  janitor::clean_names() %>% 
+  # only relevant colmuns
+  dplyr::select(tag_id, sex_based_on_dna) %>% 
+  # adding to model data
+  right_join(ws_model_data, by = join_by(tag_id == raven_id)) %>% 
+  # better column name
+  rename(sex = sex_based_on_dna,
+         raven_id = tag_id)
+  
+  
+  
+
 
 # summary data ------------------------------------------------------------
 
@@ -60,6 +74,7 @@ hist(ws_model_data$n_point,
      breaks = 1:max(ws_model_data$n_point))
 mean(ws_model_data$n_point)
 sd(ws_model_data$n_point)
+
 
 
 # proportion of days leaving territory
@@ -244,40 +259,6 @@ hunt_model_data %>%
     # adding column for total sample size for each raven
     mutate(n = hunt + other + terr))
 
-# stacked barplot showing raven decisions
-decision_table %>% 
-  # switching to long format
-  tidyr::pivot_longer(cols = c(hunt, other, terr),
-               names_to = "decision") %>% 
-  # setting graphing data
-  ggplot(aes(x = value, y = raven_id, fill = decision)) +
-  # creating proportion stacked barplot
-  geom_bar(position = "fill", stat = "identity",
-           colour = "black", linewidth = 0.2) +
-  # changing labels of plot
-  labs(title = "Raven movement decisions",
-       x = "Proportion",
-       y = "Raven ID",
-       fill = "Movement\ndecision") +
-  # custom color scheme
-  scale_fill_manual(values = c(terr = "#e7e1ef", 
-                               other = "#c994c7", 
-                               hunt = "#dd1c77"),
-                    # changing name of legend items
-                    labels = c("hunting", "other", "territory")) +
-  # removing space between axis and barplot
-  scale_x_continuous(expand = c(0, 0)) +
-  # adding sample size to right axis
-  geom_text(data = decision_table, aes(x = 1.01, y = raven_id, label = n),
-            inherit.aes = FALSE, hjust = 0, size = 3) + 
-  # adding label for sample size column
-  annotate("text", x = 1, y = Inf, label = "Sample size",
-           hjust = 0, vjust = -0.3, size = 3) +
-  # adjusting plot axis to show the extra text
-  coord_cartesian(xlim = c(0, 1.1), clip = "off") +
-  theme_classic()
-
-
 # stacked barplot showing raven decisions including wolf kill presence
 # table showing raven decisions
 ws_model_data %>% 
@@ -307,9 +288,7 @@ ws_model_data %>%
        x = "Proportion",
        y = "Raven ID",
        fill = "Movement\ndecision") +
-  scale_pattern_manual(values = c("TRUE" = "stripe", "FALSE" = "none"), 
-                       # removing pattern legend
-                       guide = "none") +
+  scale_pattern_manual(values = c("TRUE" = "stripe", "FALSE" = "none")) +
   # custom color/texture scheme
   scale_fill_manual(values = c(terr_kill = "#E69F00", terr_nokill = "#E69F00",
                                other_kill = "#56B4E9", other_nokill = "#56B4E9",
