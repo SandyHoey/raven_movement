@@ -1,7 +1,7 @@
-#categorizes the movement decisions of ravens into 3  groups
-  # leave terr
-  # visit hunting region
-  # visit other location
+# categorizes the movement decisions of ravens into 3  groups
+  # 1 = stay on terr
+  # 3 = visit hunting region
+  # 2 = visit other location
 
 # reading in raven territories
 source("scripts/home_range_mcp.R")
@@ -73,7 +73,7 @@ dist2poly <- dist2poly %>%
 
 
 # creating a column that shows if the raven decided to commute or leave terr that day
-# 3 = has a least 1 point that day in Gardiner poly
+# 3 = has a least 1 point that day in Gardiner hunting polys
 # 2 = has at least 1 point farther than 1 km from terr poly , but none in Gardiner poly
 # 1 = only has points in terr poly
 ID <- unique(dist2poly$individual_local_identifier)
@@ -161,4 +161,43 @@ commute_df <- do.call("rbind", commute_list)
               min = min(prop_visit_dump),
               max = max(prop_visit_dump),
               sd = sd(prop_visit_dump))
+  
+  # summarizing the average time between leaving the territory and arriving on the hunting grounds
+  commute_time <- dist2poly %>% 
+    # restrict to days that ravens wnet to hunting area
+    mutate(date = as.Date(study_local_timestamp)) %>% 
+    left_join(commute_df %>% 
+                # only relevant columns
+                dplyr::select(individual_local_identifier, date, commute)) %>% 
+    filter(commute == 3) %>% 
+    # sort chronologically
+    arrange(individual_local_identifier, study_local_timestamp) %>%
+    # keep first point in hunting and last point before leaving terr
+    group_by(individual_local_identifier, date) %>%
+    # add column to tell which hunting region to use
+    mutate(active_dist = if_else(study_local_timestamp <= hunt_end, 
+                                 dist2fwp, dist2bison)) %>%
+    # identify the first "arrival" point
+    mutate(arrival_row = which(active_dist == 0)[1]) %>%
+    # drop days with no valid arrival
+    filter(!is.na(arrival_row)) %>%
+    # keep only rows in territory up to arrival
+    mutate(row_id = row_number()) %>%
+    filter(row_number() == arrival_row | (row_number() < arrival_row & dist2terr == 0)) %>%
+    # from the territory points, keep only the closest one before arrival
+    mutate(keep = case_when(row_id == arrival_row ~ TRUE,
+                            row_id == max(row_id[dist2terr == 0 & row_id < arrival_row], na.rm = TRUE) ~ TRUE,
+                            TRUE ~ FALSE)) %>%
+    filter(keep) %>%
+    select(-active_dist, -arrival_row, -row_id, -keep) %>% 
+    # drop days without 2 points
+    filter(n() == 2) %>%
+    # calculating commute time
+    mutate(commute_time = as.numeric(difftime(study_local_timestamp[2], 
+                                              study_local_timestamp[1],
+                                              units = "hours"))) %>% 
+    # summarize results for individuals
+    group_by(individual_local_identifier) %>% 
+    summarize(avg_commute = mean(commute_time))
+    
   
