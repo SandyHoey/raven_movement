@@ -162,56 +162,56 @@ commute_df <- do.call("rbind", commute_list)
               max = max(prop_visit_dump),
               sd = sd(prop_visit_dump))
   
-  # summarizing the average time between leaving the territory and arriving on the hunting grounds
-  commute_time <- dist2poly %>% 
-    # restrict to days that ravens wnet to hunting area
-    mutate(date = as.Date(study_local_timestamp)) %>% 
-    left_join(commute_df %>% 
-                # only relevant columns
-                dplyr::select(individual_local_identifier, date, commute)) %>% 
-    filter(commute == 3) %>% 
-    # sort chronologically
-    arrange(individual_local_identifier, study_local_timestamp) %>%
-    # keep first point in hunting and last point before leaving terr
-    group_by(individual_local_identifier, date) %>%
-    # add column to tell which hunting region to use
-    mutate(active_dist = if_else(study_local_timestamp <= hunt_end, 
-                                 dist2fwp, dist2bison)) %>%
-    # identify the first "arrival" point
-    mutate(arrival_row = which(active_dist == 0)[1]) %>%
-    # drop days with no valid arrival
-    filter(!is.na(arrival_row)) %>%
-    # keep only rows in territory up to arrival
-    mutate(row_id = row_number()) %>%
-    filter(row_number() == arrival_row | (row_number() < arrival_row & dist2terr == 0)) %>%
-    # from the territory points, keep only the closest one before arrival
-    mutate(keep = case_when(row_id == arrival_row ~ TRUE,
-                            row_id == max(row_id[dist2terr == 0 & row_id < arrival_row], na.rm = TRUE) ~ TRUE,
-                            TRUE ~ FALSE)) %>%
-    filter(keep) %>%
-    select(-active_dist, -arrival_row, -row_id, -keep) %>% 
-    # drop days without 2 points
-    filter(n() == 2) %>%
-    # calculating commute time
-    mutate(commute_time = as.numeric(difftime(study_local_timestamp[2], 
-                                              study_local_timestamp[1],
-                                              units = "hours"))) %>% 
-    # summarize results for individuals
-    group_by(individual_local_identifier) %>% 
-    summarize(avg_commute = mean(commute_time)) %>% 
-    ungroup
-
-  # plotting by distance to territory 
-  readr::read_csv("data/clean/commute_data.csv") %>% 
-    # only relevant columns 
-    dplyr::select(raven_id, dist2nentrance) %>% 
-    # joining to commute_time
-    right_join(commute_time, by = join_by(raven_id == individual_local_identifier)) %>% 
-    # plotting
-    ggplot(aes(x = dist2nentrance/1000, y = avg_commute)) + 
-    geom_point() + 
-    # changing labels
-    labs(x = "Distance to hunting (km)",
-           y = "Average commute time (hr)") +
-    theme_classic()
-ggsave("commute_time.svg", device = "svg", path = "reports")  
+#   # summarizing the average time between leaving the territory and arriving on the hunting grounds
+#   commute_time <- dist2poly %>% 
+#     # restrict to days that ravens wnet to hunting area
+#     mutate(date = as.Date(study_local_timestamp)) %>% 
+#     left_join(commute_df %>% 
+#                 # only relevant columns
+#                 dplyr::select(individual_local_identifier, date, commute)) %>% 
+#     filter(commute == 3) %>% 
+#     # sort chronologically
+#     arrange(individual_local_identifier, study_local_timestamp) %>%
+#     # keep first point in hunting and last point before leaving terr
+#     group_by(individual_local_identifier, date) %>%
+#     # add column to tell which hunting region to use
+#     mutate(active_dist = if_else(study_local_timestamp <= hunt_end, 
+#                                  dist2fwp, dist2bison)) %>%
+#     # identify the first "arrival" point
+#     mutate(arrival_row = which(active_dist == 0)[1]) %>%
+#     # drop days with no valid arrival
+#     filter(!is.na(arrival_row)) %>%
+#     # keep only rows in territory up to arrival
+#     mutate(row_id = row_number()) %>%
+#     filter(row_number() == arrival_row | (row_number() < arrival_row & dist2terr == 0)) %>%
+#     # from the territory points, keep only the closest one before arrival
+#     mutate(keep = case_when(row_id == arrival_row ~ TRUE,
+#                             row_id == max(row_id[dist2terr == 0 & row_id < arrival_row], na.rm = TRUE) ~ TRUE,
+#                             TRUE ~ FALSE)) %>%
+#     filter(keep) %>%
+#     select(-active_dist, -arrival_row, -row_id, -keep) %>% 
+#     # drop days without 2 points
+#     filter(n() == 2) %>%
+#     # calculating commute time
+#     mutate(commute_time = as.numeric(difftime(study_local_timestamp[2], 
+#                                               study_local_timestamp[1],
+#                                               units = "hours"))) %>% 
+#     # summarize results for individuals
+#     group_by(individual_local_identifier) %>% 
+#     summarize(avg_commute = mean(commute_time)) %>% 
+#     ungroup
+# 
+#   # plotting by distance to territory 
+#   readr::read_csv("data/clean/commute_data.csv") %>% 
+#     # only relevant columns 
+#     dplyr::select(raven_id, dist2nentrance) %>% 
+#     # joining to commute_time
+#     right_join(commute_time, by = join_by(raven_id == individual_local_identifier)) %>% 
+#     # plotting
+#     ggplot(aes(x = dist2nentrance/1000, y = avg_commute)) + 
+#     geom_point() + 
+#     # changing labels
+#     labs(x = "Distance to hunting (km)",
+#            y = "Average commute time (hr)") +
+#     theme_classic()
+# ggsave("commute_time.svg", device = "svg", path = "reports")  
