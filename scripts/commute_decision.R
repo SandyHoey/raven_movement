@@ -198,6 +198,20 @@ commute_df <- do.call("rbind", commute_list)
                                               units = "hours"))) %>% 
     # summarize results for individuals
     group_by(individual_local_identifier) %>% 
-    summarize(avg_commute = mean(commute_time))
-    
-  
+    summarize(avg_commute = mean(commute_time)) %>% 
+    ungroup
+
+  # plotting by distance to territory 
+  readr::read_csv("data/clean/commute_data.csv") %>% 
+    # only relevant columns 
+    dplyr::select(raven_id, dist2nentrance) %>% 
+    # joining to commute_time
+    right_join(commute_time, by = join_by(raven_id == individual_local_identifier)) %>% 
+    # plotting
+    ggplot(aes(x = dist2nentrance/1000, y = avg_commute)) + 
+    geom_point() + 
+    # changing labels
+    labs(x = "Distance to hunting (km)",
+           y = "Average commute time (hr)") +
+    theme_classic()
+ggsave("commute_time.svg", device = "svg", path = "reports")  
