@@ -53,7 +53,7 @@ hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
 library(lme4)
 library(DHARMa)
 library(ggplot2)
-library(myFunctions) #custom bootstrap function
+library(myFunctions) # custom bootstrap function
 
 # optimizer for glmer
 cntrl <- glmerControl(optimizer = "bobyqa", tol = 1e-4, optCtrl=list(maxfun=100000))
@@ -80,7 +80,6 @@ summary(mod_terr_bms)
 
 # model with hunting season (changes result for active_kill)
 # including the interaction effect messes with active_kill because of high error with interaction term
-# with the new polygon and updated bison hunting season, this is even more out of control
 mod_terr_hseason <- glmer(terr_bin ~ (1|raven_id) + rf_active_kill + hunt_season + rf_avg_terr_kill_density + 
                             dist2nentrance + study_period * temp_max + snow_depth + prop_group_left_terr,
                           data = ws_model_data,
@@ -99,6 +98,16 @@ mod_terr <- glmer(terr_bin ~ (1|raven_id) + rf_active_kill * final_take_bms1 + h
                   control = cntrl)
 summary(mod_terr)
 
+
+# modeling without weather covariates
+mod_terr_noweather <- glmer(terr_bin ~ (1|raven_id) + rf_active_kill * final_take_bms1 + hunt_season + rf_avg_terr_kill_density + 
+                    dist2nentrance + study_period + prop_group_left_terr,
+                  data = ws_model_data,
+                  family = "binomial",
+                  nAGQ = 40,
+                  control = cntrl)
+summary(mod_terr_noweather)
+
 AIC(mod_terr_bms)
 AIC(mod_terr_hseason)
 AIC(mod_terr) #best
@@ -106,20 +115,28 @@ AIC(mod_terr) #best
 
 # bootstrap -------------------------------
 
-# bootstrapping parameter values from model simulations
-boot_terr <- boot_param_CI(nsim = 500, model = mod_terr, data = ws_model_data, pred_CI = TRUE,
-                           newData = expand.grid(rf_active_kill = c(TRUE, FALSE),
-                                                 hunt_season = c(TRUE, FALSE),
-                                                 final_take_bms1 = 0,
-                                                 rf_avg_terr_kill_density = 0,
-                                                 dist2nentrance = 0,
-                                                 study_period = "early",
-                                                 temp_max = 0,
-                                                 snow_depth = 0,
-                                                 prop_group_left_terr = 0))
-
-# view effect plot
-boot_terr[[3]] + 
+# plot coefficient CI
+terr_coef <- confint(mod_terr)
+terr_coef %>%
+  as.data.frame %>% 
+  # removing unused rows
+  filter(!rownames(.) %in% c(".sig01", "(Intercept)")) %>% 
+  # adding model coefficient
+  mutate(coeff = fixef(mod_terr)[names(fixef(mod_terr)) != "(Intercept)"],
+         FE = rownames(.)) %>% 
+  ggplot + 
+  geom_point(aes(x = coeff, y = FE), colour = "black") +
+  # confidence intervals
+  geom_segment(aes(x = `2.5 %`, xend = `97.5 %`, y = FE, yend = FE), colour = "black") +
+  # creating dashed line around 0
+  geom_vline(xintercept = 0, lty = "dashed") +
+  # adding model coefficient value to plot
+  geom_text(aes(x = coeff, y = FE, label = round(coeff, 2),
+                vjust = -.6, hjust = ifelse(coeff > 0, 0.2, 1)), 
+            size = 3) +
+  theme(legend.position = "none") +
+  labs(y = "",
+       x = "\u03b2")+ 
   # changing name and order of y axis
   scale_y_discrete(limits = c("study_periodlate:temp_max", "rf_active_killTRUE:final_take_bms1", 
                               "prop_group_left_terr", "snow_depth", "temp_max", "study_periodlate", 
@@ -135,10 +152,22 @@ boot_terr[[3]] +
                               "rf_avg_terr_kill_density" = "Kill density",
                               "hunt_seasonTRUE" = "Hunting season", 
                               "final_take_bms1" = "Hunting biomass", 
-                              "rf_active_killTRUE" = "Active kill")) +
-  # removing title
-  ggtitle("", subtitle = "")
+                              "rf_active_killTRUE" = "Active kill"))
 ggsave("coef_terr.svg", device = "svg", path = "reports")
+  
+
+# bootstrapping predictions values from model simulations
+boot_terr <- boot_param_CI(nsim = 500, model = mod_terr, data = ws_model_data, pred_CI = TRUE,
+                           newData = expand.grid(rf_active_kill = c(TRUE, FALSE),
+                                                 hunt_season = c(TRUE, FALSE),
+                                                 final_take_bms1 = 0,
+                                                 rf_avg_terr_kill_density = 0,
+                                                 dist2nentrance = 0,
+                                                 study_period = "early",
+                                                 temp_max = 0,
+                                                 snow_depth = 0,
+                                                 prop_group_left_terr = 0))
+
 
   
 # plotting predictions for wolf kills and hunting season
@@ -208,6 +237,43 @@ AIC(mod_hunt) #best
 
 # bootstrap -------------------------------
 
+# plot coefficient CI
+hunt_coef <- confint(mod_hunt)
+hunt_coef %>%
+  as.data.frame %>% 
+  # removing unused rows
+  filter(!rownames(.) %in% c(".sig01", "(Intercept)")) %>% 
+  # adding model coefficient
+  mutate(coeff = fixef(mod_hunt)[names(fixef(mod_hunt)) != "(Intercept)"],
+         FE = rownames(.)) %>% 
+  ggplot + 
+  geom_point(aes(x = coeff, y = FE), colour = "black") +
+  # confidence intervals
+  geom_segment(aes(x = `2.5 %`, xend = `97.5 %`, y = FE, yend = FE), colour = "black") +
+  # creating dashed line around 0
+  geom_vline(xintercept = 0, lty = "dashed") +
+  # adding model coefficient value to plot
+  geom_text(aes(x = coeff, y = FE, label = round(coeff, 2),
+                vjust = -.6, hjust = ifelse(coeff > 0, 0.2, 1)), 
+            size = 3) +
+  theme(legend.position = "none") +
+  labs(y = "",
+       x = "\u03b2") + 
+  # changing name and order of y axis
+  scale_y_discrete(limits = c("visit_killTRUE:final_take_bms1", "prop_group_visit_hunt", 
+                              "snow_depth", "temp_max", "dist2nentrance", 
+                              "hunt_seasonTRUE", "final_take_bms1", "visit_killTRUE"),
+                   labels = c("visit_killTRUE:final_take_bms1" = "Visit kill * Hunting biomass", 
+                              "prop_group_visit_hunt" = "Proportion traveling",
+                              "snow_depth" = "Snow depth", 
+                              "temp_max" = "Max temperature", 
+                              "dist2nentrance" = "Distance", 
+                              "hunt_seasonTRUE" = "Hunting season", 
+                              "final_take_bms1" = "Hunting biomass", 
+                              "visit_killTRUE" = "Visit kill"))
+ggsave("coef_hunt.svg", device = "svg", path = "reports")
+
+
 # prediction for kill visit and hunting season
 boot_hunt <- boot_param_CI(nsim = 500, model = mod_hunt, data = hunt_model_data, pred_CI = TRUE, 
                            newData = expand.grid(visit_kill = c(TRUE, FALSE),
@@ -217,24 +283,6 @@ boot_hunt <- boot_param_CI(nsim = 500, model = mod_hunt, data = hunt_model_data,
                                                  temp_max = 0,
                                                  snow_depth = 0,
                                                  prop_group_visit_hunt = 0))
-
-# parameter estimates
-boot_hunt[[3]] +
-  # changing name and order of y axis
-  scale_y_discrete(limits = c("visit_killTRUE:final_take_bms1", "prop_group_visit_hunt", 
-                              "snow_depth", "temp_max", "dist2nentrance", 
-                               "hunt_seasonTRUE", "final_take_bms1", "visit_killTRUE"),
-                   labels = c("visit_killTRUE:final_take_bms1" = "Visit kill * Hunting biomass", 
-                              "prop_group_visit_hunt" = "Proportion traveling",
-                              "snow_depth" = "Snow depth", 
-                              "temp_max" = "Max temperature", 
-                              "dist2nentrance" = "Distance", 
-                              "hunt_seasonTRUE" = "Hunting season", 
-                              "final_take_bms1" = "Hunting biomass", 
-                              "visit_killTRUE" = "Visit kill")) +
-  # removing title
-  ggtitle("", subtitle = "")
-ggsave("coef_hunt.svg", device = "svg", path = "reports")
 
 
 # plotting predictions for wolf kills and hunting season
