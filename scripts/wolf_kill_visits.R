@@ -1,4 +1,4 @@
-#looking to see how often ravens visit wolf kills during different movement decisions
+# looking to see how often ravens visit wolf kills during different movement decisions
 
 library(dplyr)
 library(here)
@@ -6,31 +6,47 @@ library(sf)
 library(lubridate)
 `%like%` <- data.table::`%like%`
 
-# reading in wolf kill data (both wolf project database and RF predictive)
-# wp_kills <- readr::read_csv(here("data/raw/wolf_project_carcass_data.csv")) %>% 
-#   janitor::clean_names() %>% 
-#   # removing cat kills
-#   filter(cod %like% "WOLF") %>% 
-#   # getting best coordinates
-#   mutate(easting = case_when(!is.na(ground_east) ~ ground_east,
-#                              !is.na(aerial_east) ~ aerial_east,
-#                              !is.na(est_ground_east) ~ est_ground_east),
-#          northing = case_when(!is.na(ground_north) ~ ground_north,
-#                               !is.na(aerial_north) ~ aerial_north,
-#                               !is.na(est_ground_north) ~ est_ground_north),
-#          # fixing date column format
-#          dod = lubridate::mdy(dod))
+# removing wolf kills that are in the hunting regions
+# reading in Gardiner hunting region shapefile
+mtfwp_hunt_poly <- st_read("data/clean/gardiner_hunt_poly_roads/gardiner_mtfwp_region.shp") %>% 
+  # transforming lat/long to UTM to match the GPS points
+  st_transform(crs = st_crs(sf_ravens_all))
 
+bison_hunt_poly <- st_read("data/clean/gardiner_hunt_poly_roads/gardiner_bison_region.shp") %>% 
+  # transforming lat/long to UTM to match the GPS points
+  st_transform(crs = st_crs(sf_ravens_all))
+
+hunt_dates <- readxl::read_xlsx("data/raw/hunting_seasons.xlsx") %>%
+  dplyr::select(year, end) %>% 
+  rename(hunt_end = end)
+
+# cleaning rf kill data
 source(here("scripts/clean_rf_data.R"))
 
+
 wolf_kills <- kill_data_rf %>% 
+  # simplify column names
   rename(dod = kill_start_date) %>% 
+  # only relevant columns
   dplyr::select(dod, kill_end_date, easting, northing) %>% 
+  # only complete cases
   filter(complete.cases(.)) %>% 
+  # adding sf geometry so distance can be calculated
   st_as_sf(coords = c("easting", "northing"), crs = "+proj=utm +zone=12") %>% 
   # creating a column for if the kill was found by a raven
   mutate(used_nohunt = FALSE,
-         used_hunt = FALSE)
+         used_hunt = FALSE) %>% 
+  # add MTFWP hunting end dates
+  mutate(winter_year = if_else(month(dod) %in% c(1:3), year(dod)-1, year(dod))) %>% 
+  left_join(hunt_dates, by = join_by(winter_year == year)) %>% 
+  dplyr::select(-winter_year) %>% 
+  # calculating distance to both polygons
+  mutate(., dist2fwp  = as.numeric(st_distance(., mtfwp_hunt_poly)),
+         dist2bison = as.numeric(st_distance(., bison_hunt_poly))) %>% 
+  # removing kills in the season appropriate hunting area
+  mutate(active_dist = if_else(dod <= hunt_end, "fwp", "bison")) %>% 
+  filter(if_else(active_dist == "fwp", dist2fwp != 0, dist2bison != 0)) %>% 
+  dplyr::select(-active_dist)
 
 
 # creating a single combined kill dataframe with the start date and coordinates
