@@ -46,9 +46,9 @@ ws_model_data <- readxl::read_excel("data/raw/ravens_banding_tagging.xlsx", shee
   # better column name
   rename(sex = sex_based_on_dna,
          raven_id = tag_id)
-  
-  
-  
+
+
+
 
 
 # summary data ------------------------------------------------------------
@@ -99,7 +99,7 @@ hunt_model_data %>%
             min = min(prop_hunt),
             max = max(prop_hunt),
             sd = sd(prop_hunt))
-  
+
 
 
 # average home range size
@@ -117,7 +117,7 @@ ws_model_data %>%
             max = max(dist2nentrance),
             min = min(dist2nentrance),
             sd = sd(dist2nentrance))
-  
+
 
 
 # wolf kills available on territory
@@ -273,16 +273,16 @@ ws_model_data %>%
   mutate(n = hunt_kill + hunt_nokill + other_kill + other_nokill + terr_kill + terr_nokill) %>% 
   # switching to long format
   tidyr::pivot_longer(cols = c(hunt_kill, hunt_nokill, other_kill, other_nokill, terr_kill, terr_nokill),
-               names_to = "decision") %>%  
+                      names_to = "decision") %>%  
   # adding column for presence of kill
   mutate(kill = rep(c("TRUE", "FALSE"), 60)) %>% 
   # setting graphing data
   ggplot(aes(x = value, y = raven_id, fill = decision, pattern = kill)) +
   # creating proportion stacked barplot
   geom_bar_pattern(position = "fill", stat = "identity",
-           colour = "black", linewidth = 0.2,
-           pattern_fill = "black", pattern_color = "transparent",
-           pattern_size = 0.01, pattern_spacing = 0.03, pattern_angle = 45) +
+                   colour = "black", linewidth = 0.2,
+                   pattern_fill = "black", pattern_color = "transparent",
+                   pattern_size = 0.01, pattern_spacing = 0.03, pattern_angle = 45) +
   # changing labels of plot
   labs(title = "Raven movement decisions",
        x = "Proportion",
