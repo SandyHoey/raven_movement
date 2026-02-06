@@ -354,7 +354,7 @@ commute_month %>%
             sd = sd(prop)) %>%
   ungroup %>% 
   # ordering months
-  mutate(month = fct_relevel(as.character(month), c("9", "10", "11", "12", "1", "2", "3"))) %>% 
+  mutate(month = fct_relevel(as.character(month), c("8", "9", "10", "11", "12", "1", "2", "3"))) %>% 
   # plotting
   ggplot(aes(x = month, y = mean_prop, 
              group = commute, col = commute,
