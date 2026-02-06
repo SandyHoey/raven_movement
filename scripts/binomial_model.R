@@ -101,11 +101,11 @@ summary(mod_terr)
 
 # modeling without weather covariates
 mod_terr_noweather <- glmer(terr_bin ~ (1|raven_id) + rf_active_kill * final_take_bms1 + hunt_season + rf_avg_terr_kill_density + 
-                    dist2nentrance + study_period + prop_group_left_terr,
-                  data = ws_model_data,
-                  family = "binomial",
-                  nAGQ = 40,
-                  control = cntrl)
+                              dist2nentrance + study_period + prop_group_left_terr,
+                            data = ws_model_data,
+                            family = "binomial",
+                            nAGQ = 40,
+                            control = cntrl)
 summary(mod_terr_noweather)
 
 AIC(mod_terr_bms)
@@ -154,7 +154,7 @@ terr_coef %>%
                               "final_take_bms1" = "Hunting biomass", 
                               "rf_active_killTRUE" = "Active kill"))
 ggsave("coef_terr.svg", device = "svg", path = "reports")
-  
+
 
 # bootstrapping predictions values from model simulations
 boot_terr <- boot_param_CI(nsim = 500, model = mod_terr, data = ws_model_data, pred_CI = TRUE,
@@ -169,7 +169,7 @@ boot_terr <- boot_param_CI(nsim = 500, model = mod_terr, data = ws_model_data, p
                                                  prop_group_left_terr = 0))
 
 
-  
+
 # plotting predictions for wolf kills and hunting season
 (terr_plot <- boot_terr[[4]] %>% 
     # plotting
@@ -305,4 +305,3 @@ boot_hunt <- boot_param_CI(nsim = 500, model = mod_hunt, data = hunt_model_data,
   # removing title
   ggtitle("", subtitle = "")
 ggsave("pred_hunt_hseason.svg", device = "svg", path = "reports")
-
