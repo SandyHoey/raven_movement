@@ -100,8 +100,8 @@ summary(mod_terr)
 
 
 # modeling without weather covariates
-mod_terr_noweather <- glmer(terr_bin ~ (1|raven_id) + rf_active_kill * final_take_bms1 + hunt_season + rf_avg_terr_kill_density + 
-                              dist2nentrance + study_period + prop_group_left_terr,
+mod_terr_noweather <- glmer(terr_bin ~ (1|raven_id) + rf_active_kill * final_take_bms1 + hunt_season + 
+                              rf_avg_terr_kill_density + dist2nentrance + study_period + prop_group_left_terr,
                             data = ws_model_data,
                             family = "binomial",
                             nAGQ = 40,
