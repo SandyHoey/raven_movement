@@ -288,7 +288,8 @@ ws_model_data %>%
        x = "Proportion",
        y = "Raven ID",
        fill = "Movement\ndecision") +
-  scale_pattern_manual(values = c("TRUE" = "stripe", "FALSE" = "none")) +
+  scale_pattern_manual(values = c("TRUE" = "stripe", "FALSE" = "none"), 
+                       name = "Wolf kill") +  
   # custom color/texture scheme
   scale_fill_manual(values = c(terr_kill = "#E69F00", terr_nokill = "#E69F00",
                                other_kill = "#56B4E9", other_nokill = "#56B4E9",
