@@ -9,7 +9,7 @@ ws_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
            (month < 12 | (month == 12 & day <= 15)) |
            (month > 3 | (month == 3 & day >= 1)) &
            (month < 3 | (month == 3 & day <= 30))) %>% 
-  # removing days when there is less than 5 GPS point
+  # removing days when there is less than 10 GPS point
   # unless the result is Jardine
   filter(!(n_point < 10 & terr_bin == F)) %>% 
   # only columns used in model
@@ -34,7 +34,7 @@ hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
            (month < 3 | (month == 3 & day <= 30))) %>% 
   # only have days ravens decided to leave territory
   filter(terr_bin == 1) %>% 
-  # removing days when there is less than 5 GPS point
+  # removing days when there is less than 10 GPS point
   # unless the result is Jardine
   filter(!(n_point < 10 & hunt_bin == F)) %>% 
   # only columns used in model

@@ -17,6 +17,11 @@ ws_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
   # removing days when there is less than 5 GPS point
   # unless the result is Jardine
   filter(!(n_point < 10 & terr_bin == F)) %>% 
+  # only columns used in model
+  dplyr::select(date, n_point, terr_bin, hunt_bin, raven_id, dump, rf_active_kill, rf_active_kill_3, 
+                visit_kill, final_take_bms, final_take_bms1, final_take, 
+                hunt_season, rf_avg_terr_kill_density, dist2nentrance, 
+                study_period, temp_max, snow_depth, prop_group_left_terr) %>% 
   # making sure rows are complete
   filter(complete.cases(.)) 
 
@@ -30,9 +35,12 @@ hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
            (month < 3 | (month == 3 & day <= 30))) %>% 
   # only have days ravens decided to leave territory
   filter(terr_bin == 1) %>% 
-  # removing days when there is less than 5 GPS point
+  # removing days when there is less than 10 GPS point
   # unless the result is Jardine
   filter(!(n_point < 10 & hunt_bin == F)) %>% 
+  # only columns used in model
+  dplyr::select(date, n_point, hunt_bin, terr_bin, raven_id, dump, visit_kill, final_take_bms, final_take_bms1, final_take, hunt_season,
+                dist2nentrance, study_period, temp_max, snow_depth, prop_group_visit_hunt) %>% 
   # making sure rows are complete
   filter(complete.cases(.))
 
@@ -144,8 +152,8 @@ ws_model_data %>%
 ws_model_data %>% 
   filter(hunt_bin == TRUE) %>% 
   group_by(raven_id) %>% 
-  summarise(no_visit = sum(dump == F),
-            visit = sum(dump == T)) %>% 
+  summarize(no_visit = sum(dump == FALSE),
+            visit = sum(dump == TRUE)) %>% 
   mutate(prop_visit_dump = visit/(visit + no_visit)) %>% 
   summarize(mean = mean(prop_visit_dump),
             min = min(prop_visit_dump),
@@ -263,8 +271,8 @@ hunt_model_data %>%
 # table showing raven decisions
 ws_model_data %>% 
   group_by(raven_id) %>% 
-  summarize(terr_kill = sum(terr_bin == FALSE & active_kill == TRUE),
-            terr_nokill = sum(terr_bin == FALSE & active_kill == FALSE),
+  summarize(terr_kill = sum(terr_bin == FALSE & rf_active_kill == TRUE),
+            terr_nokill = sum(terr_bin == FALSE & rf_active_kill == FALSE),
             other_kill = sum(terr_bin == TRUE & hunt_bin == FALSE & visit_kill == TRUE),
             other_nokill = sum(terr_bin == TRUE & hunt_bin == FALSE & visit_kill == FALSE),
             hunt_kill = sum(hunt_bin == TRUE & visit_kill == TRUE),
