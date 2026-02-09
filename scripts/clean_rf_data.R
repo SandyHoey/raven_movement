@@ -30,6 +30,8 @@ kill_data_rf <- readr::read_rds("data/raw/mergedkills_wolf_winter_RF_spec95.rds"
   rename(kill_start_dt = kill_start_date,
          kill_end_dt = clus_end) %>% 
   # adding dedicated date column
+  # conditioning start date based on time of day
+    # after 1400, the start day is the next day
   mutate(kill_start_date = as.Date(kill_start_dt),
          kill_end_date = as.Date(kill_end_dt)) %>% 
   # placing date columns together
@@ -73,5 +75,7 @@ kill_data_rf <- kill_data_rf %>%
   # removing sf geometry
   bind_cols(., st_coordinates(.)) %>% 
   rename(easting = X, northing = Y) %>% 
-  st_drop_geometry()
+  st_drop_geometry() %>% 
+  mutate(kill_start_date_terr  = if_else(format(kill_start_dt, "%H:%M:") > "14:00", 
+                                       as.Date(kill_start_dt), as.Date(kill_start_dt) + 1))
 
