@@ -157,13 +157,13 @@ ggsave("coef_terr.svg", device = "svg", path = "reports")
 
 
 # bootstrapping predictions values from model simulations
-boot_terr <- boot_param_CI(nsim = 500, model = mod_terr, data = ws_model_data, pred_CI = TRUE,
+boot_terr <- boot_param_CI(nsim = 5, model = mod_terr, data = ws_model_data, pred_CI = TRUE,
                            newData = expand.grid(rf_active_kill = c(TRUE, FALSE),
-                                                 hunt_season = c(TRUE, FALSE),
+                                                 hunt_season = TRUE,
                                                  final_take_bms1 = 0,
                                                  rf_avg_terr_kill_density = 0,
                                                  dist2nentrance = 0,
-                                                 study_period = "early",
+                                                 study_period = c("early", "late"),
                                                  temp_max = 0,
                                                  snow_depth = 0,
                                                  prop_group_left_terr = 0))
@@ -176,8 +176,8 @@ boot_terr <- boot_param_CI(nsim = 500, model = mod_terr, data = ws_model_data, p
     ggplot(aes(x = rf_active_kill, y = mean, col = rf_active_kill,
                ymin = lower, ymax = upper)) +
     geom_point() +
-    facet_wrap(~hunt_season, 
-               labeller = labeller(hunt_season = c("FALSE" = "No Hunting", "TRUE" = "Hunting"))) +
+    facet_wrap(~study_period, 
+               labeller = labeller(study_period = c("early" = "Early winter", "late" = "Late winter"))) +
     geom_errorbar(width = .1) +
     labs(title = "Leaving territory",
          x = "Active wolf kill",
