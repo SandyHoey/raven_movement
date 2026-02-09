@@ -116,7 +116,7 @@ AIC(mod_terr) #best
 # bootstrap -------------------------------
 
 # plot coefficient CI
-terr_coef <- confint(mod_terr, method = "profile")
+terr_coef <- confint(mod_terr, parm = "beta_", method = "profile")
 terr_coef %>%
   as.data.frame %>% 
   # removing unused rows
@@ -238,7 +238,7 @@ AIC(mod_hunt) #best
 # bootstrap -------------------------------
 
 # plot coefficient CI
-hunt_coef <- confint(mod_hunt, method = "profile")
+hunt_coef <- confint(mod_hunt, parm = "beta_", method = "profile")
 hunt_coef %>%
   as.data.frame %>% 
   # removing unused rows
