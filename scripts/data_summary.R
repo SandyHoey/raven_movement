@@ -300,7 +300,7 @@ ws_model_data %>%
   geom_bar_pattern(position = "fill", stat = "identity",
                    colour = "black", linewidth = 0.2,
                    pattern_fill = "black", pattern_color = "transparent",
-                   pattern_size = 0.02, pattern_spacing = 0.03, pattern_angle = 45) +
+                   pattern_size = 0.02, pattern_spacing = 0.015, pattern_angle = 50) +
   # changing labels of plot
   labs(title = "Raven movement decisions",
        x = "Proportion",
