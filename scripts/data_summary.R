@@ -273,39 +273,52 @@ ws_model_data %>%
   group_by(raven_id) %>% 
   summarize(terr_kill = sum(terr_bin == FALSE & rf_active_kill == TRUE),
             terr_nokill = sum(terr_bin == FALSE & rf_active_kill == FALSE),
-            other_kill = sum(terr_bin == TRUE & hunt_bin == FALSE & visit_kill == TRUE),
-            other_nokill = sum(terr_bin == TRUE & hunt_bin == FALSE & visit_kill == FALSE),
-            hunt_kill = sum(hunt_bin == TRUE & visit_kill == TRUE),
-            hunt_nokill = sum(hunt_bin == TRUE & visit_kill == FALSE)) %>% 
+            other_terr_kill = sum(terr_bin == TRUE & hunt_bin == FALSE & rf_active_kill == TRUE),
+            other_visit_kill = sum(terr_bin == TRUE & hunt_bin == FALSE & visit_kill == TRUE & rf_active_kill == FALSE),
+            other_nokill = sum(terr_bin == TRUE & hunt_bin == FALSE & visit_kill == FALSE & rf_active_kill == FALSE),
+            hunt_terr_kill = sum(hunt_bin == TRUE & rf_active_kill == TRUE),
+            hunt_visit_kill = sum(hunt_bin == TRUE & visit_kill == TRUE & rf_active_kill == FALSE),
+            hunt_nokill = sum(hunt_bin == TRUE & visit_kill == FALSE & rf_active_kill == FALSE)) %>% 
   # adding column for total sample size for each raven
-  mutate(n = hunt_kill + hunt_nokill + other_kill + other_nokill + terr_kill + terr_nokill) %>% 
+  mutate(n = hunt_terr_kill + hunt_visit_kill + hunt_nokill + other_terr_kill + 
+           other_visit_kill + other_nokill + terr_kill + terr_nokill) %>% 
   # switching to long format
-  tidyr::pivot_longer(cols = c(hunt_kill, hunt_nokill, other_kill, other_nokill, terr_kill, terr_nokill),
+  tidyr::pivot_longer(cols = c(hunt_terr_kill, hunt_visit_kill, hunt_nokill, other_terr_kill, 
+                               other_visit_kill, other_nokill, terr_kill, terr_nokill),
                       names_to = "decision") %>%  
+  # setting plotting order
+  mutate(decision = factor(decision, levels = rev(c("terr_nokill", "terr_kill",
+                                                   "other_nokill", "other_terr_kill", "other_visit_kill",
+                                                   "hunt_nokill", "hunt_terr_kill", "hunt_visit_kill")))) %>% 
   # adding column for presence of kill
-  mutate(kill = rep(c("TRUE", "FALSE"), 60)) %>% 
+  mutate(kill = rep(c("terr_kill", "visit_kill", "no_kill",
+                      "terr_kill", "visit_kill", "no_kill",
+                      "terr_kill", "no_kill"), 20)) %>% 
   # setting graphing data
   ggplot(aes(x = value, y = raven_id, fill = decision, pattern = kill)) +
   # creating proportion stacked barplot
   geom_bar_pattern(position = "fill", stat = "identity",
                    colour = "black", linewidth = 0.2,
                    pattern_fill = "black", pattern_color = "transparent",
-                   pattern_size = 0.01, pattern_spacing = 0.03, pattern_angle = 45) +
+                   pattern_size = 0.02, pattern_spacing = 0.03, pattern_angle = 45) +
   # changing labels of plot
   labs(title = "Raven movement decisions",
        x = "Proportion",
        y = "Raven ID",
        fill = "Movement\ndecision") +
-  scale_pattern_manual(values = c("TRUE" = "stripe", "FALSE" = "none"), 
-                       name = "Wolf kill") +  
+  scale_pattern_manual(values = c("terr_kill" = "stripe", 
+                                  "visit_kill" = "circle", 
+                                  "no_kill" = "none"), 
+                       name = "Wolf kill",
+                       labels = c("None", "Active kill", "Visit kill")) +  
   # custom color/texture scheme
   scale_fill_manual(values = c(terr_kill = "#E69F00", terr_nokill = "#E69F00",
-                               other_kill = "#56B4E9", other_nokill = "#56B4E9",
-                               hunt_kill = "#0072B2", hunt_nokill = "#0072B2"),
+                               other_terr_kill = "#56B4E9",other_visit_kill = "#56B4E9", other_nokill = "#56B4E9",
+                               hunt_terr_kill = "#0072B2", hunt_visit_kill = "#0072B2", hunt_nokill = "#0072B2"),
                     # removing repeats in legend
                     breaks = c("hunt_nokill", "other_nokill", "terr_nokill"),
                     # changing name of legend items
-                    labels = c("hunting", "other", "territory")) +
+                    labels = c("Hunting", "Other", "Territory")) +
   # removing pattern from fill legend
   guides(fill = guide_legend(override.aes = list(pattern = "none"))) +
   # removing space between axis and barplot
