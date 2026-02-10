@@ -157,7 +157,7 @@ ggsave("coef_terr.svg", device = "svg", path = "reports")
 
 
 # bootstrapping predictions values from model simulations
-boot_terr <- boot_param_CI(nsim = 5, model = mod_terr, data = ws_model_data, pred_CI = TRUE,
+boot_terr <- boot_param_CI(nsim = 5, model = mod_terr, data = ws_model_data, pred_CI = FALSE,
                            newData = expand.grid(rf_active_kill = c(TRUE, FALSE),
                                                  hunt_season = TRUE,
                                                  final_take_bms1 = 0,
