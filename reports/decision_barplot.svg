@@ -689,10 +689,10 @@
 <rect x='411.63' y='72.70' width='70.39' height='78.47' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
 <text x='417.11' y='87.21' style='font-size: 11.00px; font-family: "Arial";' textLength='37.67px' lengthAdjust='spacingAndGlyphs'>Wolf kill</text>
 <rect x='417.11' y='93.85' width='17.28' height='17.28' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
-<rect x='417.11' y='93.85' width='17.28' height='17.28' style='stroke-width: 0.00; stroke: none; stroke-linecap: square; stroke-linejoin: miter; fill: #595959;' />
+<rect x='417.11' y='93.85' width='17.28' height='17.28' style='stroke-width: 0.00; stroke: none; stroke-linecap: square; stroke-linejoin: miter; fill: #FFFFFF;' />
 <rect x='417.11' y='93.85' width='17.28' height='17.28' style='stroke-width: 0.15; stroke-linecap: square; stroke-linejoin: miter;' />
 <rect x='417.11' y='111.13' width='17.28' height='17.28' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
-<rect x='417.11' y='111.13' width='17.28' height='17.28' style='stroke-width: 0.00; stroke: none; stroke-linecap: square; stroke-linejoin: miter; fill: #595959;' />
+<rect x='417.11' y='111.13' width='17.28' height='17.28' style='stroke-width: 0.00; stroke: none; stroke-linecap: square; stroke-linejoin: miter; fill: #FFFFFF;' />
 <polygon points='434.36,123.10 434.36,124.53 431.12,128.38 429.92,128.38 434.36,123.10 ' style='stroke-width: 0.043; stroke: none; stroke-linecap: square; fill: #000000;' />
 <polygon points='434.36,115.95 434.36,117.38 425.12,128.38 423.92,128.38 434.36,115.95 ' style='stroke-width: 0.043; stroke: none; stroke-linecap: square; fill: #000000;' />
 <polygon points='432.37,111.16 433.57,111.16 419.12,128.38 417.92,128.38 432.37,111.16 ' style='stroke-width: 0.043; stroke: none; stroke-linecap: square; fill: #000000;' />
@@ -700,7 +700,7 @@
 <polygon points='420.38,111.16 421.58,111.16 417.14,116.45 417.14,115.02 420.38,111.16 ' style='stroke-width: 0.043; stroke: none; stroke-linecap: square; fill: #000000;' />
 <rect x='417.11' y='111.13' width='17.28' height='17.28' style='stroke-width: 0.15; stroke-linecap: square; stroke-linejoin: miter;' />
 <rect x='417.11' y='128.41' width='17.28' height='17.28' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
-<rect x='417.11' y='128.41' width='17.28' height='17.28' style='stroke-width: 0.00; stroke: none; stroke-linecap: square; stroke-linejoin: miter; fill: #595959;' />
+<rect x='417.11' y='128.41' width='17.28' height='17.28' style='stroke-width: 0.00; stroke: none; stroke-linecap: square; stroke-linejoin: miter; fill: #FFFFFF;' />
 <circle cx='418.71' cy='131.14' r='0.46' style='stroke-width: 0.043; stroke: none; fill: #000000;' />
 <circle cx='419.27' cy='137.62' r='0.46' style='stroke-width: 0.043; stroke: none; fill: #000000;' />
 <circle cx='419.84' cy='144.09' r='0.46' style='stroke-width: 0.043; stroke: none; fill: #000000;' />

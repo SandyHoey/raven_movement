@@ -319,8 +319,9 @@ ws_model_data %>%
                     breaks = c("hunt_nokill", "other_nokill", "terr_nokill"),
                     # changing name of legend items
                     labels = c("Hunting", "Other", "Territory")) +
-  # removing pattern from fill legend
-  guides(fill = guide_legend(override.aes = list(pattern = "none"))) +
+  # removing pattern from fill legend and changing pattern legend background
+  guides(fill = guide_legend(override.aes = list(pattern = "none")),
+         pattern = guide_legend(override.aes = list(fill = "white"))) +
   # removing space between axis and barplot
   scale_x_continuous(expand = c(0, 0)) +
   # adding sample size to right axis
