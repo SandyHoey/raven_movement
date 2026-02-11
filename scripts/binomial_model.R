@@ -147,12 +147,12 @@ terr_coef %>%
                               "prop_group_left_terr" = "Proportion traveling",
                               "snow_depth" = "Snow depth", 
                               "temp_max" = "Max temperature", 
-                              "study_periodlate" = "Study period", 
+                              "study_periodlate" = "Study period (Late)", 
                               "dist2nentrance" = "Distance", 
                               "rf_avg_terr_kill_density" = "Kill density",
-                              "hunt_seasonTRUE" = "Hunting season", 
+                              "hunt_seasonTRUE" = "Hunting season (TRUE)", 
                               "final_take_bms1" = "Hunting biomass", 
-                              "rf_active_killTRUE" = "Active kill"))
+                              "rf_active_killTRUE" = "Active kill (TRUE)"))
 ggsave("coef_terr.svg", device = "svg", path = "reports")
 
 
@@ -268,9 +268,9 @@ hunt_coef %>%
                               "snow_depth" = "Snow depth", 
                               "temp_max" = "Max temperature", 
                               "dist2nentrance" = "Distance", 
-                              "hunt_seasonTRUE" = "Hunting season", 
+                              "hunt_seasonTRUE" = "Hunting season (TRUE)", 
                               "final_take_bms1" = "Hunting biomass", 
-                              "visit_killTRUE" = "Visit kill"))
+                              "visit_killTRUE" = "Visit kill (TRUE)"))
 ggsave("coef_hunt.svg", device = "svg", path = "reports")
 
 
