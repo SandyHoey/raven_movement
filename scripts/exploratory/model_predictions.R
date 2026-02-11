@@ -21,13 +21,13 @@ plot(x = 1:4,
      ylim = c(0,1))
 
 
-# finding kill outside territory and study period
+# active kill and study period
 # red = found a kill
 plot(x = 1:4,
-     y = plogis(c(3.18873 - 2.24366,
-                  3.18873 - 2.24366 - 0.54742,
+     y = plogis(c(3.18873 - 0.79651,
+                  3.18873 - 0.79651 - 0.4603,
                   3.18873,
-                  3.18873 - 0.54742)),
+                  3.18873 - 0.4603)),
      main = "Active kill, Study period",
      ylim = c(0, 1))
 text(x = 1:4,
