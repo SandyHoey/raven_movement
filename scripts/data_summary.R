@@ -300,7 +300,7 @@ ws_model_data %>%
   geom_bar_pattern(position = "fill", stat = "identity",
                    colour = "black", linewidth = 0.2,
                    pattern_fill = "black", pattern_color = "transparent",
-                   pattern_size = 0.02, pattern_spacing = 0.03, pattern_angle = 45) +
+                   pattern_size = 0.02, pattern_spacing = 0.015, pattern_angle = 50) +
   # changing labels of plot
   labs(title = "Raven movement decisions",
        x = "Proportion",
@@ -319,8 +319,9 @@ ws_model_data %>%
                     breaks = c("hunt_nokill", "other_nokill", "terr_nokill"),
                     # changing name of legend items
                     labels = c("Hunting", "Other", "Territory")) +
-  # removing pattern from fill legend
-  guides(fill = guide_legend(override.aes = list(pattern = "none"))) +
+  # removing pattern from fill legend and changing pattern legend background
+  guides(fill = guide_legend(override.aes = list(pattern = "none")),
+         pattern = guide_legend(override.aes = list(fill = "white"))) +
   # removing space between axis and barplot
   scale_x_continuous(expand = c(0, 0)) +
   # adding sample size to right axis
