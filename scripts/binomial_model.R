@@ -159,11 +159,11 @@ ggsave("coef_terr.svg", device = "svg", path = "reports")
 # bootstrapping predictions values from model simulations
 boot_terr <- boot_param_CI(nsim = 5, model = mod_terr, data = ws_model_data, pred_CI = FALSE,
                            newData = expand.grid(rf_active_kill = c(TRUE, FALSE),
-                                                 hunt_season = TRUE,
+                                                 hunt_season = c(TRUE, FALSE),
                                                  final_take_bms1 = 0,
                                                  rf_avg_terr_kill_density = 0,
                                                  dist2nentrance = 0,
-                                                 study_period = c("early", "late"),
+                                                 study_period = "early",
                                                  temp_max = 0,
                                                  snow_depth = 0,
                                                  prop_group_left_terr = 0))
@@ -177,10 +177,9 @@ boot_terr <- boot_param_CI(nsim = 5, model = mod_terr, data = ws_model_data, pre
                ymin = lower, ymax = upper)) +
     geom_point() +
     facet_wrap(~study_period, 
-               labeller = labeller(study_period = c("early" = "Early winter", "late" = "Late winter"))) +
+               labeller = labeller(study_period = c("TRUE" = "Hunting", "FALSE" = "No Hunting"))) +
     geom_errorbar(width = .1) +
-    labs(title = "Leaving territory",
-         x = "Active wolf kill",
+    labs(x = "Active wolf kill",
          y = "Predicted Probability")) +
   # custom color/texture scheme
   scale_color_manual(values = c("TRUE" = "#006CD1", "FALSE" = "#DC3220")) +
@@ -294,8 +293,7 @@ boot_hunt <- boot_param_CI(nsim = 500, model = mod_hunt, data = hunt_model_data,
     facet_wrap(~hunt_season, 
                labeller = labeller(hunt_season = c("FALSE" = "No Hunting", "TRUE" = "Hunting"))) +
     geom_errorbar(width = .1) +
-    labs(title = "Visiting hunting region",
-         x = "Visit Kill",
+    labs(x = "Visit Kill",
          y = "Predicted Probability")) +
   # custom color/texture scheme
   scale_color_manual(values = c("TRUE" = "#006CD1", "FALSE" = "#DC3220")) +
