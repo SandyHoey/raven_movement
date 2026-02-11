@@ -10,11 +10,11 @@ library(lubridate)
 # reading in Gardiner hunting region shapefile
 mtfwp_hunt_poly <- st_read("data/clean/gardiner_hunt_poly_roads/gardiner_mtfwp_region.shp") %>% 
   # transforming lat/long to UTM to match the GPS points
-  st_transform(crs = st_crs(sf_ravens_all))
+  st_transform(crs = "+proj=utm +zone=12")
 
 bison_hunt_poly <- st_read("data/clean/gardiner_hunt_poly_roads/gardiner_bison_region.shp") %>% 
   # transforming lat/long to UTM to match the GPS points
-  st_transform(crs = st_crs(sf_ravens_all))
+  st_transform(crs = "+proj=utm +zone=12")
 
 hunt_dates <- readxl::read_xlsx("data/raw/hunting_seasons.xlsx") %>%
   dplyr::select(year, end) %>% 
