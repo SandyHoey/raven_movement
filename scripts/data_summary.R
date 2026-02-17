@@ -123,6 +123,7 @@ ws_model_data %>%
   slice(1) %>%
   ungroup %>% 
   summarize(mean = mean(dist2nentrance),
+            median = median(dist2nentrance),
             max = max(dist2nentrance),
             min = min(dist2nentrance),
             sd = sd(dist2nentrance))
