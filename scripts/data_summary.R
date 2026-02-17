@@ -113,6 +113,7 @@ hunt_model_data %>%
 # average home range size
 source("scripts/home_range_mcp.R")
 mean(mcp90@data$area)
+median(mcp90@data$area)
 range(mcp90@data$area)
 sd(mcp90@data$area)
 
