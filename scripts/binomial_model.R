@@ -152,7 +152,8 @@ terr_coef %>%
                               "rf_avg_terr_kill_density" = "Kill density",
                               "hunt_seasonTRUE" = "Hunting season (TRUE)", 
                               "final_take_bms1" = "Hunting biomass", 
-                              "rf_active_killTRUE" = "Active kill (TRUE)"))
+                              "rf_active_killTRUE" = "Active kill (TRUE)")) +
+  theme_classic()
 ggsave("coef_terr.svg", device = "svg", path = "reports")
 
 
@@ -269,7 +270,8 @@ hunt_coef %>%
                               "dist2nentrance" = "Distance", 
                               "hunt_seasonTRUE" = "Hunting season (TRUE)", 
                               "final_take_bms1" = "Hunting biomass", 
-                              "visit_killTRUE" = "Visit kill (TRUE)"))
+                              "visit_killTRUE" = "Visit kill (TRUE)")) +
+  theme_classic()
 ggsave("coef_hunt.svg", device = "svg", path = "reports")
 
 
