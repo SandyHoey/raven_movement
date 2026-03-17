@@ -91,7 +91,7 @@ leave_no_hunt_gps <- readr::read_csv(here("data/clean/raven_gps_outside_terr_no_
   mutate(dist2kill = NA)
   
 
-# wolf kills are available for 1 week after dod
+# wolf kills are available for 1 day after wolves leave
 # loop comparing each GPS point to all wolf kills
 # looping through each GPS point to see if there is an active kill that day
 for(i in 1:nrow(leave_no_hunt_gps)){
@@ -182,7 +182,7 @@ hunt_gps <- readr::read_csv(here("data/clean/raven_gps_covariates.csv")) %>%
 
 
 # adding column with distance to closest wolf kill
-# wolf kills are available for 1 week after dod
+# wolf kills are available for 1 day after wolves leave
 hunt_gps$dist2kill <- NA
 # loop comparing each GPS point to all wolf kills
 for(i in 1:nrow(hunt_gps)){
