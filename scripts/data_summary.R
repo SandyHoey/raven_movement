@@ -335,8 +335,8 @@ ws_model_data %>%
                    pattern_fill = "black", pattern_color = "transparent",
                    pattern_size = 0.02, pattern_spacing = 0.015, pattern_angle = 50) +
   # changing labels of plot
-  labs(title = "Raven movement decisions",
-       x = "Proportion",
+  labs(title = "  ",
+       x = "Proportion of days",
        y = "Raven ID",
        fill = "Movement\ndecision") +
   scale_pattern_manual(values = c("terr_kill" = "stripe", 
@@ -365,8 +365,8 @@ ws_model_data %>%
            hjust = 0, vjust = -0.3, size = 3) +
   # adjusting plot axis to show the extra text
   coord_cartesian(xlim = c(0, 1.1), clip = "off") +
-  theme_classic()
-ggsave("decision_barplot.svg", device = "svg", path = "reports")
+  theme_classic() 
+ggsave("decision_barplot.svg", units = "in", width = 8, height = 5.5, device = "svg", path = "figures")
 
 
 
@@ -421,7 +421,7 @@ commute_month %>%
                                 other = "#56B4E9",
                                 hunting = "#0072B2")) 
 # saving plot so the lines are less pixelated
-ggsave("monthly_decision.svg", device = "svg", path = "reports")
+ggsave("monthly_decision.svg", units = "in", width = 9, height = 7, device = "svg", path = "figures")
 
 
 
@@ -481,4 +481,4 @@ commute_day %>%
                                 hunting = "#0072B2"),
                      name = "Decision") 
 # saving plot so the lines are less pixelated
-ggsave("daily_decision.svg", device = "svg", path = "reports")
+ggsave("daily_decision.svg", device = "svg", path = "figures")
