@@ -300,21 +300,20 @@ commute_df <- commute_df %>%
 
 # Outside territory kill visit --------------------------------------------
 ## binary covariate for if the raven visited a carcass outside of its territory
-
 source("scripts/wolf_kill_visits.R")
 
-commute_df <- hunt_gps %>% 
-  # combining gps data for all days leaving territory
-  bind_rows(leave_no_hunt_gps) %>% 
+commute_df <- raven_gps_oot %>% 
   # removing sf geometry
-  st_drop_geometry() %>% 
+  st_drop_geometry %>% 
+  # renaming raven column
+  rename(raven_id = individual_local_identifier) %>% 
   # getting a summary of each day
   group_by(date, raven_id) %>% 
   summarize(visit_kill = if_else(any(dist2kill < 500), TRUE, FALSE)) %>% 
   ungroup() %>% 
   # adding to main dataframe
   right_join(commute_df) %>% 
-  # changing NA into FALSE since that is when to carcasses are available
+  # changing NA into FALSE since that is when no carcasses are available
   mutate(visit_kill = if_else(is.na(visit_kill), FALSE, visit_kill))
 
 # Hunting season-------------------------------------------------------------
