@@ -43,19 +43,19 @@ text(x = c(1.5, 3.5),
 # hunting biomass and finding kill outside territory
 # red = found a kill
 plot(x = scale_seq,
-     y = plogis(c(0.58091 - 2.24366 - 0.04314 * scale_seq)),
+     y = plogis(c(0.57638 - 2.30747 - 0.04314 * scale_seq)),
      col = "red", ylim = c(0, 1))
 lines(x = scale_seq,
-      y = plogis(c(0.58091 - 0.04314 * scale_seq)),
+      y = plogis(c(0.57638 - 0.04314 * scale_seq)),
       col = "blue")
 
 
 # hunting season and finding a kill outside territory
 plot(x = 1:4, 
-     y = plogis(c(0.58091 - 2.24366 + 0.55666,
-                  0.58091 - 2.24366,
-                  0.58091 + 0.55666,
-                  0.58091)),
+     y = plogis(c(0.57638 - 2.30747 + 0.55949, # kill, hunt
+                  0.57638 - 2.30747, # kill, no hunt
+                  0.57638 + 0.55949, # no kill, hunt 
+                  0.57638)), # no kill, no hunt
      main = "Active kill, Hunt season",
      ylim = c(0,1))
 
@@ -63,22 +63,22 @@ plot(x = 1:4,
 # finding kill outside territory + distance from hunting
 # red = found a kill
 plot(x = scale_seq,
-     y = plogis(c(0.58091 -2.24366 -1.71212 * scale_seq)),
+     y = plogis(c(0.57638 -2.30747 -1.71212 * scale_seq)),
      col = "red", ylim = c(0, 1))
 lines(x = scale_seq,
-      y = plogis(c(0.58091 -2.24366 + 0.29596 - 1.71212 * scale_seq)),
+      y = plogis(c(0.57638 -2.30747 + 0.29596 - 1.71212 * scale_seq)),
       col = "red", lty = 2)
 lines(x = scale_seq,
-      y = plogis(c(0.58091 -2.24366 - 0.29596 - 1.71212 * scale_seq)),
+      y = plogis(c(0.57638 -2.30747 - 0.29596 - 1.71212 * scale_seq)),
       col = "red", lty = 2)
 lines(x = scale_seq,
-      y = plogis(c(0.58091 - 1.71212 * scale_seq)),
+      y = plogis(c(0.57638 - 1.71212 * scale_seq)),
       col = "blue")
 lines(x = scale_seq,
-      y = plogis(c(0.58091 - (1.71212 + 0.43332) * scale_seq)),
+      y = plogis(c(0.57638 - (1.71212 + 0.43332) * scale_seq)),
       col = "blue", lty = 2)
 lines(x = scale_seq,
-      y = plogis(c(0.58091 - (1.71212 - 0.43332) * scale_seq)),
+      y = plogis(c(0.57638 - (1.71212 - 0.43332) * scale_seq)),
       col = "blue", lty = 2)
 
 
