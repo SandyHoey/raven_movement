@@ -141,6 +141,37 @@ range(kills_available$prop_available)
 sd(kills_available$prop_available)
 
 
+# wolf kills visited outside of territory
+hunt_model_data %>% 
+  group_by(raven_id) %>% 
+  summarize(visited_kills = sum(visit_kill),
+            total_days = n()) %>% 
+  mutate(prop_visited = visited_kills/total_days) %>% 
+  ungroup %>% 
+  summarize(mean = mean(prop_visited),
+            median = median(prop_visited),
+            max = max(prop_visited),
+            min = min(prop_visited),
+            sd = sd(prop_visited),
+            days_visited = sum(visited_kills))
+
+
+# how often ravens visited a kill outside territory, then visited the hunting
+hunt_model_data %>% 
+  filter(visit_kill == TRUE) %>% 
+  group_by(raven_id) %>% 
+  summarize(visit_hunt = sum(hunt_bin),
+            visited_kills = n()) %>% 
+  mutate(prop_hunt = visit_hunt/visited_kills) %>% 
+  ungroup %>% 
+  summarize(mean = mean(prop_hunt),
+            median = median(prop_hunt),
+            max = max(prop_hunt),
+            min = min(prop_hunt),
+            sd = sd(prop_hunt))
+
+
+
 # percent of trips to Gardiner included visit to the dump
 ws_model_data %>% 
   filter(hunt_bin == TRUE) %>% 
