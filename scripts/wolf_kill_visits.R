@@ -35,8 +35,7 @@ wolf_kills <- kill_data_rf %>%
   # adding sf geometry so distance can be calculated
   st_as_sf(coords = c("easting", "northing"), crs = "+proj=utm +zone=12") %>% 
   # creating a column for if the kill was found by a raven (preset to FALSE)
-  mutate(used_nohunt = FALSE,
-         used_hunt = FALSE) %>% 
+  mutate(used = FALSE) %>% 
   # add MTFWP hunting end dates
   mutate(winter_year = if_else(month(dod) %in% c(1:3), year(dod)-1, year(dod))) %>% 
   left_join(hunt_dates, by = join_by(winter_year == year)) %>% 
@@ -51,7 +50,6 @@ wolf_kills <- kill_data_rf %>%
 
 
 # reducing all raven GPS points to only extra-territorial (terr_bin = 1) --------
-# function that calculates distance of GPS points to territory
 
 raven_gps_oot <- read_csv("data/clean/all_raven_gps_clean29.csv") %>% 
   janitor::clean_names() %>% 
@@ -65,6 +63,13 @@ raven_gps_oot <- read_csv("data/clean/all_raven_gps_clean29.csv") %>%
   filter(dist2terr > 1000) %>% 
   # extracting date
   mutate(date = as.Date(study_local_timestamp)) %>% 
+  # filter time frame to winter study periods
+  filter((month(date) > 11 | (month(date) == 11 & day(date) >= 15)) &
+           (month(date) < 12 | (month(date) == 12 & day(date) <= 15)) |
+           (month(date) > 3 | (month(date) == 3 & day(date) >= 1)) &
+           (month(date) < 3 | (month(date) == 3 & day(date) <= 30))) %>% 
+  # filter to study years
+  filter(date <= "2024-3-31") %>% 
   # adding commute decisions to each GPS point
   left_join(commute_df %>% 
               dplyr::select(raven_id, date, terr_bin), 
@@ -137,7 +142,7 @@ for(i in 1:nrow(raven_gps_oot)){
       filter(kill_dist < 500) %>% 
       pull(geometry)
     if(length(tmp_used) > 0){
-      wolf_kills[wolf_kills$geometry %in% tmp_used,]$used_hunt <- TRUE
+      wolf_kills[wolf_kills$geometry %in% tmp_used,]$used <- TRUE
     }
   } else(raven_gps_oot[i, "dist2kill"] <- NA)
 }
