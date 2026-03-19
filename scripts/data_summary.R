@@ -97,7 +97,7 @@ ws_model_data %>%
             sd = sd(prop_leave))
 
 
-# proportion of days of territory visiting hunting
+# proportion of days off territory visiting hunting
 hunt_model_data %>% 
   group_by(raven_id) %>% 
   summarize(hunt = sum(hunt_bin),
