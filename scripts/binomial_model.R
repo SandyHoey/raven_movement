@@ -153,12 +153,14 @@ terr_coef %>%
                               "hunt_seasonTRUE" = "Hunting season (TRUE)", 
                               "final_take_bms1" = "Hunting biomass", 
                               "rf_active_killTRUE" = "Active kill (TRUE)")) +
-  theme_classic()
-ggsave("coef_terr.svg", device = "svg", path = "reports")
+  theme_classic() +
+  theme(axis.title = element_text(size = 13, face = "bold"),
+        axis.text.y = element_text(size = 10))
+ggsave("coef_terr.svg", units = "in", width = 9, height = 6.5, device = "svg", path = "figures")
 
 
 # bootstrapping predictions values from model simulations
-boot_terr <- boot_param_CI(nsim = 5, model = mod_terr, data = ws_model_data, pred_CI = FALSE,
+boot_terr <- boot_param_CI(nsim = 1000, model = mod_terr, data = ws_model_data, pred_CI = FALSE,
                            newData = expand.grid(rf_active_kill = c(TRUE, FALSE),
                                                  hunt_season = c(TRUE, FALSE),
                                                  final_take_bms1 = 0,
@@ -170,26 +172,27 @@ boot_terr <- boot_param_CI(nsim = 5, model = mod_terr, data = ws_model_data, pre
                                                  prop_group_left_terr = 0))
 
 
-
 # plotting predictions for wolf kills and hunting season
 (terr_plot <- boot_terr[[4]] %>% 
     # plotting
     ggplot(aes(x = rf_active_kill, y = mean, col = rf_active_kill,
                ymin = lower, ymax = upper)) +
     geom_point() +
-    facet_wrap(~study_period, 
-               labeller = labeller(study_period = c("TRUE" = "Hunting", "FALSE" = "No Hunting"))) +
+    facet_wrap(~hunt_season, 
+               labeller = labeller(hunt_season = c("TRUE" = "Hunting", "FALSE" = "No Hunting"))) +
     geom_errorbar(width = .1) +
     labs(x = "Active wolf kill",
-         y = "Predicted Probability")) +
+         y = "Predicted Probability") +
   # custom color/texture scheme
   scale_color_manual(values = c("TRUE" = "#006CD1", "FALSE" = "#DC3220")) +
   # removing legend
   guides(color = "none") +
   theme_classic() +
   # removing title
-  ggtitle("", subtitle = "")
-ggsave("pred_terr_hseason.svg", device = "svg", path = "reports")
+  ggtitle("", subtitle = "") +
+  # increase size of axis label
+  theme(axis.title = element_text(size = 13, face = "bold")))
+ggsave("pred_terr_hseason.svg", units = "in", width = 9, height = 6.5, device = "svg", path = "figures")
 
 
 # PART 2 of conditional model (visit Gardiner/other) ----------------------
@@ -271,12 +274,14 @@ hunt_coef %>%
                               "hunt_seasonTRUE" = "Hunting season (TRUE)", 
                               "final_take_bms1" = "Hunting biomass", 
                               "visit_killTRUE" = "Visit kill (TRUE)")) +
-  theme_classic()
-ggsave("coef_hunt.svg", device = "svg", path = "reports")
+  theme_classic() +
+  theme(axis.title = element_text(size = 13, face = "bold"),
+        axis.text.y = element_text(size = 10))
+ggsave("coef_hunt.svg", units = "in", width = 9, height = 6.5, device = "svg", path = "figures")
 
 
 # prediction for kill visit and hunting season
-boot_hunt <- boot_param_CI(nsim = 500, model = mod_hunt, data = hunt_model_data, pred_CI = TRUE, 
+boot_hunt <- boot_param_CI(nsim = 1000, model = mod_hunt, data = hunt_model_data, pred_CI = TRUE, 
                            newData = expand.grid(visit_kill = c(TRUE, FALSE),
                                                  hunt_season = c(TRUE, FALSE),
                                                  final_take_bms1 = 0,
@@ -303,5 +308,9 @@ boot_hunt <- boot_param_CI(nsim = 500, model = mod_hunt, data = hunt_model_data,
   # removing legend
   guides(color = "none") +
   # removing title
-  ggtitle("", subtitle = "")
-ggsave("pred_hunt_hseason.svg", device = "svg", path = "reports")
+  ggtitle("", subtitle = "") +
+  # make y axis full limits
+  scale_y_continuous(limits = c(0, 1)) +
+  # increase size of axis label
+  theme(axis.title = element_text(size = 13, face = "bold"))
+ggsave("pred_hunt_hseason.svg", units = "in", width = 9, height = 6.5, device = "svg", path = "figures")
