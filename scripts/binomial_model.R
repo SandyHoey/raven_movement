@@ -110,7 +110,7 @@ summary(mod_terr_noweather)
 
 AIC(mod_terr_bms)
 AIC(mod_terr_hseason)
-AIC(mod_terr) #best
+AIC(mod_terr) # best
 
 
 # bootstrap -------------------------------
@@ -160,7 +160,7 @@ ggsave("coef_terr.svg", units = "in", width = 9, height = 6.5, device = "svg", p
 
 
 # bootstrapping predictions values from model simulations
-boot_terr <- boot_param_CI(nsim = 1000, model = mod_terr, data = ws_model_data, pred_CI = FALSE,
+boot_terr <- boot_param_CI(nsim = 5000, model = mod_terr, data = ws_model_data, pred_CI = FALSE,
                            newData = expand.grid(rf_active_kill = c(TRUE, FALSE),
                                                  hunt_season = c(TRUE, FALSE),
                                                  final_take_bms1 = 0,
@@ -235,7 +235,7 @@ summary(mod_hunt)
 
 AIC(mod_hunt_bms)
 AIC(mod_hunt_hseason) 
-AIC(mod_hunt) #best
+AIC(mod_hunt) # best
 
 
 # bootstrap -------------------------------
@@ -281,7 +281,7 @@ ggsave("coef_hunt.svg", units = "in", width = 9, height = 6.5, device = "svg", p
 
 
 # prediction for kill visit and hunting season
-boot_hunt <- boot_param_CI(nsim = 1000, model = mod_hunt, data = hunt_model_data, pred_CI = TRUE, 
+boot_hunt <- boot_param_CI(nsim = 5000, model = mod_hunt, data = hunt_model_data, pred_CI = TRUE, 
                            newData = expand.grid(visit_kill = c(TRUE, FALSE),
                                                  hunt_season = c(TRUE, FALSE),
                                                  final_take_bms1 = 0,
