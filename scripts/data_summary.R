@@ -482,3 +482,25 @@ commute_day %>%
                      name = "Decision") 
 # saving plot so the lines are less pixelated
 ggsave("daily_decision.svg", device = "svg", path = "figures")
+
+
+# proportion of days visiting the dump
+dump_visits <- commute_df %>% 
+  # filter to days visiting hunting
+  filter(commute == 3) %>% 
+  # adding month column
+  mutate(day = day(date),
+         month = factor(month(date), levels = c("8", "9", "10", "11", "12", "1", "2", "3")),
+         year = year(date)) %>% 
+  #getting monthly proportion by raven
+  group_by(individual_local_identifier, month) %>% 
+  summarize(dump_visit = sum(dump),
+            n_days = n(),
+            prop_dump = sum(dump)/n()) %>% 
+  ungroup
+
+dump_visits %>% 
+  # plotting
+  ggplot(aes(x = month, y = prop_dump, group = 1)) +
+  stat_summary(fun = "mean", geom = "line")
+  
