@@ -502,5 +502,10 @@ dump_visits <- commute_df %>%
 dump_visits %>% 
   # plotting
   ggplot(aes(x = month, y = prop_dump, group = 1)) +
-  stat_summary(fun = "mean", geom = "line")
-  
+  stat_summary(fun = "mean", geom = "line", lwd = 1) +
+  # axis labels
+  labs(x = "Month", y = "Proportion of days visiting dump") +
+  theme_classic()
+ggsave("dump_visits.svg", units = "in", width = 6, height = 4, device = "svg", path = "figures")
+
+
