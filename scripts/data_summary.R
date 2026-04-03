@@ -6,6 +6,10 @@ library(ggpattern)
 
 
 # reading in data ---------------------------------------------------------
+# reading in full data
+data <- readr::read_csv("data/clean/commute_data.csv") %>% 
+  filter(!(n_point < 10 & terr_bin == F),
+         !(n_point < 10 & hunt_bin == F))
 
 ## dataset for part 1 of conditional model
 ws_model_data <- readr::read_csv("data/clean/commute_data.csv") %>% 
@@ -15,7 +19,7 @@ ws_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
            (month > 3 | (month == 3 & day >= 1)) &
            (month < 3 | (month == 3 & day <= 30))) %>% 
   # removing days when there is less than 5 GPS point
-  # unless the result is Jardine
+  # unless the result is leaving territory
   filter(!(n_point < 10 & terr_bin == F)) %>% 
   # only columns used in model
   dplyr::select(date, n_point, terr_bin, hunt_bin, raven_id, dump, rf_active_kill, rf_active_kill_3, 
@@ -66,7 +70,12 @@ length(unique(ws_model_data$raven_id))
 
 
 # decision days
-nrow(ws_model_data) #total days
+nrow(data) # including all winter
+mean(table(data$raven_id))
+sd(table(data$raven_id))
+max(table(data$raven_id))
+min(table(data$raven_id))
+nrow(ws_model_data) # for the model
 mean(table(ws_model_data$raven_id))
 sd(table(ws_model_data$raven_id))
 max(table(ws_model_data$raven_id))
@@ -77,20 +86,11 @@ min(table(ws_model_data$raven_id))
 range(ws_model_data$date)
 
 
-# number of GPS points per day
-hist(ws_model_data$n_point, 
-     breaks = 1:max(ws_model_data$n_point))
-mean(ws_model_data$n_point)
-sd(ws_model_data$n_point)
-
-
-
 # proportion of days leaving territory
-ws_model_data %>% 
+data %>% 
+  filter(!(n_point < 10 & terr_bin == F)) %>% 
   group_by(raven_id) %>% 
-  summarize(leave = sum(terr_bin),
-            n = n()) %>% 
-  mutate(prop_leave = leave/n) %>% 
+  summarize(prop_leave = sum(terr_bin)/n()) %>% 
   summarize(mean = mean(prop_leave),
             min = min(prop_leave),
             max = max(prop_leave),
@@ -98,11 +98,11 @@ ws_model_data %>%
 
 
 # proportion of days off territory visiting hunting
-hunt_model_data %>% 
+data %>% 
+  filter(!(n_point < 10 & hunt_bin == F),
+         terr_bin == TRUE) %>% 
   group_by(raven_id) %>% 
-  summarize(hunt = sum(hunt_bin),
-            n = n()) %>% 
-  mutate(prop_hunt = hunt/n) %>% 
+  summarize(prop_hunt = sum(hunt_bin)/n()) %>% 
   summarize(mean = mean(prop_hunt),
             min = min(prop_hunt),
             max = max(prop_hunt),
@@ -128,6 +128,52 @@ ws_model_data %>%
             min = min(dist2nentrance),
             sd = sd(dist2nentrance))
 
+
+# percent of trips to Gardiner included visit to the dump
+data %>% 
+  filter(hunt_bin == TRUE) %>% 
+  summarise(sum(dump)/n()) 
+  
+
+# average percent trip to hunting included a trip to the dump
+data %>% 
+  filter(hunt_bin == TRUE) %>% 
+  group_by(raven_id) %>% 
+  summarize(no_visit = sum(dump == FALSE),
+            visit = sum(dump == TRUE)) %>% 
+  mutate(prop_visit_dump = visit/(visit + no_visit)) %>% 
+  summarize(mean = mean(prop_visit_dump),
+            min = min(prop_visit_dump),
+            max = max(prop_visit_dump),
+            sd = sd(prop_visit_dump))
+
+
+# average percent of trips to Gardiner included visit to the dump (hunting seasons)
+data %>% 
+  filter(
+    # only during the hunting season
+    hunt_season == TRUE,
+    # only on trips to Gardiner
+    hunt_bin == TRUE) %>% 
+  summarise(sum(dump)/n())
+
+
+# average percent trip to dump (hunting season)
+data %>% 
+  filter(
+    # only during the hunting season
+    hunt_season == TRUE,
+    # only on trips to Gardiner
+    hunt_bin == TRUE) %>% 
+  group_by(raven_id) %>% 
+  summarise(no_visit = sum(dump == F),
+            visit = sum(dump == T)) %>% 
+  mutate(prop_visit_dump = visit/(visit + no_visit),
+         season = "hunt") %>% 
+  summarize(mean = mean(prop_visit_dump),
+            min = min(prop_visit_dump),
+            max = max(prop_visit_dump),
+            sd = sd(prop_visit_dump))
 
 
 # wolf kills available on territory
@@ -169,61 +215,6 @@ hunt_model_data %>%
             max = max(prop_hunt),
             min = min(prop_hunt),
             sd = sd(prop_hunt))
-
-
-
-# percent of trips to Gardiner included visit to the dump
-ws_model_data %>% 
-  filter(hunt_bin == TRUE) %>% 
-  group_by(dump) %>% 
-  summarise(n())
-161/(161+845)
-# 16%
-
-
-# average percent trip to hunting included a trip to the dump
-ws_model_data %>% 
-  filter(hunt_bin == TRUE) %>% 
-  group_by(raven_id) %>% 
-  summarize(no_visit = sum(dump == FALSE),
-            visit = sum(dump == TRUE)) %>% 
-  mutate(prop_visit_dump = visit/(visit + no_visit)) %>% 
-  summarize(mean = mean(prop_visit_dump),
-            min = min(prop_visit_dump),
-            max = max(prop_visit_dump),
-            sd = sd(prop_visit_dump))
-
-
-# average percent of trips to Gardiner included visit to the dump (hunting seasons)
-ws_model_data %>% 
-  filter(
-    # only during the hunting season
-    hunt_season == TRUE,
-    # only on trips to Gardiner
-    hunt_bin == TRUE) %>% 
-  group_by(dump) %>% 
-  summarise(n())
-264/(264+710)
-# 27.1%
-
-
-# average percent trip to dump (hunting season)
-ws_model_data %>% 
-  filter(
-    # only during the hunting season
-    hunt_season == TRUE,
-    # only on trips to Gardiner
-    hunt_bin == TRUE) %>% 
-  group_by(raven_id) %>% 
-  summarise(no_visit = sum(dump == F),
-            visit = sum(dump == T)) %>% 
-  mutate(prop_visit_dump = visit/(visit + no_visit),
-         season = "hunt") %>% 
-  summarize(mean = mean(prop_visit_dump),
-            min = min(prop_visit_dump),
-            max = max(prop_visit_dump),
-            sd = sd(prop_visit_dump))
-
 
 
 # daily proportion visiting Gardiner based on daily temperature
@@ -291,17 +282,76 @@ hunt_model_data %>%
   hist(main = "proportion of territorials that visited hunting")
 
 
-# table showing raven decisions
-(decision_table <- ws_model_data %>% 
-    group_by(raven_id) %>% 
-    summarize(terr = sum(terr_bin == FALSE),
-              other = sum(terr_bin == TRUE & hunt_bin == FALSE),
-              hunt = sum(hunt_bin == TRUE)) %>% 
-    # adding column for total sample size for each raven
-    mutate(n = hunt + other + terr))
+# stacked barplot (all winter) --------------------------------------------
+# table showing raven decisions during winter studies
+decision_table <- data %>% 
+  group_by(raven_id) %>% 
+  summarize(terr = sum(terr_bin == FALSE),
+            other = sum(terr_bin == TRUE & hunt_bin == FALSE),
+            hunt = sum(hunt_bin == TRUE)) %>% 
+  # adding column for total sample size for each raven
+  mutate(n = hunt + other + terr)
 
 # stacked barplot showing raven decisions including wolf kill presence
-# table showing raven decisions
+# data from all winter
+data %>% 
+  group_by(raven_id) %>% 
+  summarize(terr = sum(terr_bin == FALSE),
+            other = sum(terr_bin == TRUE & hunt_bin == FALSE),
+            hunt = sum(hunt_bin == TRUE)) %>% 
+  # adding column for total sample size for each raven
+  mutate(n = terr + other + hunt) %>% 
+  # switching to long format
+  tidyr::pivot_longer(cols = c(hunt, other, terr),
+                      names_to = "decision") %>%  
+  # setting plotting order
+  mutate(decision = factor(decision, levels = rev(c("terr", "other", "hunt")))) %>% 
+  # setting graphing data
+  ggplot(aes(x = value, y = raven_id, fill = decision)) +
+  # creating proportion stacked barplot
+  geom_bar(position = "fill", stat = "identity",
+                   colour = "black", linewidth = 0.2) +
+  # changing labels of plot
+  labs(title = "  ",
+       x = "Proportion of days",
+       y = "Raven ID",
+       fill = "Movement\ndecision") +
+  # custom color/texture scheme
+  scale_fill_manual(values = c(terr = "#E69F00",
+                               other = "#56B4E9",
+                               hunt = "#0072B2"),
+                    # changing name of legend items
+                    labels = c("Hunting", "Other", "Territory")) +
+  # removing pattern from fill legend and changing pattern legend background
+  guides(fill = guide_legend(override.aes = list(pattern = "none")),
+         pattern = guide_legend(override.aes = list(fill = "white"))) +
+  # removing space between axis and barplot
+  scale_x_continuous(expand = c(0, 0)) +
+  # adding sample size to right axis
+  geom_text(data = decision_table, aes(x = 1.01, y = raven_id, label = n),
+            inherit.aes = FALSE, hjust = 0, size = 3) + 
+  # adding label for sample size column
+  annotate("text", x = 1, y = Inf, label = "Sample size",
+           hjust = 0, vjust = -0.3, size = 3) +
+  # adjusting plot axis to show the extra text
+  coord_cartesian(xlim = c(0, 1.1), clip = "off") +
+  theme_classic() 
+ggsave("decision_barplot.svg", units = "in", width = 8, height = 5.5, device = "svg", path = "figures")
+
+
+# stacked barplot (WS) ----------------------------------------------------
+
+# table showing raven decisions during winter studies
+ws_decision_table <- ws_model_data %>% 
+  group_by(raven_id) %>% 
+  summarize(terr = sum(terr_bin == FALSE),
+            other = sum(terr_bin == TRUE & hunt_bin == FALSE),
+            hunt = sum(hunt_bin == TRUE)) %>% 
+  # adding column for total sample size for each raven
+  mutate(n = hunt + other + terr)
+
+# stacked barplot showing raven decisions including wolf kill presence
+# only during winter study
 ws_model_data %>% 
   group_by(raven_id) %>% 
   summarize(terr_kill = sum(terr_bin == FALSE & rf_active_kill == TRUE),
@@ -358,7 +408,7 @@ ws_model_data %>%
   # removing space between axis and barplot
   scale_x_continuous(expand = c(0, 0)) +
   # adding sample size to right axis
-  geom_text(data = decision_table, aes(x = 1.01, y = raven_id, label = n),
+  geom_text(data = ws_decision_table, aes(x = 1.01, y = raven_id, label = n),
             inherit.aes = FALSE, hjust = 0, size = 3) + 
   # adding label for sample size column
   annotate("text", x = 1, y = Inf, label = "Sample size",
@@ -366,9 +416,7 @@ ws_model_data %>%
   # adjusting plot axis to show the extra text
   coord_cartesian(xlim = c(0, 1.1), clip = "off") +
   theme_classic() 
-ggsave("decision_barplot.svg", units = "in", width = 8, height = 5.5, device = "svg", path = "figures")
-
-
+ggsave("ws_decision_barplot.svg", units = "in", width = 8, height = 5.5, device = "svg", path = "figures")
 
 
 # decisions between months ------------------------------------------------
@@ -376,15 +424,16 @@ ggsave("decision_barplot.svg", units = "in", width = 8, height = 5.5, device = "
 source("scripts/commute_decision.R")
 
 # calculating the percentage of points in each commute category by individual and month
-commute_month <- commute_df %>% 
+commute_month <- commute_df  %>% 
   # adding month column
-  mutate(month = month(date)) %>% 
+  mutate(month = month(date),
+         winter_year = if_else(month(date) %in% c(11,12), year(date), year(date) - 1)) %>% 
   # changing name of ID column
   rename(raven_id = individual_local_identifier) %>% 
-  # removing days when there are < 5 GPS points
-  filter(n_point < 5) %>% 
+  # removing days when there are < 10 GPS points
+  filter(n_point < 10) %>% 
   # getting proportion travel decisions by bird
-  group_by(raven_id, month) %>% 
+  group_by(raven_id, month, winter_year) %>% 
   summarize(territory = sum(commute == 1)/n(),
             other = sum(commute == 2)/n(),
             hunting = sum(commute == 3)/n()) %>% 
@@ -421,12 +470,12 @@ commute_month %>%
                                 other = "#56B4E9",
                                 hunting = "#0072B2")) 
 # saving plot so the lines are less pixelated
-ggsave("monthly_decision.svg", units = "in", width = 9, height = 7, device = "svg", path = "figures")
+ggsave("monthly_decision.svg", units = "in", width = 9, height = 6, device = "svg", path = "figures")
 
 
 
 # calculating the proportion individuals making each commute decision by days in October
-commute_day <- commute_df %>% 
+commute_day <- commute_df  %>% 
   filter(month(date) %in% 8:11) %>% 
   # adding month column
   mutate(day = day(date),
@@ -434,8 +483,8 @@ commute_day <- commute_df %>%
          year = year(date)) %>% 
   # changing name of ID column
   rename(raven_id = individual_local_identifier) %>% 
-  # removing days when there are < 5 GPS points
-  filter(n_point < 5) %>% 
+  # removing days when there are < 10 GPS points
+  filter(n_point < 10) %>% 
   # getting proportion travel decisions by bird
   group_by(year, month, day) %>% 
   summarize(territory = sum(commute == 1)/n(),
@@ -479,21 +528,27 @@ commute_day %>%
   scale_color_manual(values = c(territory = "#E69F00",
                                 other = "#56B4E9",
                                 hunting = "#0072B2"),
-                     name = "Decision") 
+                     name = "Decision",
+                     labels = c("Hunting", "Other", "Territory")) 
 # saving plot so the lines are less pixelated
-ggsave("daily_decision.svg", device = "svg", path = "figures")
+ggsave("daily_decision.svg", units = "in", width = 8, height = 6, device = "svg", path = "figures")
 
 
 # proportion of days visiting the dump
 dump_visits <- commute_df %>% 
-  # filter to days visiting hunting
-  filter(commute == 3) %>% 
   # adding month column
   mutate(day = day(date),
          month = factor(month(date), levels = c("8", "9", "10", "11", "12", "1", "2", "3")),
          year = year(date)) %>% 
+  # filter to days visiting hunting
+  filter(commute == 3,
+         month != 8) %>% 
+  # changing name of ID column
+  rename(raven_id = individual_local_identifier) %>% 
+  # removing days when there are < 10 GPS points
+  filter(n_point < 10) %>% 
   #getting monthly proportion by raven
-  group_by(individual_local_identifier, month) %>% 
+  group_by(raven_id, month) %>% 
   summarize(dump_visit = sum(dump),
             n_days = n(),
             prop_dump = sum(dump)/n()) %>% 
