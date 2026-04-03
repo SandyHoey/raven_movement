@@ -51,7 +51,6 @@ hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
 
 # model setup -------------------------------------------------------------
 library(lme4)
-library(DHARMa)
 library(ggplot2)
 library(myFunctions) # custom bootstrap function
 
@@ -68,30 +67,10 @@ cntrl <- glmerControl(optimizer = "bobyqa", tol = 1e-4, optCtrl=list(maxfun=1000
 # 1 = left territory
 # 0 = stayed on territory
 
-# model with biomass number
-mod_terr_bms <- glmer(terr_bin ~ (1|raven_id) + rf_active_kill * final_take_bms1 + rf_avg_terr_kill_density + 
-                        dist2nentrance + study_period * temp_max + snow_depth + prop_group_left_terr,
-                      data = ws_model_data,
-                      family = "binomial",
-                      nAGQ = 40,
-                      control = cntrl)
-summary(mod_terr_bms)
-
-
-# model with hunting season (changes result for active_kill)
-# including the interaction effect messes with active_kill because of high error with interaction term
-mod_terr_hseason <- glmer(terr_bin ~ (1|raven_id) + rf_active_kill + hunt_season + rf_avg_terr_kill_density + 
-                            dist2nentrance + study_period * temp_max + snow_depth + prop_group_left_terr,
-                          data = ws_model_data,
-                          family = "binomial",
-                          nAGQ = 40,
-                          control = cntrl)
-summary(mod_terr_hseason)
-
 
 # model with all the hunting covariates
 mod_terr <- glmer(terr_bin ~ (1|raven_id) + rf_active_kill * final_take_bms1 + hunt_season + rf_avg_terr_kill_density + 
-                    dist2nentrance + study_period * temp_max + snow_depth + prop_group_left_terr,
+                    dist2nentrance + study_period * snow_depth + temp_max + prop_group_left_terr,
                   data = ws_model_data,
                   family = "binomial",
                   nAGQ = 40,
@@ -107,10 +86,6 @@ mod_terr_noweather <- glmer(terr_bin ~ (1|raven_id) + rf_active_kill * final_tak
                             nAGQ = 40,
                             control = cntrl)
 summary(mod_terr_noweather)
-
-AIC(mod_terr_bms)
-AIC(mod_terr_hseason)
-AIC(mod_terr) # best
 
 
 # bootstrap -------------------------------
@@ -204,25 +179,6 @@ ggsave("pred_terr_hseason.svg", units = "in", width = 9, height = 6.5, device = 
 # 1 = visited hunting region
 # 0 = visited other place
 
-# model with biomass number
-mod_hunt_bms <- glmer(hunt_bin ~ (1|raven_id) + visit_kill * final_take_bms1 + dist2nentrance + 
-                        prop_group_visit_hunt + temp_max + snow_depth,
-                      data = hunt_model_data,
-                      family = "binomial",
-                      nAGQ = 40,
-                      control = cntrl)
-summary(mod_hunt_bms)
-
-
-# model with hunting season (changes study period, p value and effect direction)
-mod_hunt_hseason <- glmer(hunt_bin ~ (1|raven_id) + visit_kill + hunt_season + dist2nentrance + 
-                            prop_group_visit_hunt + temp_max + snow_depth,
-                          data = hunt_model_data,
-                          family = "binomial",
-                          nAGQ = 40,
-                          control = cntrl)
-summary(mod_hunt_hseason)
-
 
 # model with all hunting covariates
 mod_hunt <- glmer(hunt_bin ~ (1|raven_id) + visit_kill * final_take_bms1 + hunt_season + dist2nentrance + 
@@ -233,9 +189,6 @@ mod_hunt <- glmer(hunt_bin ~ (1|raven_id) + visit_kill * final_take_bms1 + hunt_
                   control = cntrl)
 summary(mod_hunt)
 
-AIC(mod_hunt_bms)
-AIC(mod_hunt_hseason) 
-AIC(mod_hunt) # best
 
 
 # bootstrap -------------------------------
