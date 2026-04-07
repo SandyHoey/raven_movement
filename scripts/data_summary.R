@@ -477,11 +477,11 @@ ggsave("monthly_decision.svg", units = "in", width = 9, height = 6, device = "sv
 
 # calculating the proportion individuals making each commute decision by days in October
 commute_day <- commute_df  %>% 
-  filter(month(date) %in% 8:11) %>% 
-  # adding month column
+  # adding date columns
   mutate(day = day(date),
-         month = month(date),
+         month = factor(month(date), levels = c(8, 9, 10, 11, 12, 1, 2, 3)),
          year = year(date)) %>% 
+  filter(month %in% c(8:12, 1:3)) %>% 
   # changing name of ID column
   rename(raven_id = individual_local_identifier) %>% 
   # removing days when there are < 10 GPS points
@@ -516,7 +516,11 @@ commute_day %>%
              labeller = labeller(month = c("8" = "August",
                                            "9" = "September",
                                            "10" = "October",
-                                           "11" = "November"))) + 
+                                           "11" = "November",
+                                           "12" = "December",
+                                           "1" = "January",
+                                           "2" = "February",
+                                           "3" = "March"))) + 
   # changing labels
   labs(y = "Porportion of ravens",
        x = "Day",
