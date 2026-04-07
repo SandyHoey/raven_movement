@@ -4,6 +4,8 @@ library(dplyr)
 
 ## dataset for part 1 of conditional model
 winter_data <- readr::read_csv("data/clean/commute_data.csv") %>% 
+  # only winter (nov - mar)
+  filter(lubridate::month(date) %in% c(11:12, 1:3)) %>% 
   # removing days when there is less than 10 GPS point
   # unless the result is Jardine
   filter(!(n_point < 10 & terr_bin == F)) %>% 
