@@ -468,7 +468,8 @@ commute_month %>%
   # custom color/texture scheme
   scale_color_manual(values = c(territory = "#E69F00",
                                 other = "#56B4E9",
-                                hunting = "#0072B2")) 
+                                hunting = "#0072B2"),
+                     labels = c("Hunting", "Other", "Territory")) 
 # saving plot so the lines are less pixelated
 ggsave("monthly_decision.svg", units = "in", width = 9, height = 6, device = "svg", path = "figures")
 
