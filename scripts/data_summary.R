@@ -562,7 +562,8 @@ dump_visits %>%
   ggplot(aes(x = hseason_blocks, y = prop_dump)) +
   geom_boxplot() +
   # axis labels
-  labs(y = "Proportion of days visiting dump") +
+  labs(x = "",
+       y = "Proportion of days visiting dump") +
   theme_classic()
 ggsave("dump_visits.svg", units = "in", width = 6, height = 4, device = "svg", path = "figures")
 
