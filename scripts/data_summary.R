@@ -540,20 +540,18 @@ ggsave("daily_decision.svg", units = "in", width = 8, height = 6, device = "svg"
 
 
 # proportion of days visiting the dump
-dump_visits <- commute_df %>% 
-  # adding month column
-  mutate(day = day(date),
-         month = factor(month(date), levels = c("8", "9", "10", "11", "12", "1", "2", "3")),
-         year = year(date)) %>% 
+dump_visits <- data %>% 
   # filter to days visiting hunting
-  filter(commute == 3,
+  filter(hunt_bin == TRUE,
          month != 8) %>% 
-  # changing name of ID column
-  rename(raven_id = individual_local_identifier) %>% 
-  # removing days when there are < 10 GPS points
-  filter(n_point < 10) %>% 
-  #getting monthly proportion by raven
-  group_by(raven_id, month) %>% 
+  # creating bins of time based on hunting periods
+  mutate(hseason_blocks = factor(if_else(hunt_season == F & month %in% 8:10, "Pre-hunt", # all days before MTFWP season
+                                  if_else(hunt_season == F, "Mid-winter", # all other days not during hunting season, which is the mid winter break
+                                          if_else(hunt_season == T & month %in% 10:12, "MTFWP hunt", # all days during MTFWP season
+                                                  if_else(hunt_season == T, "Bison hunt", NA)))),
+                                 levels = c("Pre-hunt", "MTFWP hunt", "Mid-winter", "Bison hunt"))) %>% # all other hunting season days, wihch is the bison hunt
+  # getting monthly proportion by raven
+  group_by(raven_id, hseason_blocks) %>% 
   summarize(dump_visit = sum(dump),
             n_days = n(),
             prop_dump = sum(dump)/n()) %>% 
@@ -561,10 +559,10 @@ dump_visits <- commute_df %>%
 
 dump_visits %>% 
   # plotting
-  ggplot(aes(x = month, y = prop_dump, group = 1)) +
-  stat_summary(fun = "mean", geom = "line", lwd = 1) +
+  ggplot(aes(x = hseason_blocks, y = prop_dump)) +
+  geom_boxplot() +
   # axis labels
-  labs(x = "Month", y = "Proportion of days visiting dump") +
+  labs(y = "Proportion of days visiting dump") +
   theme_classic()
 ggsave("dump_visits.svg", units = "in", width = 6, height = 4, device = "svg", path = "figures")
 
