@@ -298,6 +298,55 @@ commute_df <- commute_df %>%
 
 
 
+# Active kill visit by GPS point ------------------------------------------
+# adding raven territory size
+source("scripts/home_range_mcp.R")
+
+# adding information about available kills to raven GPS points
+gps_raven <- readr::read_csv("data/clean/all_raven_gps_clean29.csv") %>% 
+  janitor::clean_names() %>% 
+  # only useful columns
+  dplyr::select(individual_local_identifier, utm_easting, utm_northing, study_local_timestamp) %>%
+  # extracting date
+  mutate(date = as.Date(study_local_timestamp)) %>% 
+  # adding commute data to GPS points
+  left_join(commute_df %>% 
+              # only columns useful for this
+              dplyr::select(raven_id, date), 
+            by = join_by(individual_local_identifier == raven_id, 
+                                                date))
+
+
+# IGNORE WARNING SINCE THERE ARE MULTIPLE GPS POINTS PER DAY
+commute_df <- rf_in_terr_kill_list %>% 
+  # adding column with list name to each df
+  purrr::imap(~ mutate(.x, raven_id = .y)) %>% 
+  # list to df
+  do.call("rbind", .) %>% 
+  # making the kill end dates match the availability
+  mutate(kill_end_date = kill_end_date + 1) %>%
+  # joining kill location with raven GPS points
+  inner_join(gps_raven, by = c("raven_id" = "individual_local_identifier")) %>%
+  # only keeping GPS points with active kill information
+  filter(date >= kill_start_date, date <= kill_end_date) %>%
+  # calculating distance to active kills
+  mutate(dist_m = sqrt((utm_easting  - easting)^2 +
+                         (utm_northing - northing)^2)) %>%
+  # only keeping the closest GPS point per day
+  group_by(kill_id, date) %>% 
+  filter(dist_m == min(dist_m)) %>% 
+  ungroup %>% 
+  # creating column to define a visited kill
+  mutate(visit_500 = if_else(dist_m < 500, TRUE, FALSE),
+         visit_1000 = if_else(dist_m < 1000, TRUE, FALSE)) %>% 
+  # keeping only relevant columns
+  dplyr::select(raven_id, visit_500, visit_1000, date) %>% 
+  # joining to main dataframe
+  right_join(commute_df, by = join_by(raven_id, date)) %>% 
+  # making empty values FALSE
+  mutate(visit_500 = tidyr::replace_na(visit_500, FALSE),
+         visit_1000 = tidyr::replace_na(visit_1000, FALSE))
+
 # Outside territory kill visit --------------------------------------------
 ## binary covariate for if the raven visited a carcass outside of its territory
 source("scripts/wolf_kill_visits.R")
