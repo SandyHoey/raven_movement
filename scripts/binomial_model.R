@@ -13,7 +13,7 @@ ws_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
   # unless the result is Jardine
   filter(!(n_point < 10 & terr_bin == F)) %>% 
   # only columns used in model
-  dplyr::select(terr_bin, raven_id, rf_active_kill, visit_500, visit_10000,
+  dplyr::select(terr_bin, raven_id, rf_active_kill, visit_500, visit_1000,
                 rf_active_kill_3, final_take_bms, final_take_bms1, final_take, 
                 hunt_season, rf_avg_terr_kill_density, dist2nentrance, 
                 study_period, temp_max, snow_depth, prop_group_left_terr) %>% 
