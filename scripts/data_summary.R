@@ -539,6 +539,60 @@ commute_day %>%
 ggsave("daily_decision.svg", units = "in", width = 8, height = 6, device = "svg", path = "figures")
 
 
+# bison area only ---------------------------------------------------------
+
+# calculating the percentage of points in each commute category by individual and month
+commute_bison <- commute_df  %>% 
+  # adding month column
+  mutate(month = month(date),
+         winter_year = if_else(month(date) %in% c(11,12), year(date), year(date) - 1)) %>% 
+  # changing name of ID column
+  rename(raven_id = individual_local_identifier) %>% 
+  # removing days when there are < 10 GPS points
+  filter(n_point < 10) %>% 
+  # getting proportion travel decisions by bird
+  group_by(raven_id, month, winter_year) %>% 
+  summarize(territory = sum(commute == 1)/n(),
+            hunting = sum(bison_visit == TRUE)/n(),
+            other = 1 - territory - hunting) %>% 
+  ungroup
+
+# plotting the average proportion of each commute category by month
+commute_bison %>% 
+  # long data
+  pivot_longer(cols = c(territory, other, hunting), 
+               names_to = "commute", values_to = "prop") %>% 
+  # creating averages per month with sd bars
+  group_by(month, commute) %>% 
+  summarize(mean_prop = mean(prop), 
+            sd = sd(prop)) %>%
+  ungroup %>% 
+  # ordering months
+  mutate(month = fct_relevel(as.character(month), c("8", "9", "10", "11", "12", "1", "2", "3"))) %>% 
+  # plotting
+  ggplot(aes(x = month, y = mean_prop, 
+             group = commute, col = commute,
+             ymin = mean_prop - sd, ymax = mean_prop + sd)) +
+  geom_line(lwd = 1) +
+  ggborderline::geom_borderline(lwd = 1.1, bordercolor = "black" ) +
+  # changing labels
+  labs(y = "Porportion of days",
+       x = "Month",
+       color = "Decision") +
+  # setting aesthetic theme
+  theme_classic() +
+  # setting y limits
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 1)) +
+  # custom color/texture scheme
+  scale_color_manual(values = c(territory = "#E69F00",
+                                other = "#56B4E9",
+                                hunting = "#0072B2"),
+                     labels = c("Bison area", "Other", "Territory")) 
+ggsave("monthly_bison.svg", units = "in", width = 8, height = 6, device = "svg", path = "figures")
+
+
+
+# dump visits -------------------------------------------------------------
 # proportion of days visiting the dump
 dump_visits <- data %>% 
   # filter to days visiting hunting
