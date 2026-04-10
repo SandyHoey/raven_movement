@@ -82,7 +82,7 @@ commute_list <- tapply(dist2poly, INDEX = dist2poly$individual_local_identifier,
        FUN = function(x){
          
          # pulling unique dates
-         dates <- unique(as.Date(x$study_local_timestamp))
+         dates <- unique(as.Date(x$study_local_timestamp, tz = "MST"))
          
          tmp_date_df <- data.frame(ID = x[1, "individual_local_identifier"], 
                                    winter_year = if_else(month(dates) %in% c(1:3), year(dates)-1, year(dates)),
@@ -113,6 +113,14 @@ commute_list <- tapply(dist2poly, INDEX = dist2poly$individual_local_identifier,
                tmp_date_df[d,"commute"] <- 1
              }
            }
+           
+           # adding raw decisions for both MTFWP and bison regions
+           if(any(tmp_dayta[,"dist2fwp"] == 0)){
+             tmp_date_df[d, "mtfwp_visit"] <- TRUE
+           } else(tmp_date_df[d, "mtfwp_visit"] <- FALSE)
+           if(any(tmp_dayta[,"dist2bison"] == 0)){
+             tmp_date_df[d, "bison_visit"] <- TRUE 
+           } else(tmp_date_df[d, "bison_visit"] <- FALSE)
            
            # adding the number of points that day
            tmp_date_df[d, "n_point"] <- nrow(tmp_dayta)

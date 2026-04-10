@@ -82,13 +82,13 @@ trans_gps <- do.call("rbind", tapply(trans_gps, INDEX = trans_gps$individual_loc
                           
                           # has only an end date
                           if(is.na(ind$`start date`) & !is.na(ind$`leave date`)){
-                            tmp <- x[as.Date(x$study_local_timestamp) < ym(ind$`leave date`),]
+                            tmp <- x[as.Date(x$study_local_timestamp, tz = "MST") < ym(ind$`leave date`),]
                             return(tmp)
                           }
                           
                           # has only a start date
                           if(!is.na(ind$`start date`) & is.na(ind$`leave date`)){
-                            tmp <- x[as.Date(x$study_local_timestamp) > ym(ind$`start date`),]
+                            tmp <- x[as.Date(x$study_local_timestamp, tz = "MST") > ym(ind$`start date`),]
                             return(tmp)
                           }
                           

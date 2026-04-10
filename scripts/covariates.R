@@ -258,7 +258,7 @@ active_kill_fctn <- function(data, days_since, start, end){
                                  tmp_gps <- x[i,]
                                  
                                  # calculating time difference in days to start of carcass (0 = kill on that day) for all kills in territory
-                                 time_diff_start <- difftime(as.Date(tmp_gps$date),
+                                 time_diff_start <- difftime(as.Date(tmp_gps$date, tz = "MST"),
                                                              tmp_kills %>% 
                                                                pull(start), 
                                                              units = "days") %>% as.numeric()
@@ -266,7 +266,7 @@ active_kill_fctn <- function(data, days_since, start, end){
                                  # calculating time difference in days to end of carcass for all kills in territory
                                   # for wolf project database this is the same as start 
                                   # for RF predictive, this is the cluster end date
-                                 time_diff_end <- difftime(as.Date(tmp_gps$date),
+                                 time_diff_end <- difftime(as.Date(tmp_gps$date, tz = "MST"),
                                                            tmp_kills %>% 
                                                              pull(end), 
                                                            units = "days") %>% as.numeric()
@@ -308,7 +308,7 @@ gps_raven <- readr::read_csv("data/clean/all_raven_gps_clean29.csv") %>%
   # only useful columns
   dplyr::select(individual_local_identifier, utm_easting, utm_northing, study_local_timestamp) %>%
   # extracting date
-  mutate(date = as.Date(study_local_timestamp)) %>% 
+  mutate(date = as.Date(study_local_timestamp, tz = "MST")) %>% 
   # adding commute data to GPS points
   left_join(commute_df %>% 
               # only columns useful for this
