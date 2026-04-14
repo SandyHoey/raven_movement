@@ -441,6 +441,8 @@ commute_month <- commute_df  %>%
 
 # plotting the average proportion of each commute category by month
 commute_month %>% 
+  # only aug-mar
+  filter(month != 7) %>% 
   # long data
   pivot_longer(cols = c(territory, other, hunting), 
                names_to = "commute", values_to = "prop") %>% 
@@ -465,13 +467,21 @@ commute_month %>%
   theme_classic() +
   # setting y limits
   scale_y_continuous(expand = c(0, 0), limits = c(0, 1)) +
+  # getting x axis tick closer to 0
+  scale_x_discrete(expand = expansion(add = c(0.1, 0))) +
   # custom color/texture scheme
   scale_color_manual(values = c(territory = "#E69F00",
                                 other = "#56B4E9",
                                 hunting = "#0072B2"),
-                     labels = c("Hunting", "Other", "Territory")) 
+                     labels = c("Hunting", "Other", "Territory")) +
+  theme(legend.position = "top",
+        legend.justification = "right",
+        axis.title = element_text(size = 16),
+        axis.text = element_text(size = 13),
+        legend.title = element_text(size = 16),
+        legend.text = element_text(size = 14))
 # saving plot so the lines are less pixelated
-ggsave("monthly_decision.svg", units = "in", width = 9, height = 6, device = "svg", path = "figures")
+ggsave("monthly_decision.svg", units = "in", width = 7, height = 6, device = "svg", path = "figures")
 
 
 
@@ -495,6 +505,8 @@ commute_day <- commute_df  %>%
 
 # plotting the proportion of individual making a commute category by days in October
 commute_day %>% 
+  # only Sep-Nov
+  filter(month %in% 8:11) %>% 
   # long data
   pivot_longer(cols = c(territory, other, hunting), 
                names_to = "commute", values_to = "prop") %>% 
@@ -534,7 +546,10 @@ commute_day %>%
                                 other = "#56B4E9",
                                 hunting = "#0072B2"),
                      name = "Decision",
-                     labels = c("Hunting", "Other", "Territory")) 
+                     labels = c("Hunting", "Other", "Territory")) +
+  theme(axis.title = element_text(size = 16),
+        axis.text = element_text(size = 13),
+        strip.text = element_text(size = 15))
 # saving plot so the lines are less pixelated
 ggsave("daily_decision.svg", units = "in", width = 8, height = 6, device = "svg", path = "figures")
 
