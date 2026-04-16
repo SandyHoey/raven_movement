@@ -78,6 +78,17 @@ mod_terr <- glmer(terr_bin ~ (1|raven_id) + rf_active_kill * final_take_bms1 + h
                   control = cntrl)
 summary(mod_terr)
 
+
+# model with wolf kill visits in terr
+mod_terr <- glmer(terr_bin ~ (1|raven_id) + visit_500 * final_take_bms1 + hunt_season + rf_avg_terr_kill_density + 
+                    dist2nentrance + study_period * snow_depth + temp_max + prop_group_left_terr,
+                  data = ws_model_data,
+                  family = "binomial",
+                  nAGQ = 40,
+                  control = cntrl)
+summary(mod_terr)
+
+
 # modeling without weather covariates
 mod_terr_noweather <- glmer(terr_bin ~ (1|raven_id) + rf_active_kill * final_take_bms1 + hunt_season + 
                               rf_avg_terr_kill_density + dist2nentrance + study_period + prop_group_left_terr,
