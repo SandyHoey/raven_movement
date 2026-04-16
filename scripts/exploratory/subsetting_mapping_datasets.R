@@ -40,7 +40,7 @@ commute_df_intermediate <- read_csv("data/clean/commute_data.csv") %>%
 # used to identify the hunting area used by ravens 
 
 source("scripts/dist_to_gardiner.R")
-rm(list = setdiff(ls(), c("terr_fw_gps", "sunlight")))
+rm(list = setdiff(ls(), c("mcp90", "gps_in_mcp", "sunlight", "terr_fw_gps", "sunlight")))
 
 # reading in raven GPS data
 terr_fw_gps <- terr_fw_gps %>% 

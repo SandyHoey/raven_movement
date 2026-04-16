@@ -60,9 +60,6 @@ ws_model_data <- readxl::read_excel("data/raw/ravens_banding_tagging.xlsx", shee
          raven_id = tag_id)
 
 
-
-
-
 # summary data ------------------------------------------------------------
 
 # total number of ravens included in study
@@ -315,7 +312,7 @@ data %>%
   labs(title = "  ",
        x = "Proportion of days",
        y = "Raven ID",
-       fill = "Movement\ndecision") +
+       fill = "Decision") +
   # custom color/texture scheme
   scale_fill_manual(values = c(terr = "#E69F00",
                                other = "#56B4E9",
@@ -388,7 +385,7 @@ ws_model_data %>%
   labs(title = "  ",
        x = "Proportion of days",
        y = "Raven ID",
-       fill = "Movement\ndecision") +
+       fill = "Decision") +
   scale_pattern_manual(values = c("terr_kill" = "stripe", 
                                   "visit_kill" = "circle", 
                                   "no_kill" = "none"), 
