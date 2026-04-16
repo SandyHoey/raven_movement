@@ -134,25 +134,13 @@ data %>%
 
 # average percent trip to hunting included a trip to the dump
 data %>% 
-  filter(hunt_bin == TRUE) %>% 
+  filter(hunt_bin == TRUE | dump == TRUE) %>% 
   group_by(raven_id) %>% 
-  summarize(no_visit = sum(dump == FALSE),
-            visit = sum(dump == TRUE)) %>% 
-  mutate(prop_visit_dump = visit/(visit + no_visit)) %>% 
+  summarize(prop_visit_dump = sum(dump == TRUE)/n()) %>% 
   summarize(mean = mean(prop_visit_dump),
             min = min(prop_visit_dump),
             max = max(prop_visit_dump),
             sd = sd(prop_visit_dump))
-
-
-# average percent of trips to Gardiner included visit to the dump (hunting seasons)
-data %>% 
-  filter(
-    # only during the hunting season
-    hunt_season == TRUE,
-    # only on trips to Gardiner
-    hunt_bin == TRUE) %>% 
-  summarise(sum(dump)/n())
 
 
 # average percent trip to dump (hunting season)
@@ -161,12 +149,9 @@ data %>%
     # only during the hunting season
     hunt_season == TRUE,
     # only on trips to Gardiner
-    hunt_bin == TRUE) %>% 
+    hunt_bin == TRUE | dump == TRUE) %>% 
   group_by(raven_id) %>% 
-  summarise(no_visit = sum(dump == F),
-            visit = sum(dump == T)) %>% 
-  mutate(prop_visit_dump = visit/(visit + no_visit),
-         season = "hunt") %>% 
+  summarise(prop_visit_dump = visit/(visit + no_visit)) %>% 
   summarize(mean = mean(prop_visit_dump),
             min = min(prop_visit_dump),
             max = max(prop_visit_dump),
