@@ -192,7 +192,7 @@ hunting_dates <- readxl::read_xlsx("data/raw/hunting_seasons.xlsx")
 
 # raven movement data outside of territory
 read_csv("data/clean/all_raven_gps_clean29.csv") %>% 
-  clean_names() %>% 
+  janitor::clean_names() %>% 
   # selecting useful columns
   dplyr::select(individual_local_identifier, utm_easting, utm_northing, study_local_timestamp) %>%
   # adding winter year
@@ -217,8 +217,11 @@ read_csv("data/clean/all_raven_gps_clean29.csv") %>%
          study_local_timestamp < sunset) %>% 
   # remove date column since it ArcGIS is terrible
   dplyr::select(-date) %>% 
-  # only complete rows
-  filter(complete.cases(.)) %>% 
+  filter(
+    # only complete rows
+    complete.cases(.),
+    # only winter years used
+    winter_year <= 2023) %>% 
   # write out datatset
   write.csv("data/clean/raven_gps_hseason_divide.csv", row.names = F)
 
