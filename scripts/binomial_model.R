@@ -78,7 +78,6 @@ mod_terr <- glmer(terr_bin ~ (1|raven_id) + rf_active_kill * final_take_bms1 + h
                   control = cntrl)
 summary(mod_terr)
 
-
 # modeling without weather covariates
 mod_terr_noweather <- glmer(terr_bin ~ (1|raven_id) + rf_active_kill * final_take_bms1 + hunt_season + 
                               rf_avg_terr_kill_density + dist2nentrance + study_period + prop_group_left_terr,
@@ -90,6 +89,51 @@ summary(mod_terr_noweather)
 
 
 # bootstrap -------------------------------
+
+expand.grid(rf_active_kill = c(TRUE, FALSE),
+                    hunt_season = c(TRUE, FALSE),
+                    final_take_bms1 = 0,
+                    rf_avg_terr_kill_density = 0,
+                    dist2nentrance = 0,
+                    study_period = "early",
+                    temp_max = 0,
+                    snow_depth = 0,
+                    prop_group_left_terr = 0,
+                    sample_duration = 1) %>% 
+  bind_cols(predict(mod_terr, expand.grid(rf_active_kill = c(TRUE, FALSE),
+                                hunt_season = c(TRUE, FALSE),
+                                final_take_bms1 = 0,
+                                rf_avg_terr_kill_density = 0,
+                                dist2nentrance = 0,
+                                study_period = "early",
+                                temp_max = 0,
+                                snow_depth = 0,
+                                prop_group_left_terr = 0),
+          re.form = NA, type = "link", se.fit = T)) %>% 
+  mutate(mean = plogis(fit),
+         upper = plogis(fit + 1.96*se.fit),
+         lower = plogis(fit - 1.96*se.fit)) %>% 
+  ggplot(aes(x = rf_active_kill, y = mean, col = rf_active_kill,
+             ymin = lower, ymax = upper)) +
+  geom_point() +
+  facet_wrap(~hunt_season, 
+             labeller = labeller(hunt_season = c("TRUE" = "Hunting", "FALSE" = "No Hunting"))) +
+  geom_errorbar(width = .1) +
+  labs(x = "Active wolf kill",
+       y = "Predicted probability") +
+  # custom color/texture scheme
+  scale_color_manual(values = c("TRUE" = "#006CD1", "FALSE" = "#DC3220")) +
+  # removing legend
+  guides(color = "none") +
+  theme_classic() +
+  # increasing y axis 
+  scale_y_continuous(limits = c(0, 1)) +
+  # removing title
+  ggtitle("", subtitle = "") +
+  # increase size of axis label
+  theme(axis.title = element_text(size = 13, face = "bold"))
+ggsave("pred_terr_hseason.svg", units = "in", width = 9, height = 6.5, device = "svg", path = "figures")
+
 
 # plot coefficient CI
 terr_coef <- confint(mod_terr, parm = "beta_", method = "profile")
@@ -114,11 +158,11 @@ terr_coef %>%
   labs(y = "",
        x = "\u03b2")+ 
   # changing name and order of y axis
-  scale_y_discrete(limits = c("study_periodlate:temp_max", "rf_active_killTRUE:final_take_bms1", 
+  scale_y_discrete(limits = c("study_periodlate:snow_depth", "rf_active_killTRUE:final_take_bms1", 
                               "prop_group_left_terr", "snow_depth", "temp_max", "study_periodlate", 
                               "dist2nentrance", "rf_avg_terr_kill_density", "hunt_seasonTRUE", 
                               "final_take_bms1", "rf_active_killTRUE"),
-                   labels = c("study_periodlate:temp_max" = "Study period * Max temp",
+                   labels = c("study_periodlate:snow_depth" = "Study period * Snow depth",
                               "rf_active_killTRUE:final_take_bms1" = "Active kill * Hunting biomass", 
                               "prop_group_left_terr" = "Proportion traveling",
                               "snow_depth" = "Snow depth", 
@@ -194,6 +238,47 @@ summary(mod_hunt)
 
 # bootstrap -------------------------------
 
+expand.grid(visit_kill = c(TRUE, FALSE),
+            hunt_season = c(TRUE, FALSE),
+            final_take_bms1 = 0,
+            dist2nentrance = 0,
+            temp_max = 0,
+            snow_depth = 0,
+            prop_group_visit_hunt = 0) %>% 
+  bind_cols(predict(mod_hunt, expand.grid(visit_kill = c(TRUE, FALSE),
+                                          hunt_season = c(TRUE, FALSE),
+                                          final_take_bms1 = 0,
+                                          dist2nentrance = 0,
+                                          temp_max = 0,
+                                          snow_depth = 0,
+                                          prop_group_visit_hunt = 0),
+                    re.form = NA, type = "link", se.fit = T)) %>% 
+  mutate(mean = plogis(fit),
+         upper = plogis(fit + 1.96*se.fit),
+         lower = plogis(fit - 1.96*se.fit)) %>% 
+  # plotting
+  ggplot(aes(x = visit_kill, y = mean, col = visit_kill,
+             ymin = lower, ymax = upper)) +
+  geom_point() +
+  facet_wrap(~hunt_season, 
+             labeller = labeller(hunt_season = c("FALSE" = "No Hunting", "TRUE" = "Hunting"))) +
+  geom_errorbar(width = .1) +
+  labs(x = "Visit wolf kill",
+       y = "Predicted probability") +
+  # custom color/texture scheme
+  scale_color_manual(values = c("TRUE" = "#006CD1", "FALSE" = "#DC3220")) +
+  theme_classic() +
+  # removing legend
+  guides(color = "none") +
+  # removing title
+  ggtitle("", subtitle = "") +
+  # make y axis full limits
+  scale_y_continuous(limits = c(0, 1)) +
+  # increase size of axis label
+  theme(axis.title = element_text(size = 13, face = "bold"))
+ggsave("pred_hunt_hseason.svg", units = "in", width = 9, height = 6.5, device = "svg", path = "figures")
+
+  
 # plot coefficient CI
 hunt_coef <- confint(mod_hunt, parm = "beta_", method = "profile")
 hunt_coef %>%
