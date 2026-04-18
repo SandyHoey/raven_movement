@@ -71,7 +71,7 @@ cntrl <- glmerControl(optimizer = "bobyqa", tol = 1e-4, optCtrl=list(maxfun=1000
 
 # model with all the hunting covariates
 mod_terr <- glmer(terr_bin ~ (1|raven_id) + rf_active_kill * final_take_bms1 + hunt_season + rf_avg_terr_kill_density + 
-                    dist2nentrance + study_period * snow_depth + temp_max + prop_group_left_terr,
+                    dist2nentrance + study_period + snow_depth + temp_max + prop_group_left_terr,
                   data = ws_model_data,
                   family = "binomial",
                   nAGQ = 40,
@@ -80,13 +80,13 @@ summary(mod_terr)
 
 
 # model with wolf kill visits in terr
-mod_terr <- glmer(terr_bin ~ (1|raven_id) + visit_500 * final_take_bms1 + hunt_season + rf_avg_terr_kill_density + 
-                    dist2nentrance + study_period * snow_depth + temp_max + prop_group_left_terr,
+mod_visit_terr <- glmer(terr_bin ~ (1|raven_id) + visit_500 * final_take_bms1 + hunt_season + rf_avg_terr_kill_density + 
+                    dist2nentrance + study_period + snow_depth + temp_max + prop_group_left_terr,
                   data = ws_model_data,
                   family = "binomial",
                   nAGQ = 40,
                   control = cntrl)
-summary(mod_terr)
+summary(mod_visit_terr)
 
 
 # modeling without weather covariates
@@ -100,7 +100,6 @@ summary(mod_terr_noweather)
 
 
 # bootstrap -------------------------------
-
 expand.grid(rf_active_kill = c(TRUE, FALSE),
                     hunt_season = c(TRUE, FALSE),
                     final_take_bms1 = 0,
@@ -109,8 +108,7 @@ expand.grid(rf_active_kill = c(TRUE, FALSE),
                     study_period = "early",
                     temp_max = 0,
                     snow_depth = 0,
-                    prop_group_left_terr = 0,
-                    sample_duration = 1) %>% 
+                    prop_group_left_terr = 0) %>% 
   bind_cols(predict(mod_terr, expand.grid(rf_active_kill = c(TRUE, FALSE),
                                 hunt_season = c(TRUE, FALSE),
                                 final_take_bms1 = 0,
@@ -169,12 +167,11 @@ terr_coef %>%
   labs(y = "",
        x = "\u03b2")+ 
   # changing name and order of y axis
-  scale_y_discrete(limits = c("study_periodlate:snow_depth", "rf_active_killTRUE:final_take_bms1", 
+  scale_y_discrete(limits = c("rf_active_killTRUE:final_take_bms1", 
                               "prop_group_left_terr", "snow_depth", "temp_max", "study_periodlate", 
                               "dist2nentrance", "rf_avg_terr_kill_density", "hunt_seasonTRUE", 
                               "final_take_bms1", "rf_active_killTRUE"),
-                   labels = c("study_periodlate:snow_depth" = "Study period * Snow depth",
-                              "rf_active_killTRUE:final_take_bms1" = "Active kill * Hunting biomass", 
+                   labels = c("rf_active_killTRUE:final_take_bms1" = "Active kill * Hunting biomass", 
                               "prop_group_left_terr" = "Proportion traveling",
                               "snow_depth" = "Snow depth", 
                               "temp_max" = "Max temperature", 
@@ -246,8 +243,29 @@ mod_hunt <- glmer(hunt_bin ~ (1|raven_id) + visit_kill * final_take_bms1 + hunt_
 summary(mod_hunt)
 
 
-
 # bootstrap -------------------------------
+expand.grid(visit_kill = c(TRUE, FALSE),
+            hunt_season = TRUE,
+            final_take_bms1 = seq(-2, 2, 0.1),
+            dist2nentrance = 0,
+            temp_max = 0,
+            snow_depth = 0,
+            prop_group_visit_hunt = 0) %>% 
+  bind_cols(predict(mod_hunt, expand.grid(visit_kill = c(TRUE, FALSE),
+                                          hunt_season = TRUE,
+                                          final_take_bms1 = seq(-2, 2, 0.1),
+                                          dist2nentrance = 0,
+                                          temp_max = 0,
+                                          snow_depth = 0,
+                                          prop_group_visit_hunt = 0),
+                    re.form = NA, type = "link", se.fit = T)) %>% 
+  mutate(mean = plogis(fit),
+         upper = plogis(fit + 1.96*se.fit),
+         lower = plogis(fit - 1.96*se.fit)) %>% 
+  ggplot(aes(x = final_take_bms1, y = mean, col = visit_kill, fill = visit_kill, ymin = lower, ymax = upper)) +
+  geom_line() +
+  geom_ribbon(alpha = 0.25)
+
 
 expand.grid(visit_kill = c(TRUE, FALSE),
             hunt_season = c(TRUE, FALSE),
