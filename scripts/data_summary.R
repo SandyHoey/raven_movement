@@ -326,7 +326,7 @@ data %>%
         strip.text = element_text(size = 12),
         legend.text = element_text(size = 12),
         legend.title = element_text(size = 14))
-ggsave("decision_barplot.svg", units = "in", width = 7, height = 6, device = "svg", path = "figures")
+ggsave("decision_barplot.tif", units = "in", width = 7, height = 6, device = "tiff", path = "figures")
 
 
 # stacked barplot (WS) ----------------------------------------------------
@@ -412,7 +412,7 @@ ws_model_data %>%
         strip.text = element_text(size = 12),
         legend.box.spacing = unit(0.1, "cm"),
         legend.margin = margin(0, 0, 0, 0))
-ggsave("ws_decision_barplot.svg", units = "in", width = 8, height = 5.5, device = "svg", path = "figures")
+ggsave("ws_decision_barplot.tif", units = "in", width = 8, height = 5.5, device = "tiff", path = "figures")
 
 
 # decisions between months ------------------------------------------------
@@ -477,7 +477,7 @@ commute_month %>%
         legend.title = element_text(size = 16),
         legend.text = element_text(size = 14))
 # saving plot so the lines are less pixelated
-ggsave("monthly_decision.svg", units = "in", width = 7, height = 6, device = "svg", path = "figures")
+ggsave("monthly_decision.tif", units = "in", width = 7, height = 6, device = "tiff", path = "figures")
 
 
 
@@ -547,7 +547,7 @@ commute_day %>%
         axis.text = element_text(size = 13),
         strip.text = element_text(size = 15))
 # saving plot so the lines are less pixelated
-ggsave("daily_decision.svg", units = "in", width = 8, height = 6, device = "svg", path = "figures")
+ggsave("daily_decision.tif", units = "in", width = 8, height = 6, device = "tiff", path = "figures")
 
 
 # bison area only ---------------------------------------------------------
@@ -599,7 +599,7 @@ commute_bison %>%
                                 other = "#A4D8F4",
                                 hunting = "#0072B2"),
                      labels = c("Bison area", "Other", "Territory")) 
-ggsave("monthly_bison.svg", units = "in", width = 8, height = 6, device = "svg", path = "figures")
+ggsave("monthly_bison.tif", units = "in", width = 8, height = 6, device = "tiff", path = "figures")
 
 
 
@@ -630,6 +630,6 @@ dump_visits %>%
   labs(x = "",
        y = "Proportion of days visiting dump") +
   theme_classic()
-ggsave("dump_visits.svg", units = "in", width = 6, height = 4, device = "svg", path = "figures")
+ggsave("dump_visits.tif", units = "in", width = 6, height = 4, device = "tiff", path = "figures")
 
 

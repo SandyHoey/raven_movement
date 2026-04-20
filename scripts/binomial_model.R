@@ -125,7 +125,7 @@ expand.grid(visit_500 = c(TRUE, FALSE),
   ggtitle("", subtitle = "") +
   # increase size of axis label
   theme(axis.title = element_text(size = 13, face = "bold"))
-ggsave("pred_terr_hseason.svg", units = "in", width = 9, height = 6.5, device = "svg", path = "figures")
+ggsave("pred_terr_hseason.tif", units = "in", width = 9, height = 6.5, device = "tiff", path = "figures")
 
 
 # plot coefficient CI
@@ -171,7 +171,7 @@ terr_coef %>%
   theme_classic() +
   theme(axis.title = element_text(size = 13, face = "bold"),
         axis.text.y = element_text(size = 10))
-ggsave("coef_terr.svg", units = "in", width = 9, height = 6.5, device = "svg", path = "figures")
+ggsave("coef_terr.tif", units = "in", width = 9, height = 6.5, device = "tiff", path = "figures")
 
 
 # bootstrapping predictions values from model simulations
@@ -207,7 +207,7 @@ boot_terr <- boot_param_CI(nsim = 5000, model = mod_terr, data = ws_model_data, 
   ggtitle("", subtitle = "") +
   # increase size of axis label
   theme(axis.title = element_text(size = 13, face = "bold")))
-ggsave("pred_terr_hseason.svg", units = "in", width = 9, height = 6.5, device = "svg", path = "figures")
+ggsave("pred_terr_hseason.tif", units = "in", width = 9, height = 6.5, device = "tiff", path = "figures")
 
 
 # PART 2 of conditional model (visit Gardiner/other) ----------------------
@@ -269,7 +269,7 @@ expand.grid(visit_kill = c(TRUE, FALSE),
   scale_y_continuous(limits = c(0, 1)) +
   # increase size of axis label
   theme(axis.title = element_text(size = 13, face = "bold"))
-ggsave("pred_hunt_hseason.svg", units = "in", width = 9, height = 6.5, device = "svg", path = "figures")
+ggsave("pred_hunt_hseason.tif", units = "in", width = 9, height = 6.5, device = "tiff", path = "figures")
 
   
 # plot coefficient CI
@@ -312,7 +312,7 @@ hunt_coef %>%
   theme_classic() +
   theme(axis.title = element_text(size = 13, face = "bold"),
         axis.text.y = element_text(size = 10))
-ggsave("coef_hunt.svg", units = "in", width = 9, height = 6.5, device = "svg", path = "figures")
+ggsave("coef_hunt.tif", units = "in", width = 9, height = 6.5, device = "tiff", path = "figures")
 
 
 # prediction for kill visit and hunting season
@@ -348,4 +348,4 @@ boot_hunt <- boot_param_CI(nsim = 5000, model = mod_hunt, data = hunt_model_data
   scale_y_continuous(limits = c(0, 1)) +
   # increase size of axis label
   theme(axis.title = element_text(size = 13, face = "bold"))
-ggsave("pred_hunt_hseason.svg", units = "in", width = 9, height = 6.5, device = "svg", path = "figures")
+ggsave("pred_hunt_hseason.tif", units = "in", width = 9, height = 6.5, device = "tiff", path = "figures")
