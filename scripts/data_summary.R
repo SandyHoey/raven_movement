@@ -6,10 +6,11 @@ library(ggpattern)
 
 
 # reading in data ---------------------------------------------------------
-# reading in full data
+# reading in full data (Sep-Mar)
 data <- readr::read_csv("data/clean/commute_data.csv") %>% 
-  filter(!(n_point < 10 & terr_bin == F),
-         !(n_point < 10 & hunt_bin == F))
+  filter(n_point >= 10,
+         month != 8)
+
 
 ## dataset for part 1 of conditional model
 ws_model_data <- readr::read_csv("data/clean/commute_data.csv") %>% 
@@ -20,12 +21,11 @@ ws_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
            (month < 3 | (month == 3 & day <= 30))) %>% 
   # removing days when there is less than 5 GPS point
   # unless the result is leaving territory
-  filter(!(n_point < 10 & terr_bin == F)) %>% 
+  filter(n_point >= 10) %>% 
   # only columns used in model
-  dplyr::select(date, n_point, terr_bin, hunt_bin, raven_id, dump, rf_active_kill, rf_active_kill_3, 
-                visit_kill, final_take_bms, final_take_bms1, final_take, 
-                hunt_season, rf_avg_terr_kill_density, dist2nentrance, 
-                study_period, temp_max, snow_depth, prop_group_left_terr) %>% 
+  dplyr::select(date, n_point, terr_bin, hunt_bin, raven_id, dump, rf_active_kill, visit_500, 
+                visit_kill, final_take_bms1, hunt_season, rf_avg_terr_kill_density, 
+                dist2nentrance, study_period, temp_max, snow_depth, prop_group_left_terr) %>% 
   # making sure rows are complete
   filter(complete.cases(.)) 
 
@@ -41,10 +41,10 @@ hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
   filter(terr_bin == 1) %>% 
   # removing days when there is less than 10 GPS point
   # unless the result is Jardine
-  filter(!(n_point < 10 & hunt_bin == F)) %>% 
+  filter(n_point >= 10) %>% 
   # only columns used in model
-  dplyr::select(date, n_point, hunt_bin, terr_bin, raven_id, dump, visit_kill, final_take_bms, final_take_bms1, final_take, hunt_season,
-                dist2nentrance, study_period, temp_max, snow_depth, prop_group_visit_hunt) %>% 
+  dplyr::select(date, n_point, hunt_bin, terr_bin, raven_id, dump, visit_kill, final_take_bms1, 
+                hunt_season, dist2nentrance, study_period, temp_max, snow_depth, prop_group_visit_hunt) %>% 
   # making sure rows are complete
   filter(complete.cases(.))
 
@@ -63,7 +63,7 @@ ws_model_data <- readxl::read_excel("data/raw/ravens_banding_tagging.xlsx", shee
 # summary data ------------------------------------------------------------
 
 # total number of ravens included in study
-length(unique(ws_model_data$raven_id))
+length(unique(data$raven_id))
 
 
 # decision days
@@ -85,7 +85,7 @@ range(ws_model_data$date)
 
 # proportion of days leaving territory
 data %>% 
-  filter(!(n_point < 10 & terr_bin == F)) %>% 
+  filter(n_point >= 10) %>% 
   group_by(raven_id) %>% 
   summarize(prop_leave = sum(terr_bin)/n()) %>% 
   summarize(mean = mean(prop_leave),
@@ -96,7 +96,7 @@ data %>%
 
 # proportion of days off territory visiting hunting
 data %>% 
-  filter(!(n_point < 10 & hunt_bin == F),
+  filter(n_point >= 10,
          terr_bin == TRUE) %>% 
   group_by(raven_id) %>% 
   summarize(prop_hunt = sum(hunt_bin)/n()) %>% 
@@ -116,6 +116,8 @@ sd(mcp90@data$area)
 
 # average distance to hunting
 ws_model_data %>% 
+  # removing Old Faithful birds since they never go to Gardiner
+  filter(!(raven_id %in% c(7485, 7494))) %>% 
   group_by(raven_id) %>% 
   slice(1) %>%
   ungroup %>% 
@@ -178,8 +180,8 @@ hunt_model_data %>%
   ungroup %>% 
   summarize(mean = mean(prop_visited),
             median = median(prop_visited),
-            max = max(prop_visited),
             min = min(prop_visited),
+            max = max(prop_visited),
             sd = sd(prop_visited),
             days_visited = sum(visited_kills))
 
@@ -194,8 +196,8 @@ hunt_model_data %>%
   ungroup %>% 
   summarize(mean = mean(prop_hunt),
             median = median(prop_hunt),
-            max = max(prop_hunt),
             min = min(prop_hunt),
+            max = max(prop_hunt),
             sd = sd(prop_hunt))
 
 
@@ -300,7 +302,7 @@ data %>%
        fill = "Decision") +
   # custom color/texture scheme
   scale_fill_manual(values = c(terr = "#E69F00",
-                               other = "#56B4E9",
+                               other = "#A4D8F4",
                                hunt = "#0072B2"),
                     # changing name of legend items
                     labels = c("Hunting", "Other", "Territory")) +
@@ -314,11 +316,17 @@ data %>%
             inherit.aes = FALSE, hjust = 0, size = 3) + 
   # adding label for sample size column
   annotate("text", x = 1, y = Inf, label = "Sample size",
-           hjust = 0, vjust = -0.3, size = 3) +
+           hjust = 0.3, vjust = -0.3, size = 4) +
   # adjusting plot axis to show the extra text
   coord_cartesian(xlim = c(0, 1.1), clip = "off") +
-  theme_classic() 
-ggsave("decision_barplot.svg", units = "in", width = 8, height = 5.5, device = "svg", path = "figures")
+  theme_classic() +
+  theme(legend.position = "bottom",
+        axis.title = element_text(size = 14),
+        axis.text = element_text(size = 11),
+        strip.text = element_text(size = 12),
+        legend.text = element_text(size = 12),
+        legend.title = element_text(size = 14))
+ggsave("decision_barplot.svg", units = "in", width = 7, height = 6, device = "svg", path = "figures")
 
 
 # stacked barplot (WS) ----------------------------------------------------
@@ -336,14 +344,14 @@ ws_decision_table <- ws_model_data %>%
 # only during winter study
 ws_model_data %>% 
   group_by(raven_id) %>% 
-  summarize(terr_kill = sum(terr_bin == FALSE & rf_active_kill == TRUE),
-            terr_nokill = sum(terr_bin == FALSE & rf_active_kill == FALSE),
-            other_terr_kill = sum(terr_bin == TRUE & hunt_bin == FALSE & rf_active_kill == TRUE),
-            other_visit_kill = sum(terr_bin == TRUE & hunt_bin == FALSE & visit_kill == TRUE & rf_active_kill == FALSE),
-            other_nokill = sum(terr_bin == TRUE & hunt_bin == FALSE & visit_kill == FALSE & rf_active_kill == FALSE),
-            hunt_terr_kill = sum(hunt_bin == TRUE & rf_active_kill == TRUE),
-            hunt_visit_kill = sum(hunt_bin == TRUE & visit_kill == TRUE & rf_active_kill == FALSE),
-            hunt_nokill = sum(hunt_bin == TRUE & visit_kill == FALSE & rf_active_kill == FALSE)) %>% 
+  summarize(terr_kill = sum(terr_bin == FALSE & visit_500 == TRUE),
+            terr_nokill = sum(terr_bin == FALSE & visit_500 == FALSE),
+            other_terr_kill = sum(terr_bin == TRUE & hunt_bin == FALSE & visit_500 == TRUE),
+            other_visit_kill = sum(terr_bin == TRUE & hunt_bin == FALSE & visit_kill == TRUE & visit_500 == FALSE),
+            other_nokill = sum(terr_bin == TRUE & hunt_bin == FALSE & visit_kill == FALSE & visit_500 == FALSE),
+            hunt_terr_kill = sum(hunt_bin == TRUE & visit_500 == TRUE),
+            hunt_visit_kill = sum(hunt_bin == TRUE & visit_kill == TRUE & visit_500 == FALSE),
+            hunt_nokill = sum(hunt_bin == TRUE & visit_kill == FALSE & visit_500 == FALSE)) %>% 
   # adding column for total sample size for each raven
   mutate(n = hunt_terr_kill + hunt_visit_kill + hunt_nokill + other_terr_kill + 
            other_visit_kill + other_nokill + terr_kill + terr_nokill) %>% 
@@ -358,7 +366,7 @@ ws_model_data %>%
   # adding column for presence of kill
   mutate(kill = rep(c("terr_kill", "visit_kill", "no_kill",
                       "terr_kill", "visit_kill", "no_kill",
-                      "terr_kill", "no_kill"), 20)) %>% 
+                      "terr_kill", "no_kill"), 18)) %>% 
   # setting graphing data
   ggplot(aes(x = value, y = raven_id, fill = decision, pattern = kill)) +
   # creating proportion stacked barplot
@@ -374,11 +382,12 @@ ws_model_data %>%
   scale_pattern_manual(values = c("terr_kill" = "stripe", 
                                   "visit_kill" = "circle", 
                                   "no_kill" = "none"), 
-                       name = "Wolf kill",
-                       labels = c("None", "Active kill", "Visit kill")) +  
+                       name = "Wolf kill visit",
+                       breaks = c("terr_kill", "visit_kill"),
+                       labels = c("In territory", "Out of territory")) +  
   # custom color/texture scheme
   scale_fill_manual(values = c(terr_kill = "#E69F00", terr_nokill = "#E69F00",
-                               other_terr_kill = "#56B4E9",other_visit_kill = "#56B4E9", other_nokill = "#56B4E9",
+                               other_terr_kill = "#A4D8F4",other_visit_kill = "#A4D8F4", other_nokill = "#A4D8F4",
                                hunt_terr_kill = "#0072B2", hunt_visit_kill = "#0072B2", hunt_nokill = "#0072B2"),
                     # removing repeats in legend
                     breaks = c("hunt_nokill", "other_nokill", "terr_nokill"),
@@ -394,10 +403,15 @@ ws_model_data %>%
             inherit.aes = FALSE, hjust = 0, size = 3) + 
   # adding label for sample size column
   annotate("text", x = 1, y = Inf, label = "Sample size",
-           hjust = 0, vjust = -0.3, size = 3) +
+           hjust = 0.3, vjust = -0.3, size = 4) +
   # adjusting plot axis to show the extra text
   coord_cartesian(xlim = c(0, 1.1), clip = "off") +
-  theme_classic() 
+  theme_classic() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 11),
+        strip.text = element_text(size = 12),
+        legend.box.spacing = unit(0.1, "cm"),
+        legend.margin = margin(0, 0, 0, 0))
 ggsave("ws_decision_barplot.svg", units = "in", width = 8, height = 5.5, device = "svg", path = "figures")
 
 
@@ -413,7 +427,7 @@ commute_month <- commute_df  %>%
   # changing name of ID column
   rename(raven_id = individual_local_identifier) %>% 
   # removing days when there are < 10 GPS points
-  filter(n_point < 10) %>% 
+  filter(n_point >= 10) %>% 
   # getting proportion travel decisions by bird
   group_by(raven_id, month, winter_year) %>% 
   summarize(territory = sum(commute == 1)/n(),
@@ -422,9 +436,8 @@ commute_month <- commute_df  %>%
   ungroup
 
 # plotting the average proportion of each commute category by month
-commute_month %>% 
-  # only aug-mar
-  filter(month != 7) %>% 
+commute_month %>%
+  filter(month != 8) %>% 
   # long data
   pivot_longer(cols = c(territory, other, hunting), 
                names_to = "commute", values_to = "prop") %>% 
@@ -450,14 +463,15 @@ commute_month %>%
   # setting y limits
   scale_y_continuous(expand = c(0, 0), limits = c(0, 1)) +
   # getting x axis tick closer to 0
-  scale_x_discrete(expand = expansion(add = c(0.1, 0))) +
+  scale_x_discrete(expand = expansion(add = c(0.2, 0.1))) +
   # custom color/texture scheme
   scale_color_manual(values = c(territory = "#E69F00",
-                                other = "#56B4E9",
+                                other = "#A4D8F4",
                                 hunting = "#0072B2"),
                      labels = c("Hunting", "Other", "Territory")) +
-  theme(legend.position = "top",
-        legend.justification = "right",
+  theme(legend.position = c(0.95, 0.95),
+        legend.justification = c("right", "top"),
+        legend.box.just = "right",
         axis.title = element_text(size = 16),
         axis.text = element_text(size = 13),
         legend.title = element_text(size = 16),
@@ -477,7 +491,7 @@ commute_day <- commute_df  %>%
   # changing name of ID column
   rename(raven_id = individual_local_identifier) %>% 
   # removing days when there are < 10 GPS points
-  filter(n_point < 10) %>% 
+  filter(n_point >= 10) %>% 
   # getting proportion travel decisions by bird
   group_by(year, month, day) %>% 
   summarize(territory = sum(commute == 1)/n(),
@@ -488,7 +502,7 @@ commute_day <- commute_df  %>%
 # plotting the proportion of individual making a commute category by days in October
 commute_day %>% 
   # only Sep-Nov
-  filter(month %in% 8:11) %>% 
+  filter(month %in% 9:12) %>% 
   # long data
   pivot_longer(cols = c(territory, other, hunting), 
                names_to = "commute", values_to = "prop") %>% 
@@ -525,7 +539,7 @@ commute_day %>%
   scale_y_continuous(expand = c(0, 0), limits = c(0, 1)) +
   # custom color/texture scheme
   scale_color_manual(values = c(territory = "#E69F00",
-                                other = "#56B4E9",
+                                other = "#A4D8F4",
                                 hunting = "#0072B2"),
                      name = "Decision",
                      labels = c("Hunting", "Other", "Territory")) +
@@ -546,7 +560,7 @@ commute_bison <- commute_df  %>%
   # changing name of ID column
   rename(raven_id = individual_local_identifier) %>% 
   # removing days when there are < 10 GPS points
-  filter(n_point < 10) %>% 
+  filter(n_point >= 10) %>% 
   # getting proportion travel decisions by bird
   group_by(raven_id, month, winter_year) %>% 
   summarize(territory = sum(commute == 1)/n(),
@@ -582,7 +596,7 @@ commute_bison %>%
   scale_y_continuous(expand = c(0, 0), limits = c(0, 1)) +
   # custom color/texture scheme
   scale_color_manual(values = c(territory = "#E69F00",
-                                other = "#56B4E9",
+                                other = "#A4D8F4",
                                 hunting = "#0072B2"),
                      labels = c("Bison area", "Other", "Territory")) 
 ggsave("monthly_bison.svg", units = "in", width = 8, height = 6, device = "svg", path = "figures")

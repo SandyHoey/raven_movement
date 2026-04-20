@@ -19,8 +19,7 @@ commute_df_covariates <- readr::read_csv("data/clean/commute_data.csv") %>%
            (month > 3 | (month == 3 & day >= 1)) &
            (month < 3 | (month == 3 & day <= 30))) %>% 
   # removing days when there is less than 10 GPS point
-  # unless the result is Jardine
-  filter(!(n_point < 10 & terr_bin == F)) %>% 
+  filter(n_point >= 10) %>% 
   # only columns used in model
   dplyr::select(date, terr_bin, raven_id, rf_active_kill, rf_active_kill_3, final_take_bms, final_take_bms1, final_take, 
                 hunt_season, rf_avg_terr_kill_density, dist2nentrance, 
@@ -74,16 +73,18 @@ kill_rows <- in_terr_kill_df %>%
   dplyr::select(kill_id, raven_id, visit_500, visit_1000, terr_bin, date, delta_dod, area) %>% 
   arrange(raven_id, kill_id, date)
   
-table(kill_rows$visit_500)
-table(kill_rows$visit_1000)
-# how many times did ravens never visit the kill
+# kill visits during days kills were available
+kill_rows %>% 
+  summarize(prop_visit_available_days = sum(visit_500)/n())
+
+# kill visits on at least 1 day the kill was available
 kill_rows %>% 
   group_by(kill_id) %>% 
-  summarize(found = any(visit_500 == TRUE)) %>% 
+  mutate(visit_available_500 = if_else(any(visit_500 == TRUE), TRUE, FALSE)) %>% 
+  slice(1) %>% 
   ungroup %>% 
-  pull(found) %>% 
-  sum
-8/25
+  summarize(prop_visit_kill_duration = sum(visit_available_500)/n())
+
 
 
 
