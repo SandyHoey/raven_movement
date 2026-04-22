@@ -19,7 +19,7 @@ ws_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
   # unless the result is Jardine
   filter(n_point >= 10) %>% 
   # only columns used in model
-  dplyr::select(terr_bin, raven_id, visit_500, final_take_bms, final_take_bms1, 
+  dplyr::select(terr_bin, raven_id, rf_active_kill, visit_500, final_take_bms, final_take_bms1, 
                 hunt_season, rf_avg_terr_kill_density, dist2nentrance, 
                 study_period, temp_max, snow_depth, prop_group_left_terr) %>% 
   # scaling continuous variables
@@ -74,45 +74,49 @@ mod_terr <- glmmTMB(terr_bin ~ (1|raven_id) + visit_500 * final_take_bms1 + hunt
 summary(mod_terr)
 
 
-# modeling without weather covariates
-mod_terr_noweather <- glmmTMB(terr_bin ~ (1|raven_id) + visit_500 * final_take_bms1 + hunt_season + 
-                              rf_avg_terr_kill_density + dist2nentrance + study_period + prop_group_left_terr,
-                            data = ws_model_data,
-                            family = "binomial",
-                            control = cntrlTMB)
-summary(mod_terr_noweather)
+# model with wolf kill visits in terr
+mod_terr_avail <- glmmTMB(terr_bin ~ (1|raven_id) + rf_active_kill * final_take_bms1 + hunt_season + rf_avg_terr_kill_density + 
+                      dist2nentrance + study_period + snow_depth + temp_max + prop_group_left_terr,
+                    data = ws_model_data,
+                    family = "binomial",
+                    control = cntrlTMB)
+summary(mod_terr_avail)
 
 
-# bootstrap -------------------------------
+# prediction and coef plots -------------------------------
 
-expand.grid(visit_500 = c(TRUE, FALSE),
-                    hunt_season = c(TRUE),
-                    final_take_bms1 = 0,
-                    rf_avg_terr_kill_density = 0,
-                    dist2nentrance = 0,
-                    study_period = "early",
-                    temp_max = 0,
-                    snow_depth = 0,
-                    prop_group_left_terr = 0,
-                    sample_duration = 1) %>% 
+# main model (visit wolf kill)
+visit_kill_table <- expand.grid(visit_500 = c(TRUE, FALSE),
+            hunt_season = c(TRUE),
+            final_take_bms1 = 0,
+            rf_avg_terr_kill_density = 0,
+            dist2nentrance = 0,
+            study_period = "early",
+            temp_max = 0,
+            snow_depth = 0,
+            prop_group_left_terr = 0,
+            sample_duration = 1,
+            model = "Kill visit") %>% 
   bind_cols(predict(mod_terr, expand.grid(visit_500 = c(TRUE, FALSE),
-                                hunt_season = c(TRUE),
-                                final_take_bms1 = 0,
-                                rf_avg_terr_kill_density = 0,
-                                dist2nentrance = 0,
-                                study_period = "early",
-                                temp_max = 0,
-                                snow_depth = 0,
-                                prop_group_left_terr = 0),
-          re.form = NA, type = "link", se.fit = T)) %>% 
+                                          hunt_season = c(TRUE),
+                                          final_take_bms1 = 0,
+                                          rf_avg_terr_kill_density = 0,
+                                          dist2nentrance = 0,
+                                          study_period = "early",
+                                          temp_max = 0,
+                                          snow_depth = 0,
+                                          prop_group_left_terr = 0),
+                    re.form = NA, type = "link", se.fit = T)) %>% 
   mutate(mean = plogis(fit),
          upper = plogis(fit + 1.96*se.fit),
-         lower = plogis(fit - 1.96*se.fit)) %>% 
+         lower = plogis(fit - 1.96*se.fit),
+         kill = visit_500)
+visit_kill_table %>% 
   ggplot(aes(x = visit_500, y = mean, col = visit_500,
              ymin = lower, ymax = upper)) +
   geom_point() +
   geom_errorbar(width = .1) +
-  labs(x = "Visit wolf kill in territory",
+  labs(x = "Wolf kill visit",
        y = "Predicted probability") +
   # custom color/texture scheme
   scale_color_manual(values = c("TRUE" = "#006CD1", "FALSE" = "#DC3220")) +
@@ -124,8 +128,79 @@ expand.grid(visit_500 = c(TRUE, FALSE),
   # removing title
   ggtitle("", subtitle = "") +
   # increase size of axis label
-  theme(axis.title = element_text(size = 13, face = "bold"))
-ggsave("pred_terr_hseason.tif", units = "in", width = 9, height = 6.5, device = "tiff", path = "figures")
+  theme(axis.title = element_text(size = 13),
+        axis.text.y = element_text(size = 10))
+ggsave("pred_terr_visit.tif", units = "in", width = 9, height = 6.5, device = "tiff", path = "figures")
+
+
+# secondary model (available wolf kills)
+avail_kill_table <- expand.grid(rf_active_kill = c(TRUE, FALSE),
+            hunt_season = c(TRUE),
+            final_take_bms1 = 0,
+            rf_avg_terr_kill_density = 0,
+            dist2nentrance = 0,
+            study_period = "early",
+            temp_max = 0,
+            snow_depth = 0,
+            prop_group_left_terr = 0,
+            sample_duration = 1,
+            model = "Kill available") %>% 
+  bind_cols(predict(mod_terr_avail, expand.grid(rf_active_kill = c(TRUE, FALSE),
+                                          hunt_season = c(TRUE),
+                                          final_take_bms1 = 0,
+                                          rf_avg_terr_kill_density = 0,
+                                          dist2nentrance = 0,
+                                          study_period = "early",
+                                          temp_max = 0,
+                                          snow_depth = 0,
+                                          prop_group_left_terr = 0),
+                    re.form = NA, type = "link", se.fit = T)) %>% 
+  mutate(mean = plogis(fit),
+         upper = plogis(fit + 1.96*se.fit),
+         lower = plogis(fit - 1.96*se.fit),
+         kill = rf_active_kill)
+avail_kill_table %>% 
+  ggplot(aes(x = rf_active_kill, y = mean, col = rf_active_kill,
+             ymin = lower, ymax = upper)) +
+  geom_point() +
+  geom_errorbar(width = .1) +
+  labs(x = "Wolf kill available",
+       y = "Predicted probability") +
+  # custom color/texture scheme
+  scale_color_manual(values = c("TRUE" = "#006CD1", "FALSE" = "#DC3220")) +
+  # removing legend
+  guides(color = "none") +
+  theme_classic() +
+  # increasing y axis 
+  scale_y_continuous(limits = c(0, 1)) +
+  # removing title
+  ggtitle("", subtitle = "") +
+  # increase size of axis label
+  theme(axis.title = element_text(size = 13),
+        axis.text.y = element_text(size = 10))
+ggsave("pred_terr_avail.tif", units = "in", width = 9, height = 6.5, device = "tiff", path = "figures")
+
+
+
+# combined plot of both wolf kill options
+bind_rows(visit_kill_table, avail_kill_table) %>% 
+  ggplot(aes(x = model, y = mean, col = kill,
+             ymin = lower, ymax = upper)) + 
+  geom_point(position = position_dodge(width = 0.5)) +
+  geom_errorbar(width = .1, position = position_dodge(width = 0.5)) +
+  # custom color/texture scheme
+  scale_color_manual(values = c("TRUE" = "#006CD1", "FALSE" = "#DC3220")) +
+  # changing labels
+  labs(y = "Predicted probability",
+       col = "Wolf kill") +
+  theme_classic() +
+  # increase size of axis label
+  theme(legend.position = "bottom",
+        axis.title = element_text(size = 13),
+        axis.text.y = element_text(size = 10),
+        axis.text.x = element_text(size = 13),
+        axis.title.x = element_blank())
+ggsave("pred_terr_combo.tif", units = "in", width = 9, height = 6.5, device = "tiff", path = "figures")
 
 
 # plot coefficient CI
@@ -229,7 +304,7 @@ mod_hunt <- glmmTMB(hunt_bin ~ (1|raven_id) + visit_kill * final_take_bms1 + hun
 summary(mod_hunt)
 
 
-# bootstrap -------------------------------
+# prediction and coef plots -------------------------------
 
 expand.grid(visit_kill = c(TRUE, FALSE),
             hunt_season = c(TRUE, FALSE),
@@ -268,8 +343,8 @@ expand.grid(visit_kill = c(TRUE, FALSE),
   # make y axis full limits
   scale_y_continuous(limits = c(0, 1)) +
   # increase size of axis label
-  theme(axis.title = element_text(size = 13, face = "bold"))
-ggsave("pred_hunt_hseason.tif", units = "in", width = 9, height = 6.5, device = "tiff", path = "figures")
+  theme(axis.title = element_text(size = 13))
+ggsave("pred_hunt.tif", units = "in", width = 9, height = 6.5, device = "tiff", path = "figures")
 
   
 # plot coefficient CI
