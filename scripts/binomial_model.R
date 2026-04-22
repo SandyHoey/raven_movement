@@ -200,6 +200,7 @@ bind_rows(visit_kill_table, avail_kill_table) %>%
         axis.text.y = element_text(size = 10),
         axis.text.x = element_text(size = 13),
         axis.title.x = element_blank())
+
 ggsave("pred_terr_combo.tif", units = "in", width = 9, height = 6.5, device = "tiff", path = "figures")
 
 
