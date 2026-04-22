@@ -114,6 +114,44 @@ kill_rows %>%
   summarize(prop_visit_kill_duration = sum(visit_available_500)/n())
   
 
+
+# kill attributes ---------------------------------------------------------
+
+kill_db <- readr::read_csv("data/raw/wolf_project_carcass_data.csv") %>% 
+  janitor::clean_names() %>% 
+  mutate(date = mdy(dod)) %>%
+  mutate(easting = case_when(!is.na(ground_east) ~ ground_east,
+                             !is.na(aerial_east) ~ aerial_east,
+                             !is.na(est_ground_east) ~ est_ground_east),
+         northing = case_when(!is.na(ground_north) ~ ground_north,
+                              !is.na(aerial_north) ~ aerial_north,
+                              !is.na(est_ground_north) ~ est_ground_north)) %>%
+  filter(!is.na(easting))
+
+
+for(i in 1:length(unique(kill_rows$kill_id))){
+  # kill date 
+  tmp_kill <- kill_rows %>% 
+    group_by(kill_id) %>% 
+    slice(1) %>% 
+    ungroup %>% 
+    slice(i)
+  
+  # getting all kills within 2 days
+  kill_possible <- kill_db %>% 
+    mutate(time_diff = difftime(date, tmp_kill$date)) %>% 
+    filter(time_diff >= 0, time_diff <= 2) %>% 
+  # getting kills within 1 km
+    mutate(dist_m = sqrt((easting  - tmp_kill$easting)^2 +
+                           (northing - tmp_kill$northing)^2)) %>% 
+    filter(dist_m <= 2000)
+  
+  kill_rows[kill_rows$kill_id == tmp_kill$kill_id, "potential"] <- nrow(kill_possible)
+  kill_rows[kill_rows$kill_id == tmp_kill$kill_id, "prey_species"] <- kill_possible[1, "species"]
+  kill_rows[kill_rows$kill_id == tmp_kill$kill_id, "prey_sex"] <- kill_possible[1, "sex"]
+  kill_rows[kill_rows$kill_id == tmp_kill$kill_id, "prey_age"] <- kill_possible[1, "age_class"]
+}
+
 # doing some testing on probabilities of visiting a kill ------------------
 # library(lme4)
 # 
