@@ -65,3 +65,4 @@ rsconnect/
 
 # removing backup data files
 /data/clean/commute_data_BACKUP.csv
+.positai
