@@ -25,11 +25,13 @@ sunlight <- read_csv("data/clean/all_raven_gps_clean29.csv") %>%
 
 # reading function that calculates distance of GPS points to territory
 source("scripts/commute_decision.R")
-rm(list = setdiff(ls(), c("mcp90", "gps_in_mcp", "sunlight")))
+rm(list = setdiff(ls(), c("mcp90", "gps_in_mcp", "sunlight", "commute_df")))
 
 
 # reading in commute data
 commute_df_intermediate <- read_csv("data/clean/commute_data.csv") %>% 
+  # only days with > 10 GPS points
+  filter(n_point >= 10) %>% 
   # selecting useful columns
   dplyr::select(raven_id, date, terr_bin, hunt_bin, hunt_season) %>% 
   # filter movement decision for left territory, but didn't visit hunting
@@ -215,13 +217,19 @@ read_csv("data/clean/all_raven_gps_clean29.csv") %>%
   mutate(study_local_timestamp = as.POSIXct(study_local_timestamp, tz = "MST")) %>% 
   filter(study_local_timestamp > sunrise,
          study_local_timestamp < sunset) %>% 
-  # remove date column since it ArcGIS is terrible
-  dplyr::select(-date) %>% 
   filter(
     # only complete rows
     complete.cases(.),
     # only winter years used
     winter_year <= 2023) %>% 
+  # adding commute decisions so data is restricted to birds/days that I used
+  left_join(commute_df %>% 
+              filter(n_point >= 10), by = join_by(individual_local_identifier, date)) %>% 
+  filter(complete.cases(.),
+         # removing paired females
+         !(individual_local_identifier %in% c("7654", "7489_2"))) %>% 
+  # remove date column since it ArcGIS is terrible
+  dplyr::select(-date) %>% 
   # write out datatset
   write.csv("data/clean/raven_gps_hseason_divide.csv", row.names = F)
 
