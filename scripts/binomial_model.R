@@ -4,20 +4,21 @@ library(dplyr)
 library(glmmTMB)
 library(ggplot2)
 library(myFunctions) # custom bootstrap function
+library(modelsummary)
+library(pandoc) # writing out model result tables to word
 
 # model optimizer
 cntrlTMB = glmmTMBControl(optimizer = optim, optArgs = list(method="BFGS"))
 
 ## dataset for part 1 of conditional model
-ws_model_data <- readr::read_csv("data/clean/commute_data.csv") %>% 
+ws_model_data <- readr::read_csv("data/clean/commute_data.csv")  %>% 
+  # limit to study years
+  filter(date < "2024-3-31") %>% 
   # restricting to only winter study months
   filter((month > 11 | (month == 11 & day >= 15)) &
            (month < 12 | (month == 12 & day <= 15)) |
            (month > 3 | (month == 3 & day >= 1)) &
            (month < 3 | (month == 3 & day <= 30))) %>% 
-  # removing days when there is less than 10 GPS point
-  # unless the result is Jardine
-  filter(n_point >= 10) %>% 
   # only columns used in model
   dplyr::select(terr_bin, raven_id, rf_active_kill, visit_500, final_take_bms, final_take_bms1, 
                 hunt_season, rf_avg_terr_kill_density, dist2nentrance, 
@@ -33,7 +34,9 @@ ws_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
 
 
 ## dataset for part 2 of conditional model
-hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
+hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>% 
+  # limit to study years
+  filter(date < "2024-3-31") %>%
   # restricting to only winter study months
   filter((month > 11 | (month == 11 & day >= 15)) &
            (month < 12 | (month == 12 & day <= 15)) |
@@ -41,9 +44,6 @@ hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
            (month < 3 | (month == 3 & day <= 30))) %>% 
   # only have days ravens decided to leave territory
   filter(terr_bin == 1) %>% 
-  # removing days when there is less than 10 GPS point
-  # unless the result is Jardine
-  filter(n_point >= 10) %>% 
   # only columns used in model
   dplyr::select(hunt_bin, raven_id, visit_kill, final_take_bms, final_take_bms1, final_take, hunt_season,
                 dist2nentrance, study_period, temp_max, snow_depth, prop_group_visit_hunt) %>% 
@@ -66,39 +66,56 @@ hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
 
 
 # model with wolf kill visits in terr
-mod_terr <- glmmTMB(terr_bin ~ (1|raven_id) + visit_500 * final_take_bms1 + hunt_season + rf_avg_terr_kill_density + 
-                    dist2nentrance + study_period + snow_depth + temp_max + prop_group_left_terr,
-                  data = ws_model_data,
-                  family = "binomial",
-                  control = cntrlTMB)
-summary(mod_terr)
-
-
-# model with wolf kill visits in terr
-mod_terr_avail <- glmmTMB(terr_bin ~ (1|raven_id) + rf_active_kill * final_take_bms1 + hunt_season + rf_avg_terr_kill_density + 
-                      dist2nentrance + study_period + snow_depth + temp_max + prop_group_left_terr,
+mod_terr <- glmmTMB(terr_bin ~ (1|raven_id) + visit_500 + rf_active_kill + final_take_bms1 + hunt_season + rf_avg_terr_kill_density + 
+                      dist2nentrance + study_period + temp_max + snow_depth + prop_group_left_terr,
                     data = ws_model_data,
                     family = "binomial",
                     control = cntrlTMB)
-summary(mod_terr_avail)
+summary(mod_terr)
+
+
+modelsummary(list(" " = mod_terr),
+             # set included values
+             statistic = c("Std. Error" = "std.error", "p-value" = "p.value"),
+             shape = term ~ model + statistic,
+             # removing stats
+             gof_map = NA,
+             # set coef names
+             coef_rename = c("(Intercept)" = "Intercept",
+                             "visit_500TRUE" = "Visit kill (TRUE)",
+                             "rf_active_killTRUE" = "Available kill (TRUE)",
+                             "final_take_bms1" = "Hunting biomass",
+                             "hunt_seasonTRUE" = "Hunting season (TRUE)",
+                             "rf_avg_terr_kill_density" = "Kill density",
+                             "dist2nentrance" = "Distance",
+                             "study_periodlate" = "Study period (Late)",
+                             "snow_depth" = "Snow depth",
+                             "temp_max" = "Max temperature",
+                             "prop_group_left_terr" = "Proportion traveling"),
+             # remove random effects rows
+             effects = "fixed",
+             # output
+             output = "figures/terr_table.docx")
 
 
 # prediction and coef plots -------------------------------
 
 # main model (visit wolf kill)
 visit_kill_table <- expand.grid(visit_500 = c(TRUE, FALSE),
-            hunt_season = c(TRUE),
-            final_take_bms1 = 0,
-            rf_avg_terr_kill_density = 0,
-            dist2nentrance = 0,
-            study_period = "early",
-            temp_max = 0,
-            snow_depth = 0,
-            prop_group_left_terr = 0,
-            sample_duration = 1,
-            model = "Kill visit") %>% 
+                                rf_active_kill = FALSE,
+                                hunt_season = FALSE,
+                                final_take_bms1 = 0,
+                                rf_avg_terr_kill_density = 0,
+                                dist2nentrance = 0,
+                                study_period = "early",
+                                temp_max = 0,
+                                snow_depth = 0,
+                                prop_group_left_terr = 0,
+                                sample_duration = 1,
+                                model = "Kill visit") %>% 
   bind_cols(predict(mod_terr, expand.grid(visit_500 = c(TRUE, FALSE),
-                                          hunt_season = c(TRUE),
+                                          rf_active_kill = FALSE,
+                                          hunt_season = FALSE,
                                           final_take_bms1 = 0,
                                           rf_avg_terr_kill_density = 0,
                                           dist2nentrance = 0,
@@ -130,78 +147,7 @@ visit_kill_table %>%
   # increase size of axis label
   theme(axis.title = element_text(size = 13),
         axis.text.y = element_text(size = 10))
-ggsave("pred_terr_visit.tif", units = "in", width = 9, height = 6.5, device = "tiff", path = "figures")
-
-
-# secondary model (available wolf kills)
-avail_kill_table <- expand.grid(rf_active_kill = c(TRUE, FALSE),
-            hunt_season = c(TRUE),
-            final_take_bms1 = 0,
-            rf_avg_terr_kill_density = 0,
-            dist2nentrance = 0,
-            study_period = "early",
-            temp_max = 0,
-            snow_depth = 0,
-            prop_group_left_terr = 0,
-            sample_duration = 1,
-            model = "Kill available") %>% 
-  bind_cols(predict(mod_terr_avail, expand.grid(rf_active_kill = c(TRUE, FALSE),
-                                          hunt_season = c(TRUE),
-                                          final_take_bms1 = 0,
-                                          rf_avg_terr_kill_density = 0,
-                                          dist2nentrance = 0,
-                                          study_period = "early",
-                                          temp_max = 0,
-                                          snow_depth = 0,
-                                          prop_group_left_terr = 0),
-                    re.form = NA, type = "link", se.fit = T)) %>% 
-  mutate(mean = plogis(fit),
-         upper = plogis(fit + 1.96*se.fit),
-         lower = plogis(fit - 1.96*se.fit),
-         kill = rf_active_kill)
-avail_kill_table %>% 
-  ggplot(aes(x = rf_active_kill, y = mean, col = rf_active_kill,
-             ymin = lower, ymax = upper)) +
-  geom_point() +
-  geom_errorbar(width = .1) +
-  labs(x = "Wolf kill available",
-       y = "Predicted probability") +
-  # custom color/texture scheme
-  scale_color_manual(values = c("TRUE" = "#006CD1", "FALSE" = "#DC3220")) +
-  # removing legend
-  guides(color = "none") +
-  theme_classic() +
-  # increasing y axis 
-  scale_y_continuous(limits = c(0, 1)) +
-  # removing title
-  ggtitle("", subtitle = "") +
-  # increase size of axis label
-  theme(axis.title = element_text(size = 13),
-        axis.text.y = element_text(size = 10))
-ggsave("pred_terr_avail.tif", units = "in", width = 9, height = 6.5, device = "tiff", path = "figures")
-
-
-
-# combined plot of both wolf kill options
-bind_rows(visit_kill_table, avail_kill_table) %>% 
-  ggplot(aes(x = model, y = mean, col = kill,
-             ymin = lower, ymax = upper)) + 
-  geom_point(position = position_dodge(width = 0.5)) +
-  geom_errorbar(width = .1, position = position_dodge(width = 0.5)) +
-  # custom color/texture scheme
-  scale_color_manual(values = c("TRUE" = "#006CD1", "FALSE" = "#DC3220")) +
-  # changing labels
-  labs(y = "Predicted probability",
-       col = "Wolf kill") +
-  theme_classic() +
-  # increase size of axis label
-  theme(legend.position = "bottom",
-        axis.title = element_text(size = 13),
-        axis.text.y = element_text(size = 10),
-        axis.text.x = element_text(size = 13),
-        axis.title.x = element_blank())
-
-ggsave("pred_terr_combo.tif", units = "in", width = 9, height = 6.5, device = "tiff", path = "figures")
+ggsave("pred_terr.tif", units = "in", width = 9, height = 6.5, device = "tiff", path = "figures")
 
 
 # plot coefficient CI
@@ -221,21 +167,20 @@ terr_coef %>%
   geom_vline(xintercept = 0, lty = "dashed") +
   # adding model coefficient value to plot
   geom_text(aes(x = coeff, y = FE, label = round(coeff, 2),
-                vjust = -.6, hjust = ifelse(coeff > 0, 0.2, 1)), 
+                vjust = -.6, hjust = ifelse(coeff > 0, 0.2, 1.1)), 
             size = 3) +
   # changing labels
   labs(y = "",
        x = "\u03b2") +
   # changing x axis limits
-  scale_x_continuous(limits = c(-7.5, 2), breaks = seq(-8, 2, 1), labels = seq(-8, 2, 1),
+  scale_x_continuous(limits = c(-3.3, 1.2), breaks = seq(-4, 2, 1), labels = seq(-4, 2, 1),
                      expand = expansion(add = c(0.1, 0.1))) +
   # changing name and order of y axis
-  scale_y_discrete(limits = c("visit_500TRUE:final_take_bms1", "prop_group_left_terr", 
-                              "snow_depth", "temp_max", "study_periodlate", 
-                              "dist2nentrance", "rf_avg_terr_kill_density", "hunt_seasonTRUE", 
-                              "final_take_bms1", "visit_500TRUE"),
-                   labels = c("visit_500TRUE:final_take_bms1" = "Visit kill * Hunting biomass", 
-                              "prop_group_left_terr" = "Proportion traveling",
+  scale_y_discrete(limits = c("prop_group_left_terr", "snow_depth", "temp_max", 
+                              "study_periodlate", "dist2nentrance", 
+                              "rf_avg_terr_kill_density", "hunt_seasonTRUE", 
+                              "final_take_bms1", "rf_active_killTRUE", "visit_500TRUE"),
+                   labels = c("prop_group_left_terr" = "Proportion traveling",
                               "snow_depth" = "Snow depth", 
                               "temp_max" = "Max temperature", 
                               "study_periodlate" = "Study period (Late)", 
@@ -243,6 +188,7 @@ terr_coef %>%
                               "rf_avg_terr_kill_density" = "Kill density",
                               "hunt_seasonTRUE" = "Hunting season (TRUE)", 
                               "final_take_bms1" = "Hunting biomass", 
+                              "rf_active_killTRUE" = "Available kill (TRUE)",
                               "visit_500TRUE" = "Visit kill (TRUE)")) +
   theme_classic() +
   theme(axis.title = element_text(size = 13, face = "bold"),
@@ -274,15 +220,15 @@ boot_terr <- boot_param_CI(nsim = 5000, model = mod_terr, data = ws_model_data, 
     geom_errorbar(width = .1) +
     labs(x = "Active wolf kill",
          y = "Predicted Probability") +
-  # custom color/texture scheme
-  scale_color_manual(values = c("TRUE" = "#006CD1", "FALSE" = "#DC3220")) +
-  # removing legend
-  guides(color = "none") +
-  theme_classic() +
-  # removing title
-  ggtitle("", subtitle = "") +
-  # increase size of axis label
-  theme(axis.title = element_text(size = 13, face = "bold")))
+    # custom color/texture scheme
+    scale_color_manual(values = c("TRUE" = "#006CD1", "FALSE" = "#DC3220")) +
+    # removing legend
+    guides(color = "none") +
+    theme_classic() +
+    # removing title
+    ggtitle("", subtitle = "") +
+    # increase size of axis label
+    theme(axis.title = element_text(size = 13, face = "bold")))
 ggsave("pred_terr_hseason.tif", units = "in", width = 9, height = 6.5, device = "tiff", path = "figures")
 
 
@@ -297,13 +243,34 @@ ggsave("pred_terr_hseason.tif", units = "in", width = 9, height = 6.5, device = 
 
 
 # model with all hunting covariates
-mod_hunt <- glmmTMB(hunt_bin ~ (1|raven_id) + visit_kill * final_take_bms1 + hunt_season + dist2nentrance + 
-                    temp_max + snow_depth + prop_group_visit_hunt,
-                  data = hunt_model_data,
-                  family = "binomial",
-                  control = cntrlTMB)
+mod_hunt <- glmmTMB(hunt_bin ~ (1|raven_id) + visit_kill + final_take_bms1 + hunt_season + 
+                      dist2nentrance + temp_max + snow_depth + prop_group_visit_hunt,
+                    data = hunt_model_data,
+                    family = "binomial",
+                    control = cntrlTMB)
 summary(mod_hunt)
 
+
+modelsummary(list(" " = mod_hunt),
+             # set included values
+             statistic = c("Std. Error" = "std.error", "p-value" = "p.value"),
+             shape = term ~ model + statistic,
+             # removing stats
+             gof_map = NA,
+             # set coef names
+             coef_rename = c("(Intercept)" = "Intercept",
+                             "visit_killTRUE" = "Visit kill (TRUE)",
+                             "final_take_bms1" = "Hunting biomass",
+                             "hunt_seasonTRUE" = "Hunting season (TRUE)",
+                             "dist2nentrance" = "Distance",
+                             "study_periodlate" = "Study period (Late)",
+                             "snow_depth" = "Snow depth",
+                             "temp_max" = "Max temperature",
+                             "prop_group_visit_hunt" = "Proportion traveling"),
+             # remove random effects rows
+             effects = "fixed",
+             # output
+             output = "figures/hunt_table.docx")
 
 # prediction and coef plots -------------------------------
 
@@ -347,7 +314,7 @@ expand.grid(visit_kill = c(TRUE, FALSE),
   theme(axis.title = element_text(size = 13))
 ggsave("pred_hunt.tif", units = "in", width = 9, height = 6.5, device = "tiff", path = "figures")
 
-  
+
 # plot coefficient CI
 hunt_coef <- confint(mod_hunt, parm = "beta_", method = "profile")
 hunt_coef %>%
@@ -374,11 +341,10 @@ hunt_coef %>%
   scale_x_continuous(limits = c(-3, 2), breaks = seq(-3, 2, 1), labels = seq(-3, 2, 1),
                      expand = expansion(add = c(0.1, 0.1))) +
   # changing name and order of y axis
-  scale_y_discrete(limits = c("visit_killTRUE:final_take_bms1", "prop_group_visit_hunt", 
-                              "snow_depth", "temp_max", "dist2nentrance", 
-                              "hunt_seasonTRUE", "final_take_bms1", "visit_killTRUE"),
-                   labels = c("visit_killTRUE:final_take_bms1" = "Visit kill * Hunting biomass", 
-                              "prop_group_visit_hunt" = "Proportion traveling",
+  scale_y_discrete(limits = c("prop_group_visit_hunt", "snow_depth", "temp_max", 
+                              "dist2nentrance", "hunt_seasonTRUE", "final_take_bms1", 
+                              "visit_killTRUE"),
+                   labels = c("prop_group_visit_hunt" = "Proportion traveling",
                               "snow_depth" = "Snow depth", 
                               "temp_max" = "Max temperature", 
                               "dist2nentrance" = "Distance", 

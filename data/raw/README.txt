@@ -105,7 +105,7 @@ raven_banding_tagging (csv): metadata about each captured and process common rav
 	Fate Date (date): date of death or tag failure
 	cause of death (chr): the cause of death of the raven
 
-cooke_city_weather (csv): history of temperature from Red Lodge (https://www.wunderground.com/history/monthly/us/mt/red-lodge/KRED/date/2025-11)
+red_lodge_weather (csv): history of temperature from Red Lodge (https://www.wunderground.com/history/monthly/us/mt/red-lodge/KRED/date/2025-11)
 	date (date): date of weather
 	temp_max (num): maximum daily temperature
 	temp_mean (num): average daily temperature (not sure how this is calculated)

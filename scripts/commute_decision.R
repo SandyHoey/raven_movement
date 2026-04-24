@@ -10,12 +10,11 @@ source("scripts/home_range_mcp.R")
 source("scripts/dist_to_gardiner.R")
 
 
-# calculating distance to territory
-# using 90% mcp
 # distance calculated in meters
 gps_in_mcp <- function(data){
   ID <- mcp90$id
   
+  # splitting by individual
   for(i in 1:length(ID)){
     tmp_data <- subset(data, individual_local_identifier == ID[i])
     tmp_sf <- st_as_sf(tmp_data, coords=c("utm_easting", "utm_northing"), 
@@ -32,23 +31,22 @@ gps_in_mcp <- function(data){
   
   return(output_df)
 }
-
-dist2poly <- gps_in_mcp(terr_fw_gps)
+dist2poly <- gps_in_mcp(five_hour_gps)
 
 
 # getting the number of points in territory and Gardiner 
-info_table <- tapply(dist2poly, INDEX = dist2poly$individual_local_identifier,
-       FUN = function(x){
-         info_table <- rep(NA, 4)
-         names(info_table) <- c("Gardiner", "Terr", "Other", "Total")
-         
-         info_table[1] <- nrow(subset(x, dist2fwp == 0))
-         info_table[2] <- nrow(subset(x, dist2terr == 0))
-         info_table[3] <-  nrow(subset(x, dist2fwp != 0 & dist2terr != 0))
-         info_table[4] <- nrow(x)
-           
-         return(info_table)
-       })
+# info_table <- tapply(dist2poly, INDEX = dist2poly$individual_local_identifier,
+#        FUN = function(x){
+#          info_table <- rep(NA, 4)
+#          names(info_table) <- c("Gardiner", "Terr", "Other", "Total")
+#          
+#          info_table[1] <- nrow(subset(x, dist2fwp == 0))
+#          info_table[2] <- nrow(subset(x, dist2terr == 0))
+#          info_table[3] <-  nrow(subset(x, dist2fwp != 0 & dist2terr != 0))
+#          info_table[4] <- nrow(x)
+#            
+#          return(info_table)
+#        })
 
 
 # number of points adds up properly
@@ -82,7 +80,7 @@ commute_list <- tapply(dist2poly, INDEX = dist2poly$individual_local_identifier,
        FUN = function(x){
          
          # pulling unique dates
-         dates <- unique(as.Date(x$study_local_timestamp, tz = "MST"))
+         dates <- unique(as.Date(x$study_local_timestamp, tz = "America/Denver"))
          
          tmp_date_df <- data.frame(ID = x[1, "individual_local_identifier"], 
                                    winter_year = if_else(month(dates) %in% c(1:3), year(dates)-1, year(dates)),
@@ -92,7 +90,7 @@ commute_list <- tapply(dist2poly, INDEX = dist2poly$individual_local_identifier,
          # individual ended up that day (terr, other, Gardiner)
          for(d in 1:length(dates)){
            # filtering to all GPS points for a single day
-           tmp_dayta <- x %>% filter(as.Date(study_local_timestamp) == dates[d])
+           tmp_dayta <- x %>% filter(date == dates[d])
            
            # changing the polygon used to determine if a hunting visit happen based on the hunting season
            # any time after the end of MTFWP season uses the smaller bison polygon
@@ -138,88 +136,3 @@ commute_list <- tapply(dist2poly, INDEX = dist2poly$individual_local_identifier,
 
 commute_df <- do.call("rbind", commute_list)
 
-
-# plotting individual raven commute decision per day
-# layout(matrix(1:20, nrow = 4, ncol = 5))
-# sapply(commute_list,
-#        FUN = function(x){
-#          plot(commute~date, x,
-#               main = x[1, "individual_local_identifier"],
-#               cex = 0.7, yaxp = c(0,3,3))
-# })
-
-
-
-# calculating the number of commute days that included a visit to the dump
-  # all ravens
-  commute_df %>% 
-    filter(commute == 3) %>% 
-    group_by(dump) %>% 
-    summarise(n())
-  713/(713+1980)
-  # 26.5% of the time a raven visits the dump when they search the hunting area
-  # individual basis
-  commute_df %>% 
-    filter(commute == 3) %>% 
-    group_by(individual_local_identifier) %>% 
-    summarise(no_visit = sum(dump == F),
-              visit = sum(dump == T)) %>% 
-    mutate(prop_visit_dump = visit/(visit + no_visit)) %>% 
-    summarize(mean = mean(prop_visit_dump),
-              min = min(prop_visit_dump),
-              max = max(prop_visit_dump),
-              sd = sd(prop_visit_dump))
-  
-#   # summarizing the average time between leaving the territory and arriving on the hunting grounds
-#   commute_time <- dist2poly %>% 
-#     # restrict to days that ravens wnet to hunting area
-#     mutate(date = as.Date(study_local_timestamp)) %>% 
-#     left_join(commute_df %>% 
-#                 # only relevant columns
-#                 dplyr::select(individual_local_identifier, date, commute)) %>% 
-#     filter(commute == 3) %>% 
-#     # sort chronologically
-#     arrange(individual_local_identifier, study_local_timestamp) %>%
-#     # keep first point in hunting and last point before leaving terr
-#     group_by(individual_local_identifier, date) %>%
-#     # add column to tell which hunting region to use
-#     mutate(active_dist = if_else(study_local_timestamp <= hunt_end, 
-#                                  dist2fwp, dist2bison)) %>%
-#     # identify the first "arrival" point
-#     mutate(arrival_row = which(active_dist == 0)[1]) %>%
-#     # drop days with no valid arrival
-#     filter(!is.na(arrival_row)) %>%
-#     # keep only rows in territory up to arrival
-#     mutate(row_id = row_number()) %>%
-#     filter(row_number() == arrival_row | (row_number() < arrival_row & dist2terr == 0)) %>%
-#     # from the territory points, keep only the closest one before arrival
-#     mutate(keep = case_when(row_id == arrival_row ~ TRUE,
-#                             row_id == max(row_id[dist2terr == 0 & row_id < arrival_row], na.rm = TRUE) ~ TRUE,
-#                             TRUE ~ FALSE)) %>%
-#     filter(keep) %>%
-#     select(-active_dist, -arrival_row, -row_id, -keep) %>% 
-#     # drop days without 2 points
-#     filter(n() == 2) %>%
-#     # calculating commute time
-#     mutate(commute_time = as.numeric(difftime(study_local_timestamp[2], 
-#                                               study_local_timestamp[1],
-#                                               units = "hours"))) %>% 
-#     # summarize results for individuals
-#     group_by(individual_local_identifier) %>% 
-#     summarize(avg_commute = mean(commute_time)) %>% 
-#     ungroup
-# 
-#   # plotting by distance to territory 
-#   readr::read_csv("data/clean/commute_data.csv") %>% 
-#     # only relevant columns 
-#     dplyr::select(raven_id, dist2nentrance) %>% 
-#     # joining to commute_time
-#     right_join(commute_time, by = join_by(raven_id == individual_local_identifier)) %>% 
-#     # plotting
-#     ggplot(aes(x = dist2nentrance/1000, y = avg_commute)) + 
-#     geom_point() + 
-#     # changing labels
-#     labs(x = "Distance to hunting (km)",
-#            y = "Average commute time (hr)") +
-#     theme_classic()
-# ggsave("commute_time.svg", device = "svg", path = "reports")  

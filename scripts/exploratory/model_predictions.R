@@ -3,28 +3,28 @@ scale_seq <- seq(-2, 2, .005)
 # PART 1
 # hunting season and active kill in territory
 # early winter
-plogis(c(2.302459 - 3.335041 - 0.22172,
-         2.302459 - 3.335041,
-         2.302459 - 0.22172,
-         2.302459))
+plogis(c(2.3158440 - 1.8916349 - 0.22172,
+         2.3158440 - 1.8916349,
+         2.3158440 - 0.22172,
+         2.3158440))
 # late winter
-plogis(c(2.302459 - 3.335041 - 0.22172 + 0.045225,
-         2.302459 - 3.335041 + 0.045225,
-         2.302459 - 0.22172 + 0.045225,
-         2.302459 + 0.045225))
+plogis(c(2.3158440 - 1.8916349 - 0.22172 - 0.1172071,
+         2.3158440 - 1.8916349 - 0.1172071,
+         2.3158440 - 0.22172 - 0.1172071,
+         2.3158440 - 0.1172071))
 
 
 # examining interaction effect study_period*snow
 # red = Late winter
 # green = Early winter
 plot(x = scale_seq,
-     y = plogis(2.302459 - 3.335041 + (0.687682 * scale_seq) - 0.554340),
+     y = plogis(2.3158440 - 1.8916349 + (0.687682 * scale_seq) - 0.554340),
      main = "Stdy period * snow",
      xlab = "snow",
      ylim = c(0, 1),
      col = 2, lwd = 0.1)
 lines(x = scale_seq, 
-      y = plogis(2.302459 + (0.687682 * scale_seq) - 0.554340),
+      y = plogis(2.3158440 + (0.687682 * scale_seq) - 0.554340),
       col = 3, lwd = 2)
 a <- 0.26064
 b <- 0.08188

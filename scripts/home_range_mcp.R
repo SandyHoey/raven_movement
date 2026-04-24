@@ -58,9 +58,7 @@ transGPS <- do.call("rbind", tapply(transGPS, INDEX=transGPS$individual_local_id
 
 
 # combining trans and territorial datasets
-# !!!SKIP this step if you want to exclude trans 
 terrGPS <- rbind(terrGPS, transGPS)
-
 
 
 # subsetting the GPS points to only breeding season (subject to change the month)
@@ -69,17 +67,6 @@ terrGPS <- terrGPS[month(terrGPS$study_local_timestamp) %in% c(5,6,7),]
 
 # plotting gps points per bird to make sure they are on territory 
 mysf <- st_as_sf(terrGPS, coords = c("utm_easting", "utm_northing"), crs = 32612)
-#tapply(mysf, INDEX = mysf$individual_local_identifier, FUN = mapview)
-
-
-# creating mcp for each individual
-# mcp95 <- mysf %>% 
-#   dplyr::select(c("individual_local_identifier", "geometry")) %>% 
-#   as_Spatial() %>%
-#   mcp(percent = 95, unout = "km2")
-# 
-# 
-# mapview(mcp95[,1])
 
 
 # 95% mcp had the mammoth birds with a massive territory including rainbow lakes and gardiner

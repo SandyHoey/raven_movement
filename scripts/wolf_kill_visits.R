@@ -1,11 +1,10 @@
 # finding wolf kills visited outside of territory for each raven
-# clean version that doesn't require separate output from the mapping datasets
 
 library(dplyr)
-library(here)
 library(sf)
 library(lubridate)
 `%like%` <- data.table::`%like%`
+
 
 # removing wolf kills that are in the hunting regions
 # reading in Gardiner hunting region shapefile
@@ -21,8 +20,6 @@ hunt_dates <- readxl::read_xlsx("data/raw/hunting_seasons.xlsx") %>%
   dplyr::select(year, end) %>% 
   rename(hunt_end = end)
 
-# cleaning rf kill data
-source(here("scripts/clean_rf_data.R"))
 
 # main table that holds by-kill information
 wolf_kills <- kill_data_rf %>% 
@@ -51,18 +48,16 @@ wolf_kills <- kill_data_rf %>%
 
 # reducing all raven GPS points to only extra-territorial (terr_bin = 1) --------
 
-raven_gps_oot <- read_csv("data/clean/all_raven_gps_clean29.csv") %>% 
-  janitor::clean_names() %>% 
+raven_gps_oot <- readr::read_csv("data/clean/terr_raven_gps_5h.csv", 
+                          locale = locale(tz = "America/Denver")) %>% 
   # selecting useful columns
-  dplyr::select(individual_local_identifier, utm_easting, utm_northing, study_local_timestamp) %>%
+  dplyr::select(individual_local_identifier, utm_easting, utm_northing, date) %>%
   # only complete rows
   na.omit %>% 
   # calculating distance to territory
   gps_in_mcp() %>% 
   # only GPS outside of territory (> 1000 meters)
   filter(dist2terr > 1000) %>% 
-  # extracting date
-  mutate(date = as.Date(study_local_timestamp)) %>% 
   # filter time frame to winter study periods
   filter((month(date) > 11 | (month(date) == 11 & day(date) >= 15)) &
            (month(date) < 12 | (month(date) == 12 & day(date) <= 15)) |
@@ -75,23 +70,6 @@ raven_gps_oot <- read_csv("data/clean/all_raven_gps_clean29.csv") %>%
               dplyr::select(raven_id, date, terr_bin), 
             by = join_by(individual_local_identifier == raven_id, 
                          date)) %>% 
-  # only daytime points
-  # calculating sunlight times 
-  left_join(readr::read_csv("data/clean/all_raven_gps_clean29.csv") %>%
-              janitor::clean_names() %>% 
-              mutate(date = as.Date(study_local_timestamp)) %>% 
-              rename(lat = location_lat,
-                     lon = location_long) %>% 
-              suncalc::getSunlightTimes(data = .,
-                                        keep = c("sunrise", "sunset"),
-                                        tz = "MST") %>% 
-              # getting rid of duplicates
-              group_by(date) %>% 
-              slice(1) %>% 
-              ungroup) %>%
-  mutate(study_local_timestamp = as.POSIXct(study_local_timestamp, tz = "MST")) %>% 
-  filter(study_local_timestamp > sunrise,
-         study_local_timestamp < sunset) %>% 
   # turning into sf object to calculate distance from kills
   st_as_sf(coords = c("utm_easting", "utm_northing"), 
            crs = "+proj=utm +zone=12", 
@@ -99,8 +77,8 @@ raven_gps_oot <- read_csv("data/clean/all_raven_gps_clean29.csv") %>%
   # only complete rows (removes GPS points from days that aren't included)
   na.omit %>% 
   # removing extra columns
-  dplyr::select(-c(dist2terr, terr_bin, study_local_timestamp, sunrise, sunset, lat, lon)) %>% 
-  #creating column for distance to the nearest wolf kills
+  dplyr::select(-c(dist2terr, terr_bin)) %>% 
+  # creating column for distance to the nearest wolf kills
   mutate(dist2kill = NA)
 
 

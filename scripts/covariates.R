@@ -4,9 +4,6 @@ library(lubridate)
 library(data.table)
 
 
-# currently contains all winter months (nov-mar)
-
-
 # Daily commute decisions -----------------------------
 source("scripts/commute_decision.R")
 
@@ -258,7 +255,7 @@ active_kill_fctn <- function(data, days_since, start, end){
                                  tmp_gps <- x[i,]
                                  
                                  # calculating time difference in days to start of carcass (0 = kill on that day) for all kills in territory
-                                 time_diff_start <- difftime(as.Date(tmp_gps$date, tz = "MST"),
+                                 time_diff_start <- difftime(as.Date(tmp_gps$date, tz = "America/Denver"),
                                                              tmp_kills %>% 
                                                                pull(start), 
                                                              units = "days") %>% as.numeric()
@@ -266,7 +263,7 @@ active_kill_fctn <- function(data, days_since, start, end){
                                  # calculating time difference in days to end of carcass for all kills in territory
                                   # for wolf project database this is the same as start 
                                   # for RF predictive, this is the cluster end date
-                                 time_diff_end <- difftime(as.Date(tmp_gps$date, tz = "MST"),
+                                 time_diff_end <- difftime(as.Date(tmp_gps$date, tz = "America/Denver"),
                                                            tmp_kills %>% 
                                                              pull(end), 
                                                            units = "days") %>% as.numeric()
@@ -303,12 +300,10 @@ commute_df <- commute_df %>%
 source("scripts/home_range_mcp.R")
 
 # adding information about available kills to raven GPS points
-gps_raven <- readr::read_csv("data/clean/all_raven_gps_clean29.csv") %>% 
-  janitor::clean_names() %>% 
+gps_raven <- readr::read_csv("data/clean/terr_raven_gps_5h.csv", 
+                             locale = locale(tz = "America/Denver")) %>% 
   # only useful columns
-  dplyr::select(individual_local_identifier, utm_easting, utm_northing, study_local_timestamp) %>%
-  # extracting date
-  mutate(date = as.Date(study_local_timestamp, tz = "MST")) %>% 
+  dplyr::select(individual_local_identifier, utm_easting, utm_northing, date) %>%
   # adding commute data to GPS points
   left_join(commute_df %>% 
               # only columns useful for this
@@ -317,7 +312,7 @@ gps_raven <- readr::read_csv("data/clean/all_raven_gps_clean29.csv") %>%
                                                 date))
 
 
-# IGNORE WARNING SINCE THERE ARE MULTIPLE GPS POINTS PER DAY
+# IGNORE WARNING SINCE THERE CAN BE MULTIPLE KILLS PER DAY
 commute_df <- rf_in_terr_kill_list %>% 
   # adding column with list name to each df
   purrr::imap(~ mutate(.x, raven_id = .y)) %>% 
@@ -391,7 +386,6 @@ commute_df <- commute_df %>%
   # adding hunting end date
   left_join(fwp_dates)  %>% 
   left_join(bison_dates) %>% 
-  
   # creating new boolean column for hunting season
     #' TRUE = active hunting season
   mutate(
@@ -408,11 +402,11 @@ commute_df <- commute_df %>%
 
 
 # FWP hunting take ------------------------------------------------------------
-#adding FWP hunting estimates
+# adding FWP hunting estimates
 
 source("scripts/fwp_hunting_estimates.R")
 
-#adding column for rolled over biomass form previous day
+# adding column for rolled over biomass form previous day
 daily_count <- daily_count %>%
   arrange(year, month, day) %>% 
   mutate(fwp_bms1 = if_else(!is.na(lag(year)), # if it isn't the first row, which doesn't have a previous row
@@ -421,7 +415,7 @@ daily_count <- daily_count %>%
                                       final_take_bms), #(ifelse2) else, just use the biomass for that day
                               final_take_bms))  #(ifelse1) else, just use the biomass for that day %>% 
   
-#adding to main data frame
+# adding to main data frame
 commute_df <- commute_df %>%
   left_join(daily_count %>%
               dplyr::select(year, month, day, 
@@ -468,105 +462,28 @@ commute_df <- commute_df %>%
          final_take = final_take + bison_take)
 
 
-# #!!!! some code is included and commented out for using a hunting start date 
-#   # calculating daily take
-#   # adding the daily biomass to the window columns based on start date of the hunt
-# 
-# 
-# #reading in data
-# #year on this data is the year at the time of march, not the hunting season year
-# bison_take <- readr::read_csv("data/raw/bison_hunt.csv")
-# 
-# commute_df <- bison_take %>% 
-#   
-#   #making a single column with the greatest take value from the FEIS or IBMP
-#   mutate(bison_daily_take = if_else(is.na(take), ibmp,
-#                               if_else(is.na(ibmp), take,
-#                                       if_else(take > ibmp, take, ibmp))),
-#          
-#          #dividing by hunting days - add back in when I get the hunt start dates
-#          # end_date = as.Date(paste0(year(start_date), "-3-31")),
-#          # bison_daily_take = bison_daily_take/(difftime(end_date, start_date, units = "days") + 1),
-#          bison_daily_take = bison_daily_take/31,
-#          
-#          #making the biomass based around elk weight = 1x
-#          bison_daily_bms = bison_daily_take * 2.15) %>% 
-#   
-#   #joining to commute data 
-#   rename(bison_hunt_start = start_date) %>% 
-#   dplyr::select(year, bison_hunt_start, bison_daily_take, bison_daily_bms) %>% 
-#   right_join(commute_df, by = join_by(year)) %>% 
-#   
-#   
-#   #reorganizing columns to keep raven and date data up front
-#   relocate(bison_daily_take, bison_daily_bms,
-#            .after = final_take_bms) %>% 
-#   relocate(bison_hunt_start, 
-#            .after = start_hunt) %>% 
-#   
-#   #adding the bison biomass number to the moving window columns
-#   # {if(month(bison_hunt_start) == 3){
-#   #   mutate(bms_window_1 = if_else(month == 3 & day >= day(start(date)), bison_daily_bms,
-#   #                                 if_else(month == 3 & day < day(start(date)), 0, bms_window_1)),
-#   #          bms_window_3 = if_else(month == 3 & day >= day(start(date)), bison_daily_bms,
-#   #                                 if_else(month == 3 & day < day(start(date)), 0, bms_window_3)),
-#   #          bms_window_5 = if_else(month == 3 & day >= day(start(date)), bison_daily_bms,
-#   #                                 if_else(month == 3 & day < day(start(date)), 0, bms_window_5)))
-#   #   } else(
-#   #     mutate(bms_window_1 = if_else(month == 3, bison_daily_bms, bms_window_1),
-#   #            bms_window_3 = if_else(month == 3, bison_daily_bms, bms_window_3),
-#   #            bms_window_5 = if_else(month == 3, bison_daily_bms, bms_window_5))
-#   #     )
-#   # }
-# 
-#   mutate(bms_window_1 = if_else(month == 3, bison_daily_bms, bms_window_1),
-#          bms_window_3 = if_else(month == 3, bison_daily_bms, bms_window_3),
-#          bms_window_5 = if_else(month == 3, bison_daily_bms, bms_window_5),
-#          final_take_bms = if_else(month == 3, bison_daily_bms, final_take_bms)) 
-
-
-# Hunting categorical take ----------------------------------------------------
-# #adding just high or low periods/years instead of numerical values
-# 
-# # low period is before nov 7
-# # low period for bison is years < 1 (which is low values of below 10 in a season)
-# 
-# commute_df <- commute_df %>% 
-#   
-#   mutate(take_high_low = if_else(final_take_bms == 0, "zero",
-#                                  if_else(
-#                                    #in the early FWP season (before Nov 7)
-#                                    (paste(month, day, sep = "-") >= format(start_hunt, "%m-%d") &
-#                                       paste(month, day, sep = "-") <= "11-7"),
-#                                    "low",
-#                                    "high")),
-#          take_high_low = if_else(#in a low bison take year (< 10 in a season)
-#                                     month == 3 & bison_daily_take < 1,
-#                                     "low",
-#                                     take_high_low))
-
 # Clearing up tagged pairs ------------------------------------------------
 
 # High bridge pair (7654 & 7530)
 # Tower pair (7484_2 & 7493_2)
 
 # looking at the number of days for each raven
-high_m <- commute_df %>% 
-  filter(raven_id == "7654")
-high_f <- commute_df %>% 
-  filter(raven_id == "7530")
-tower_m <- commute_df %>% 
-  filter(raven_id == "7484_2")
-tower_f <- commute_df %>% 
-  filter(raven_id == "7493_2")
+# high_m <- commute_df %>% 
+#   filter(raven_id == "7654")
+# high_f <- commute_df %>% 
+#   filter(raven_id == "7530")
+# tower_m <- commute_df %>% 
+#   filter(raven_id == "7484_2")
+# tower_f <- commute_df %>% 
+#   filter(raven_id == "7493_2")
+# 
+# nrow(high_m)
+# nrow(high_f)
+# 
+# nrow(tower_m)
+# nrow(tower_f)
 
-nrow(high_m)
-nrow(high_f)
-
-nrow(tower_m)
-nrow(tower_f)
-
-# females are both better than males
+# both females are better than their males
 
 commute_df <- commute_df %>% 
   filter(raven_id != "7654",
@@ -579,32 +496,6 @@ commute_df <- commute_df %>%
   mutate(study_period = if_else(month %in% c(10, 11, 12, 1, 2), 
                                 if_else(month %in% c(10, 11, 12), "early", "mid"), 
                                 "late"))
-
-
-
-# Yearly kill density -----------------------------------------------------
-# ## kills in territory/30 days
-# 
-# ## distinct kill density for each year and study period
-# 
-# # turning kill_density_list into dataframe that can be joined to commute_df
-# kill_density_df <- kill_density_list %>% 
-#   # turning list into single dataframe while retaining raven_id as a column
-#   bind_rows(.id = "source") %>% 
-#   # fixing column names
-#   rename(raven_id = source,
-#          yearly_terr_kill_density = density,
-#          study_period = period)
-# 
-# #adding yearly kill density to main data
-# commute_df <- commute_df %>% 
-#   left_join(kill_density_df) %>% 
-#   # making kill_density 0 when NA since there were no kills in its territory
-#   # having a row in the commute_df means the raven was taking points that day
-#   mutate(yearly_terr_kill_density = if_else(is.na(yearly_terr_kill_density), 0, 
-#                                          yearly_terr_kill_density))
-
-
 
 
 # Other raven movement decisions ------------------------------------------
@@ -624,7 +515,6 @@ group_commute_decision <- commute_df %>%
 #adding group commute decision to main dataframe
 commute_df <- commute_df %>% 
   left_join(group_commute_decision) %>% 
-  
   # editing the values of group commute to remove the decision of that row
   mutate(group_left_terr = if_else(terr_bin == TRUE, # if that raven left its territory
                                    group_left_terr - 1, # remove 1 raven from the group that chose to leave
@@ -633,39 +523,11 @@ commute_df <- commute_df %>%
                                     group_visit_hunt - 1, # remove 1 raven from the group that visited Gardiner
                                     group_visit_hunt),
          n_raven_daily = if_else(n_raven_daily == 1, NA, n_raven_daily - 1)) %>% 
-  
   # turning the raw values into a proportion
   mutate(prop_group_left_terr = group_left_terr/n_raven_daily,
          prop_group_visit_hunt = group_visit_hunt/n_raven_daily) %>% 
-  
   # removing raw value of group raven daily decisions
   dplyr::select(-c(group_left_terr, group_visit_hunt, n_raven_daily))
-
-
-
-# Individual decision history --------------------------------------------
-#' 
-#' #looking to see about the days since the last data point
-#' commute_df <- commute_df %>%
-#'   group_by(raven_id, year, study_period) %>%
-#'   arrange(date) %>%
-#'   mutate(
-#'     #adding days since the previous data point
-#'     days_since_last = as.numeric(date - lag(date)),
-#'   #' previous day = 1668 days
-#'   #' 2 days = 1712 days
-#'   #' 3 days = 1732 days
-#'   #' 4 days = 1752 days
-#'   #' 7 days = 1768 days
-#' 
-#' # adding decisions of previous day
-#'     #previous day history
-#'     previous_decision_terr = if_else(days_since_last == 1, 
-#'                                      lag(terr_bin), 
-#'                                      NA),
-#'     previous_decision_hunt = if_else(days_since_last == 1, 
-#'                                      lag(hunt_bin), 
-#'                                      NA))
 
 
 # Weather -------------------------------------------------------------
@@ -687,10 +549,7 @@ weather_history <- readr::read_csv("data/raw/noaa_weather_ncei.csv", skip = 1) %
 commute_df <- commute_df %>% 
   left_join(weather_history)
 
-# commute_df <- commute_df %>% 
-#   left_join(temp_history)
-# 
-# plot(tmax_degrees_fahrenheit ~ temp_max, data = commute_df)
+
 # Writing out csv to cleaned data folder ----------------------------------
 # so this doesn't have to be run every time to work with model script
 

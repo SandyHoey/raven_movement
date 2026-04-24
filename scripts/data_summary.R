@@ -8,20 +8,19 @@ library(ggpattern)
 # reading in data ---------------------------------------------------------
 # reading in full data (Sep-Mar)
 data <- readr::read_csv("data/clean/commute_data.csv") %>% 
-  filter(n_point >= 10,
-         month != 8)
+  # limit to study years
+  filter(date < "2024-3-31")
 
 
 ## dataset for part 1 of conditional model
 ws_model_data <- readr::read_csv("data/clean/commute_data.csv") %>% 
+  # limit to study years
+  filter(date < "2024-3-31") %>% 
   # restricting to only winter study months
   filter((month > 11 | (month == 11 & day >= 15)) &
            (month < 12 | (month == 12 & day <= 15)) |
            (month > 3 | (month == 3 & day >= 1)) &
            (month < 3 | (month == 3 & day <= 30))) %>% 
-  # removing days when there is less than 5 GPS point
-  # unless the result is leaving territory
-  filter(n_point >= 10) %>% 
   # only columns used in model
   dplyr::select(date, n_point, terr_bin, hunt_bin, raven_id, dump, rf_active_kill, visit_500, 
                 visit_kill, final_take_bms1, hunt_season, rf_avg_terr_kill_density, 
@@ -31,7 +30,9 @@ ws_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
 
 
 ## dataset for part 2 of conditional model
-hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
+hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>% 
+  # limit to study years
+  filter(date < "2024-3-31") %>%
   # restricting to only winter study months
   filter((month > 11 | (month == 11 & day >= 15)) &
            (month < 12 | (month == 12 & day <= 15)) |
@@ -39,9 +40,6 @@ hunt_model_data <- readr::read_csv("data/clean/commute_data.csv") %>%
            (month < 3 | (month == 3 & day <= 30))) %>% 
   # only have days ravens decided to leave territory
   filter(terr_bin == 1) %>% 
-  # removing days when there is less than 10 GPS point
-  # unless the result is Jardine
-  filter(n_point >= 10) %>% 
   # only columns used in model
   dplyr::select(date, n_point, hunt_bin, terr_bin, raven_id, dump, visit_kill, final_take_bms1, 
                 hunt_season, dist2nentrance, study_period, temp_max, snow_depth, prop_group_visit_hunt) %>% 
@@ -106,13 +104,13 @@ data %>%
             sd = sd(prop_hunt))
 
 
-
 # average home range size
 source("scripts/home_range_mcp.R")
-mean(mcp90@data$area)
-median(mcp90@data$area)
-range(mcp90@data$area)
-sd(mcp90@data$area)
+mean(mcp90@data$area[mcp90@data$id %in% data$raven_id])
+median(mcp90@data$area[mcp90@data$id %in% data$raven_id])
+range(mcp90@data$area[mcp90@data$id %in% data$raven_id])
+sd(mcp90@data$area[mcp90@data$id %in% data$raven_id])
+
 
 # average distance to hunting
 ws_model_data %>% 
@@ -161,14 +159,15 @@ data %>%
 
 
 # wolf kills available on territory
-kills_available <- ws_model_data %>% 
+ws_model_data %>% 
   group_by(raven_id) %>% 
   summarize(available_kills = sum(rf_active_kill),
             total_days = n()) %>% 
-  mutate(prop_available = available_kills/total_days)
-mean(kills_available$prop_available)
-range(kills_available$prop_available)
-sd(kills_available$prop_available)
+  mutate(prop_available = available_kills/total_days) %>% 
+  summarize(mean = mean(prop_available),
+            min = min(prop_available),
+            max = max(prop_available),
+            sd = sd(prop_available))
 
 
 # wolf kills visited outside of territory
@@ -179,7 +178,6 @@ hunt_model_data %>%
   mutate(prop_visited = visited_kills/total_days) %>% 
   ungroup %>% 
   summarize(mean = mean(prop_visited),
-            median = median(prop_visited),
             min = min(prop_visited),
             max = max(prop_visited),
             sd = sd(prop_visited),
@@ -331,6 +329,9 @@ ggsave("decision_barplot.tif", units = "in", width = 7, height = 6, device = "ti
 
 # stacked barplot (WS) ----------------------------------------------------
 
+
+
+
 # table showing raven decisions during winter studies
 ws_decision_table <- ws_model_data %>% 
   group_by(raven_id) %>% 
@@ -344,29 +345,34 @@ ws_decision_table <- ws_model_data %>%
 # only during winter study
 ws_model_data %>% 
   group_by(raven_id) %>% 
-  summarize(terr_kill = sum(terr_bin == FALSE & visit_500 == TRUE),
-            terr_nokill = sum(terr_bin == FALSE & visit_500 == FALSE),
-            other_terr_kill = sum(terr_bin == TRUE & hunt_bin == FALSE & visit_500 == TRUE),
-            other_visit_kill = sum(terr_bin == TRUE & hunt_bin == FALSE & visit_kill == TRUE & visit_500 == FALSE),
+  summarize(terr_avail = sum(terr_bin == FALSE & rf_active_kill == TRUE & visit_500 == FALSE),
+            terr_visit = sum(terr_bin == FALSE & visit_500 == TRUE),
+            terr_nokill = sum(terr_bin == FALSE & rf_active_kill == FALSE),
+            other_terr_avail= sum(terr_bin == TRUE & hunt_bin == FALSE & rf_active_kill == TRUE & visit_500 == FALSE),
+            other_terr_visit = sum(terr_bin == TRUE & hunt_bin == FALSE & visit_500 == TRUE),
+            other_visit_outside = sum(terr_bin == TRUE & hunt_bin == FALSE & visit_kill == TRUE & visit_500 == FALSE),
             other_nokill = sum(terr_bin == TRUE & hunt_bin == FALSE & visit_kill == FALSE & visit_500 == FALSE),
-            hunt_terr_kill = sum(hunt_bin == TRUE & visit_500 == TRUE),
-            hunt_visit_kill = sum(hunt_bin == TRUE & visit_kill == TRUE & visit_500 == FALSE),
+            hunt_terr_avail = sum(hunt_bin == TRUE & rf_active_kill == TRUE & visit_500 == FALSE) ,
+            hunt_terr_visit = sum(hunt_bin == TRUE & visit_500 == TRUE),
+            hunt_visit_outside = sum(hunt_bin == TRUE & visit_kill == TRUE & visit_500 == FALSE),
             hunt_nokill = sum(hunt_bin == TRUE & visit_kill == FALSE & visit_500 == FALSE)) %>% 
   # adding column for total sample size for each raven
-  mutate(n = hunt_terr_kill + hunt_visit_kill + hunt_nokill + other_terr_kill + 
-           other_visit_kill + other_nokill + terr_kill + terr_nokill) %>% 
+  mutate(n = hunt_terr_avail + hunt_terr_visit + hunt_visit_outside + hunt_nokill + 
+           other_terr_avail + other_terr_visit + other_visit_outside + other_nokill + 
+           terr_avail + terr_visit + terr_nokill) %>% 
   # switching to long format
-  tidyr::pivot_longer(cols = c(hunt_terr_kill, hunt_visit_kill, hunt_nokill, other_terr_kill, 
-                               other_visit_kill, other_nokill, terr_kill, terr_nokill),
+  tidyr::pivot_longer(cols = c(hunt_terr_avail, hunt_terr_visit, hunt_visit_outside, hunt_nokill, 
+                                 other_terr_avail, other_terr_visit, other_visit_outside, other_nokill, 
+                                 terr_avail, terr_visit, terr_nokill),
                       names_to = "decision") %>%  
   # setting plotting order
-  mutate(decision = factor(decision, levels = rev(c("terr_nokill", "terr_kill",
-                                                   "other_nokill", "other_terr_kill", "other_visit_kill",
-                                                   "hunt_nokill", "hunt_terr_kill", "hunt_visit_kill")))) %>% 
+  mutate(decision = factor(decision, levels = rev(c("terr_nokill", "terr_avail", "terr_visit",
+                                                   "other_nokill", "other_terr_avail", "other_terr_visit", "other_visit_outside",
+                                                   "hunt_nokill", "hunt_terr_avail", "hunt_terr_visit", "hunt_visit_outside")))) %>% 
   # adding column for presence of kill
-  mutate(kill = rep(c("terr_kill", "visit_kill", "no_kill",
-                      "terr_kill", "visit_kill", "no_kill",
-                      "terr_kill", "no_kill"), 18)) %>% 
+  mutate(kill = rep(c("terr_avail", "terr_visit", "visit_outside", "no_kill",
+                      "terr_avail", "terr_visit", "visit_outside", "no_kill",
+                      "terr_avail", "terr_visit", "no_kill"), 18)) %>% 
   # setting graphing data
   ggplot(aes(x = value, y = raven_id, fill = decision, pattern = kill)) +
   # creating proportion stacked barplot
@@ -379,16 +385,17 @@ ws_model_data %>%
        x = "Proportion of days",
        y = "Raven ID",
        fill = "Decision") +
-  scale_pattern_manual(values = c("terr_kill" = "stripe", 
-                                  "visit_kill" = "circle", 
+  scale_pattern_manual(values = c("terr_avail" = "stripe", 
+                                  "terr_visit" = "crosshatch",
+                                  "visit_outside" = "circle", 
                                   "no_kill" = "none"), 
-                       name = "Wolf kill visit",
-                       breaks = c("terr_kill", "visit_kill"),
-                       labels = c("In territory", "Out of territory")) +  
+                       name = "Wolf kill",
+                       breaks = c("terr_avail", "terr_visit", "visit_outside"),
+                       labels = c("Available in territory", "Visit in territory", "Visit out of territory")) +  
   # custom color/texture scheme
-  scale_fill_manual(values = c(terr_kill = "#E69F00", terr_nokill = "#E69F00",
-                               other_terr_kill = "#A4D8F4",other_visit_kill = "#A4D8F4", other_nokill = "#A4D8F4",
-                               hunt_terr_kill = "#0072B2", hunt_visit_kill = "#0072B2", hunt_nokill = "#0072B2"),
+  scale_fill_manual(values = c(terr_avail = "#E69F00", terr_visit = "#E69F00", terr_nokill = "#E69F00",
+                               other_terr_avail = "#A4D8F4",other_terr_visit = "#A4D8F4", other_visit_outside = "#A4D8F4", other_nokill = "#A4D8F4",
+                               hunt_terr_avail = "#0072B2",hunt_terr_visit = "#0072B2", hunt_visit_outside = "#0072B2", hunt_nokill = "#0072B2"),
                     # removing repeats in legend
                     breaks = c("hunt_nokill", "other_nokill", "terr_nokill"),
                     # changing name of legend items
