@@ -4,8 +4,7 @@ library(dplyr)
 library(glmmTMB)
 library(ggplot2)
 library(myFunctions) # custom bootstrap function
-library(modelsummary)
-library(pandoc) # writing out model result tables to word
+
 
 # model optimizer
 cntrlTMB = glmmTMBControl(optimizer = optim, optArgs = list(method="BFGS"))
@@ -74,7 +73,7 @@ mod_terr <- glmmTMB(terr_bin ~ (1|raven_id) + visit_500 + rf_active_kill + final
 summary(mod_terr)
 
 
-modelsummary(list(" " = mod_terr),
+modelsummary::modelsummary(list(" " = mod_terr),
              # set included values
              statistic = c("Std. Error" = "std.error", "p-value" = "p.value"),
              shape = term ~ model + statistic,
@@ -95,7 +94,9 @@ modelsummary(list(" " = mod_terr),
              # remove random effects rows
              effects = "fixed",
              # output
-             output = "figures/terr_table.docx")
+             output = "flextable")  %>% 
+  flextable::autofit() %>% 
+  flextable::save_as_image(path = "figures/terr_table.png")
 
 
 # prediction and coef plots -------------------------------
@@ -251,7 +252,7 @@ mod_hunt <- glmmTMB(hunt_bin ~ (1|raven_id) + visit_kill + final_take_bms1 + hun
 summary(mod_hunt)
 
 
-modelsummary(list(" " = mod_hunt),
+modelsummary::modelsummary(list(" " = mod_hunt),
              # set included values
              statistic = c("Std. Error" = "std.error", "p-value" = "p.value"),
              shape = term ~ model + statistic,
@@ -270,7 +271,9 @@ modelsummary(list(" " = mod_hunt),
              # remove random effects rows
              effects = "fixed",
              # output
-             output = "figures/hunt_table.docx")
+             output = "flextable") %>% 
+  flextable::autofit() %>% 
+  flextable::save_as_image(path = "figures/hunt_table.png")
 
 # prediction and coef plots -------------------------------
 
