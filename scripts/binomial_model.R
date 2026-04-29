@@ -73,6 +73,17 @@ mod_terr <- glmmTMB(terr_bin ~ (1|raven_id) + visit_500 + rf_active_kill + final
 summary(mod_terr)
 
 
+# odds ratio
+data.frame(term = rownames(summary(mod_terr)$coefficients$cond),
+           estimate = summary(mod_terr)$coefficients$cond[, "Estimate"],
+           se = summary(mod_terr)$coefficients$cond[, "Std. Error"],
+           row.names = NULL) %>% 
+  mutate(OR = round(exp(estimate), 2),
+         low = round(exp(estimate - 1.96 * se), 2),
+         up = round(exp(estimate + 1.96 * se), 2)) %>% 
+  dplyr::select(term, OR, low, up)
+  
+# model summary table -----------------------------------------------------
 modelsummary::modelsummary(list(" " = mod_terr),
              # set included values
              statistic = c("Std. Error" = "std.error", "p-value" = "p.value"),
@@ -81,16 +92,16 @@ modelsummary::modelsummary(list(" " = mod_terr),
              gof_map = NA,
              # set coef names
              coef_rename = c("(Intercept)" = "Intercept",
-                             "visit_500TRUE" = "Visit kill (TRUE)",
-                             "rf_active_killTRUE" = "Available kill (TRUE)",
-                             "final_take_bms1" = "Hunting biomass",
-                             "hunt_seasonTRUE" = "Hunting season (TRUE)",
-                             "rf_avg_terr_kill_density" = "Kill density",
+                             "visit_500TRUE" = "Visit kill",
+                             "rf_active_killTRUE" = "Available kill",
+                             "final_take_bms1" = "Biomass",
+                             "hunt_seasonTRUE" = "Hunt",
+                             "rf_avg_terr_kill_density" = "Density",
                              "dist2nentrance" = "Distance",
-                             "study_periodlate" = "Study period (Late)",
-                             "snow_depth" = "Snow depth",
-                             "temp_max" = "Max temperature",
-                             "prop_group_left_terr" = "Proportion traveling"),
+                             "study_periodlate" = "Season",
+                             "snow_depth" = "Snow",
+                             "temp_max" = "Temp",
+                             "prop_group_left_terr" = "Social"),
              # remove random effects rows
              effects = "fixed",
              # output
@@ -172,7 +183,7 @@ terr_coef %>%
             size = 3) +
   # changing labels
   labs(y = "",
-       x = "\u03b2") +
+       x = "\u03b1") +
   # changing x axis limits
   scale_x_continuous(limits = c(-3.3, 1.2), breaks = seq(-4, 2, 1), labels = seq(-4, 2, 1),
                      expand = expansion(add = c(0.1, 0.1))) +
@@ -252,6 +263,16 @@ mod_hunt <- glmmTMB(hunt_bin ~ (1|raven_id) + visit_kill + final_take_bms1 + hun
 summary(mod_hunt)
 
 
+# odds ratio
+data.frame(term = rownames(summary(mod_hunt)$coefficients$cond),
+           estimate = summary(mod_hunt)$coefficients$cond[, "Estimate"],
+           se = summary(mod_hunt)$coefficients$cond[, "Std. Error"],
+           row.names = NULL) %>% 
+  mutate(OR = round(exp(estimate), 2),
+         low = round(exp(estimate - 1.96 * se), 2),
+         up = round(exp(estimate + 1.96 * se), 2)) %>% 
+  dplyr::select(term, OR, low, up)
+# model summary table -----------------------------------------------------
 modelsummary::modelsummary(list(" " = mod_hunt),
              # set included values
              statistic = c("Std. Error" = "std.error", "p-value" = "p.value"),
@@ -347,13 +368,13 @@ hunt_coef %>%
   scale_y_discrete(limits = c("prop_group_visit_hunt", "snow_depth", "temp_max", 
                               "dist2nentrance", "hunt_seasonTRUE", "final_take_bms1", 
                               "visit_killTRUE"),
-                   labels = c("prop_group_visit_hunt" = "Proportion traveling",
-                              "snow_depth" = "Snow depth", 
-                              "temp_max" = "Max temperature", 
+                   labels = c("prop_group_visit_hunt" = "Social",
+                              "snow_depth" = "Snow", 
+                              "temp_max" = "Temp", 
                               "dist2nentrance" = "Distance", 
-                              "hunt_seasonTRUE" = "Hunting season (TRUE)", 
-                              "final_take_bms1" = "Hunting biomass", 
-                              "visit_killTRUE" = "Visit kill (TRUE)")) +
+                              "hunt_seasonTRUE" = "Hunt", 
+                              "final_take_bms1" = "Biomass", 
+                              "visit_killTRUE" = "Visit")) +
   theme_classic() +
   theme(axis.title = element_text(size = 13, face = "bold"),
         axis.text.y = element_text(size = 10))
