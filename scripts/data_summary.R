@@ -3,6 +3,7 @@
 library(dplyr)
 library(ggplot2)
 library(ggpattern)
+library(patchwork)
 
 
 # reading in data ---------------------------------------------------------
@@ -83,7 +84,6 @@ range(ws_model_data$date)
 
 # proportion of days leaving territory
 data %>% 
-  filter(n_point >= 10) %>% 
   group_by(raven_id) %>% 
   summarize(prop_leave = sum(terr_bin)/n()) %>% 
   summarize(mean = mean(prop_leave),
@@ -94,10 +94,9 @@ data %>%
 
 # proportion of days off territory visiting hunting
 data %>% 
-  filter(n_point >= 10,
-         terr_bin == TRUE) %>% 
+  filter(terr_bin == TRUE) %>% 
   group_by(raven_id) %>% 
-  summarize(prop_hunt = sum(hunt_bin)/n()) %>% 
+  summarize(prop_hunt = sum(hunt_bin)) %>% 
   summarize(mean = mean(prop_hunt),
             min = min(prop_hunt),
             max = max(prop_hunt),
@@ -264,39 +263,34 @@ hunt_model_data %>%
   hist(main = "proportion of territorials that visited hunting")
 
 
-# stacked barplot (all winter) --------------------------------------------
+# stacked average barplot (all winter) --------------------------------------------
 # table showing raven decisions during winter studies
-decision_table <- data %>% 
+(all_winter_bar <- data %>% 
   group_by(raven_id) %>% 
-  summarize(terr = sum(terr_bin == FALSE),
-            other = sum(terr_bin == TRUE & hunt_bin == FALSE),
-            hunt = sum(hunt_bin == TRUE)) %>% 
-  # adding column for total sample size for each raven
-  mutate(n = hunt + other + terr)
-
-# stacked barplot showing raven decisions including wolf kill presence
-# data from all winter
-data %>% 
-  group_by(raven_id) %>% 
-  summarize(terr = sum(terr_bin == FALSE),
-            other = sum(terr_bin == TRUE & hunt_bin == FALSE),
-            hunt = sum(hunt_bin == TRUE)) %>% 
-  # adding column for total sample size for each raven
-  mutate(n = terr + other + hunt) %>% 
+  # calculating proportions for indviduals
+  summarize(prop_terr = sum(terr_bin == FALSE)/n(),
+            prop_other = sum(terr_bin == TRUE & hunt_bin == FALSE)/n(),
+            prop_hunt = sum(hunt_bin == TRUE)/n()) %>% 
+  # averaging across individuals
+  summarize(terr = mean(prop_terr),
+            other = mean(prop_other),
+            hunt = mean(prop_hunt)) %>% 
+  # adding name for y axis
+  mutate(y = "All winter") %>% 
   # switching to long format
   tidyr::pivot_longer(cols = c(hunt, other, terr),
                       names_to = "decision") %>%  
   # setting plotting order
   mutate(decision = factor(decision, levels = rev(c("terr", "other", "hunt")))) %>% 
   # setting graphing data
-  ggplot(aes(x = value, y = raven_id, fill = decision)) +
+  ggplot(aes(x = value, y = y, fill = decision)) +
   # creating proportion stacked barplot
   geom_bar(position = "fill", stat = "identity",
                    colour = "black", linewidth = 0.2) +
   # changing labels of plot
   labs(title = "  ",
        x = "Proportion of days",
-       y = "Raven ID",
+       y = "",
        fill = "Decision") +
   # custom color/texture scheme
   scale_fill_manual(values = c(terr = "#E69F00",
@@ -304,33 +298,20 @@ data %>%
                                hunt = "#0072B2"),
                     # changing name of legend items
                     labels = c("Hunting", "Other", "Territory")) +
-  # removing pattern from fill legend and changing pattern legend background
-  guides(fill = guide_legend(override.aes = list(pattern = "none")),
-         pattern = guide_legend(override.aes = list(fill = "white"))) +
   # removing space between axis and barplot
   scale_x_continuous(expand = c(0, 0)) +
-  # adding sample size to right axis
-  geom_text(data = decision_table, aes(x = 1.01, y = raven_id, label = n),
-            inherit.aes = FALSE, hjust = 0, size = 3) + 
-  # adding label for sample size column
-  annotate("text", x = 1, y = Inf, label = "Sample size",
-           hjust = 0.3, vjust = -0.3, size = 4) +
   # adjusting plot axis to show the extra text
   coord_cartesian(xlim = c(0, 1.1), clip = "off") +
   theme_classic() +
-  theme(legend.position = "bottom",
+  theme(legend.position = "none",
         axis.title = element_text(size = 14),
         axis.text = element_text(size = 11),
         strip.text = element_text(size = 12),
         legend.text = element_text(size = 12),
-        legend.title = element_text(size = 14))
-ggsave("decision_barplot.tif", units = "in", width = 7, height = 6, device = "tiff", path = "figures")
+        legend.title = element_text(size = 14)))
 
 
 # stacked barplot (WS) ----------------------------------------------------
-
-
-
 
 # table showing raven decisions during winter studies
 ws_decision_table <- ws_model_data %>% 
@@ -343,7 +324,7 @@ ws_decision_table <- ws_model_data %>%
 
 # stacked barplot showing raven decisions including wolf kill presence
 # only during winter study
-ws_model_data %>% 
+(ws_bar <- ws_model_data %>% 
   group_by(raven_id) %>% 
   summarize(terr_avail = sum(terr_bin == FALSE & rf_active_kill == TRUE & visit_500 == FALSE),
             terr_visit = sum(terr_bin == FALSE & visit_500 == TRUE),
@@ -418,8 +399,17 @@ ws_model_data %>%
         axis.text = element_text(size = 11),
         strip.text = element_text(size = 12),
         legend.box.spacing = unit(0.1, "cm"),
-        legend.margin = margin(0, 0, 0, 0))
+        legend.margin = margin(0, 0, 0, 0)))
 ggsave("ws_decision_barplot.tif", units = "in", width = 8, height = 5.5, device = "tiff", path = "figures")
+
+# plotting barplots together
+(all_winter_bar + ws_bar) + 
+  plot_layout(heights = c(0.1, 1), ncol = 1, axes = "collect_x") &
+  theme(axis.title = element_text(size = 18),
+        legend.title = element_text(size = 15),
+        legend.text = element_text(size = 13),
+        axis.text = element_text(size = 13))
+ggsave("combined_decision_barplot.tif", units = "in", width = 8.5, height = 6.5, device = "tiff", path = "figures")
 
 
 # decisions between months ------------------------------------------------
@@ -433,8 +423,6 @@ commute_month <- commute_df  %>%
          winter_year = if_else(month(date) %in% c(11,12), year(date), year(date) - 1)) %>% 
   # changing name of ID column
   rename(raven_id = individual_local_identifier) %>% 
-  # removing days when there are < 10 GPS points
-  filter(n_point >= 10) %>% 
   # getting proportion travel decisions by bird
   group_by(raven_id, month, winter_year) %>% 
   summarize(territory = sum(commute == 1)/n(),
@@ -497,8 +485,6 @@ commute_day <- commute_df  %>%
   filter(month %in% c(8:12, 1:3)) %>% 
   # changing name of ID column
   rename(raven_id = individual_local_identifier) %>% 
-  # removing days when there are < 10 GPS points
-  filter(n_point >= 10) %>% 
   # getting proportion travel decisions by bird
   group_by(year, month, day) %>% 
   summarize(territory = sum(commute == 1)/n(),
@@ -566,8 +552,6 @@ commute_bison <- commute_df  %>%
          winter_year = if_else(month(date) %in% c(11,12), year(date), year(date) - 1)) %>% 
   # changing name of ID column
   rename(raven_id = individual_local_identifier) %>% 
-  # removing days when there are < 10 GPS points
-  filter(n_point >= 10) %>% 
   # getting proportion travel decisions by bird
   group_by(raven_id, month, winter_year) %>% 
   summarize(territory = sum(commute == 1)/n(),
