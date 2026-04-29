@@ -233,7 +233,7 @@ kill_rows %>%
 
 
 # looking at kills never visited
-kills_not _visited <- kill_rows %>% 
+kills_not_visited <- kill_rows %>% 
   filter(visit == FALSE) %>% 
   group_by(kill_id) %>% 
   slice(1)
