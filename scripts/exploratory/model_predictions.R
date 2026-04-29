@@ -1,74 +1,93 @@
 scale_seq <- seq(-2, 2, .005)
 
 # PART 1
-# hunting season and active kill in territory
-# early winter
-plogis(c(2.3158440 - 1.8916349 - 0.22172,
-         2.3158440 - 1.8916349,
-         2.3158440 - 0.22172,
-         2.3158440))
-# late winter
-plogis(c(2.3158440 - 1.8916349 - 0.22172 - 0.1172071,
-         2.3158440 - 1.8916349 - 0.1172071,
-         2.3158440 - 0.22172 - 0.1172071,
-         2.3158440 - 0.1172071))
+# impact of wolf kill visit on p(leaving)
+expand.grid(visit_500 = c(TRUE, FALSE),
+            rf_active_kill = c(TRUE, FALSE),
+            hunt_season = c(TRUE, FALSE),
+            final_take_bms1 = 0,
+            rf_avg_terr_kill_density = 0,
+            dist2nentrance = 0,
+            study_period = c("early", "late"),
+            temp_max = 0,
+            snow_depth = 0,
+            prop_group_left_terr = 0) %>% 
+  mutate(pred = predict(mod_terr, expand.grid(visit_500 = c(TRUE, FALSE),
+                              rf_active_kill = c(TRUE, FALSE),
+                              hunt_season = c(TRUE, FALSE),
+                              final_take_bms1 = 0,
+                              rf_avg_terr_kill_density = 0,
+                              dist2nentrance = 0,
+                              study_period = c("early", "late"),
+                              temp_max = 0,
+                              snow_depth = 0,
+                              prop_group_left_terr = 0),
+        re.form = NA, type = "response")) %>% 
+  group_by(rf_active_kill, hunt_season, study_period)%>%
+  pivot_wider(names_from   = visit_500,
+              values_from  = pred,
+              names_prefix = "visit_") %>%
+  mutate(difference = visit_FALSE - visit_TRUE) %>% 
+  ungroup %>% 
+  summarize(mean = mean(difference),
+            min = min(difference),
+            max = max(difference))
 
 
-# examining interaction effect study_period*snow
-# red = Late winter
-# green = Early winter
-plot(x = scale_seq,
-     y = plogis(2.3158440 - 1.8916349 + (0.687682 * scale_seq) - 0.554340),
-     main = "Stdy period * snow",
-     xlab = "snow",
-     ylim = c(0, 1),
-     col = 2, lwd = 0.1)
-lines(x = scale_seq, 
-      y = plogis(2.3158440 + (0.687682 * scale_seq) - 0.554340),
-      col = 3, lwd = 2)
-a <- 0.26064
-b <- 0.08188
-exp(a)
-exp(a-1.96*b)
-exp(a+1.96*b)
+
 # PART 2
-# hunting biomass and finding kill outside territory
-# red = found a kill
-plot(x = scale_seq,
-     y = plogis(c(-0.50056 - 1.92891 - 0.04314 * scale_seq)),
-     col = "red", ylim = c(0, 1))
-lines(x = scale_seq,
-      y = plogis(c(-0.50056 - 0.04314 * scale_seq)),
-      col = "blue")
+# impact of wolf kill visit on p(hunt)
+expand.grid(visit_kill = c(TRUE, FALSE),
+            hunt_season = c(TRUE, FALSE),
+            final_take_bms1 = 0,
+            dist2nentrance = 0,
+            temp_max = 0,
+            snow_depth = 0,
+            prop_group_visit_hunt = 0) %>% 
+  mutate(pred = predict(mod_hunt, expand.grid(visit_kill = c(TRUE, FALSE),
+                                              hunt_season = c(TRUE, FALSE),
+                                              final_take_bms1 = 0,
+                                              dist2nentrance = 0,
+                                              temp_max = 0,
+                                              snow_depth = 0,
+                                              prop_group_visit_hunt = 0),
+                        re.form = NA, type = "response")) %>% 
+  group_by(hunt_season)%>%
+  pivot_wider(names_from   = visit_kill,
+              values_from  = pred,
+              names_prefix = "visit_") %>%
+  mutate(difference = visit_FALSE - visit_TRUE) %>% 
+  ungroup %>% 
+  summarize(mean = mean(difference),
+            min = min(difference),
+            max = max(difference))
 
 
-# hunting season and finding a kill outside territory
-plogis(c(-0.50056 - 1.92891 + 1.03254, # kill, hunt
-         -0.50056 - 1.92891, # kill, no hunt
-         -0.50056 + 1.03254, # no kill, hunt 
-         -0.50056)) # no kill, no hunt
-
-
-# finding kill outside territory + distance from hunting
-# red = found a kill
-plot(x = scale_seq,
-     y = plogis(c(-0.50056 -1.92891 -1.71212 * scale_seq)),
-     col = "red", ylim = c(0, 1))
-lines(x = scale_seq,
-      y = plogis(c(-0.50056 -1.92891 + 0.29596 - 1.71212 * scale_seq)),
-      col = "red", lty = 2)
-lines(x = scale_seq,
-      y = plogis(c(-0.50056 -1.92891 - 0.29596 - 1.71212 * scale_seq)),
-      col = "red", lty = 2)
-lines(x = scale_seq,
-      y = plogis(c(-0.50056 - 1.71212 * scale_seq)),
-      col = "blue")
-lines(x = scale_seq,
-      y = plogis(c(-0.50056 - (1.71212 + 0.43332) * scale_seq)),
-      col = "blue", lty = 2)
-lines(x = scale_seq,
-      y = plogis(c(-0.50056 - (1.71212 - 0.43332) * scale_seq)),
-      col = "blue", lty = 2)
+# impact of hunting season on p(hunt)
+expand.grid(visit_kill = c(TRUE, FALSE),
+            hunt_season = c(TRUE, FALSE),
+            final_take_bms1 = 0,
+            dist2nentrance = 0,
+            temp_max = 0,
+            snow_depth = 0,
+            prop_group_visit_hunt = 0) %>% 
+  mutate(pred = predict(mod_hunt, expand.grid(visit_kill = c(TRUE, FALSE),
+                                              hunt_season = c(TRUE, FALSE),
+                                              final_take_bms1 = 0,
+                                              dist2nentrance = 0,
+                                              temp_max = 0,
+                                              snow_depth = 0,
+                                              prop_group_visit_hunt = 0),
+                        re.form = NA, type = "response")) %>% 
+  group_by(visit_kill)%>%
+  pivot_wider(names_from   = hunt_season,
+              values_from  = pred,
+              names_prefix = "hunt_") %>%
+  mutate(difference = hunt_TRUE - hunt_FALSE) %>% 
+  ungroup %>% 
+  summarize(mean = mean(difference),
+            min = min(difference),
+            max = max(difference))
 
 
 
