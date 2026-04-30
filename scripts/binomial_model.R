@@ -159,7 +159,7 @@ visit_kill_table %>%
   # increase size of axis label
   theme(axis.title = element_text(size = 13),
         axis.text.y = element_text(size = 10))
-ggsave("pred_terr.tif", units = "in", width = 9, height = 6.5, device = "tiff", path = "figures")
+ggsave("pred_terr.tif", units = "in", width = 6, height = 6, device = "tiff", path = "figures")
 
 
 # plot coefficient CI
@@ -192,56 +192,20 @@ terr_coef %>%
                               "study_periodlate", "dist2nentrance", 
                               "rf_avg_terr_kill_density", "hunt_seasonTRUE", 
                               "final_take_bms1", "rf_active_killTRUE", "visit_500TRUE"),
-                   labels = c("prop_group_left_terr" = "Proportion traveling",
-                              "snow_depth" = "Snow depth", 
-                              "temp_max" = "Max temperature", 
-                              "study_periodlate" = "Study period (Late)", 
-                              "dist2nentrance" = "Distance", 
-                              "rf_avg_terr_kill_density" = "Kill density",
-                              "hunt_seasonTRUE" = "Hunting season (TRUE)", 
-                              "final_take_bms1" = "Hunting biomass", 
-                              "rf_active_killTRUE" = "Available kill (TRUE)",
-                              "visit_500TRUE" = "Visit kill (TRUE)")) +
+                   labels = c("visit_500TRUE" = "Visit kill",
+                              "rf_active_killTRUE" = "Available kill",
+                              "final_take_bms1" = "Biomass",
+                              "hunt_seasonTRUE" = "Hunt",
+                              "rf_avg_terr_kill_density" = "Density",
+                              "dist2nentrance" = "Distance",
+                              "study_periodlate" = "Season",
+                              "snow_depth" = "Snow",
+                              "temp_max" = "Temp",
+                              "prop_group_left_terr" = "Social")) +
   theme_classic() +
   theme(axis.title = element_text(size = 13, face = "bold"),
         axis.text.y = element_text(size = 10))
-ggsave("coef_terr.tif", units = "in", width = 9, height = 6.5, device = "tiff", path = "figures")
-
-
-# bootstrapping predictions values from model simulations
-boot_terr <- boot_param_CI(nsim = 5000, model = mod_terr, data = ws_model_data, pred_CI = FALSE,
-                           newData = expand.grid(rf_active_kill = c(TRUE, FALSE),
-                                                 hunt_season = c(TRUE, FALSE),
-                                                 final_take_bms1 = 0,
-                                                 rf_avg_terr_kill_density = 0,
-                                                 dist2nentrance = 0,
-                                                 study_period = "early",
-                                                 temp_max = 0,
-                                                 snow_depth = 0,
-                                                 prop_group_left_terr = 0))
-
-
-# plotting predictions for wolf kills and hunting season
-(terr_plot <- boot_terr[[4]] %>% 
-    # plotting
-    ggplot(aes(x = rf_active_kill, y = mean, col = rf_active_kill,
-               ymin = lower, ymax = upper)) +
-    geom_point() +
-    facet_wrap(~hunt_season, 
-               labeller = labeller(hunt_season = c("TRUE" = "Hunting", "FALSE" = "No Hunting"))) +
-    geom_errorbar(width = .1) +
-    labs(x = "Active wolf kill",
-         y = "Predicted Probability") +
-    # custom color/texture scheme
-    scale_color_manual(values = c("TRUE" = "#006CD1", "FALSE" = "#DC3220")) +
-    # removing legend
-    guides(color = "none") +
-    theme_classic() +
-    # removing title
-    ggtitle("", subtitle = "") +
-    # increase size of axis label
-    theme(axis.title = element_text(size = 13, face = "bold")))
-ggsave("pred_terr_hseason.tif", units = "in", width = 9, height = 6.5, device = "tiff", path = "figures")
+ggsave("coef_terr.tif", units = "in", width = 8.5, height = 6.5, device = "tiff", path = "figures")
 
 
 # PART 2 of conditional model (visit Gardiner/other) ----------------------
@@ -281,14 +245,14 @@ modelsummary::modelsummary(list(" " = mod_hunt),
              gof_map = NA,
              # set coef names
              coef_rename = c("(Intercept)" = "Intercept",
-                             "visit_killTRUE" = "Visit kill (TRUE)",
-                             "final_take_bms1" = "Hunting biomass",
-                             "hunt_seasonTRUE" = "Hunting season (TRUE)",
+                             "visit_killTRUE" = "Visit",
+                             "final_take_bms1" = "Biomass",
+                             "hunt_seasonTRUE" = "Hunt",
                              "dist2nentrance" = "Distance",
-                             "study_periodlate" = "Study period (Late)",
-                             "snow_depth" = "Snow depth",
-                             "temp_max" = "Max temperature",
-                             "prop_group_visit_hunt" = "Proportion traveling"),
+                             "study_periodlate" = "Season",
+                             "snow_depth" = "Snow",
+                             "temp_max" = "Temp",
+                             "prop_group_visit_hunt" = "Social"),
              # remove random effects rows
              effects = "fixed",
              # output
@@ -378,40 +342,5 @@ hunt_coef %>%
   theme_classic() +
   theme(axis.title = element_text(size = 13, face = "bold"),
         axis.text.y = element_text(size = 10))
-ggsave("coef_hunt.tif", units = "in", width = 9, height = 6.5, device = "tiff", path = "figures")
+ggsave("coef_hunt.tif", units = "in", width = 8.5, height = 6.5, device = "tiff", path = "figures")
 
-
-# prediction for kill visit and hunting season
-boot_hunt <- boot_param_CI(nsim = 5000, model = mod_hunt, data = hunt_model_data, pred_CI = TRUE, 
-                           newData = expand.grid(visit_kill = c(TRUE, FALSE),
-                                                 hunt_season = c(TRUE, FALSE),
-                                                 final_take_bms1 = 0,
-                                                 dist2nentrance = 0,
-                                                 temp_max = 0,
-                                                 snow_depth = 0,
-                                                 prop_group_visit_hunt = 0))
-
-
-# plotting predictions for wolf kills and hunting season
-(hunt_plot <- boot_hunt[[4]] %>% 
-    # plotting
-    ggplot(aes(x = visit_kill, y = mean, col = visit_kill,
-               ymin = lower, ymax = upper)) +
-    geom_point() +
-    facet_wrap(~hunt_season, 
-               labeller = labeller(hunt_season = c("FALSE" = "No Hunting", "TRUE" = "Hunting"))) +
-    geom_errorbar(width = .1) +
-    labs(x = "Visit Kill",
-         y = "Predicted Probability")) +
-  # custom color/texture scheme
-  scale_color_manual(values = c("TRUE" = "#006CD1", "FALSE" = "#DC3220")) +
-  theme_classic() +
-  # removing legend
-  guides(color = "none") +
-  # removing title
-  ggtitle("", subtitle = "") +
-  # make y axis full limits
-  scale_y_continuous(limits = c(0, 1)) +
-  # increase size of axis label
-  theme(axis.title = element_text(size = 13, face = "bold"))
-ggsave("pred_hunt_hseason.tif", units = "in", width = 9, height = 6.5, device = "tiff", path = "figures")
