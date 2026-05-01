@@ -135,4 +135,3 @@ test <- kill_data_rf %>%
     lubridate::ceiling_date(kill_start_date, "month") <= as.Date("2024-03-30")) %>% 
   dplyr::select(easting, northing) %>% 
 write.csv("data/clean/rf_kills_coords.csv")
-
