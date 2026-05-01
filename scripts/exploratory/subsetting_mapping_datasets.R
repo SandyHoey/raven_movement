@@ -114,3 +114,24 @@ read_csv("data/clean/terr_raven_gps_5h.csv",
   # write out datatset
   write.csv("data/clean/raven_gps_hseason_divide.csv", row.names = F)
 
+
+# writing out wolf kill locations
+# wolf kill locations (rf) ------------------------------------------------
+source("scripts/clean_rf_data.R")
+
+test <- kill_data_rf %>% 
+  # filtering to study period
+  mutate(year = lubridate::year(kill_start_date),
+         month = lubridate::month(kill_start_date),
+         day = lubridate::day(kill_start_date)) %>% 
+  # restricting to only winter study months
+  filter((month > 11 | (month == 11 & day >= 15)) &
+           (month < 12 | (month == 12 & day <= 15)) |
+           (month > 3 | (month == 3 & day >= 1)) &
+           (month < 3 | (month == 3 & day <= 30)),
+         # setting study period
+         lubridate::floor_date(kill_start_date, "month") >= as.Date("2019-10-01"),
+         lubridate::ceiling_date(kill_start_date, "month") <= as.Date("2024-03-30")) %>% 
+  dplyr::select(easting, northing)
+  write.csv("data/clean/rf_kills_coords.csv")
+
