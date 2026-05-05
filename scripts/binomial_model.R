@@ -83,7 +83,7 @@ data.frame(term = rownames(summary(mod_terr)$coefficients$cond),
          up = round(exp(estimate + 1.96 * se), 2)) %>% 
   dplyr::select(term, OR, low, up)
   
-# model summary table -----------------------------------------------------
+# summary table -----------------------------------------------------
 modelsummary::modelsummary(list(" " = mod_terr),
              # set included values
              statistic = c("Std. Error" = "std.error", "p-value" = "p.value"),
@@ -92,8 +92,8 @@ modelsummary::modelsummary(list(" " = mod_terr),
              gof_map = NA,
              # set coef names
              coef_rename = c("(Intercept)" = "Intercept",
-                             "visit_500TRUE" = "Visit kill",
-                             "rf_active_killTRUE" = "Available kill",
+                             "visit_500TRUE" = "Visit",
+                             "rf_active_killTRUE" = "Available",
                              "final_take_bms1" = "Biomass",
                              "hunt_seasonTRUE" = "Hunt",
                              "rf_avg_terr_kill_density" = "Density",
@@ -110,7 +110,7 @@ modelsummary::modelsummary(list(" " = mod_terr),
   flextable::save_as_image(path = "figures/terr_table.png")
 
 
-# prediction and coef plots -------------------------------
+# prediction -------------------------------
 
 # main model (visit wolf kill)
 visit_kill_table <- expand.grid(visit_500 = c(TRUE, FALSE),
@@ -162,6 +162,8 @@ visit_kill_table %>%
 ggsave("pred_terr.tif", units = "in", width = 6, height = 6, device = "tiff", path = "figures")
 
 
+
+# coef --------------------------------------------------------------------
 # plot coefficient CI
 terr_coef <- confint(mod_terr, parm = "beta_", method = "profile")
 terr_coef %>%
@@ -192,8 +194,8 @@ terr_coef %>%
                               "study_periodlate", "dist2nentrance", 
                               "rf_avg_terr_kill_density", "hunt_seasonTRUE", 
                               "final_take_bms1", "rf_active_killTRUE", "visit_500TRUE"),
-                   labels = c("visit_500TRUE" = "Visit kill",
-                              "rf_active_killTRUE" = "Available kill",
+                   labels = c("visit_500TRUE" = "Visit",
+                              "rf_active_killTRUE" = "Available",
                               "final_take_bms1" = "Biomass",
                               "hunt_seasonTRUE" = "Hunt",
                               "rf_avg_terr_kill_density" = "Density",
@@ -236,7 +238,7 @@ data.frame(term = rownames(summary(mod_hunt)$coefficients$cond),
          low = round(exp(estimate - 1.96 * se), 2),
          up = round(exp(estimate + 1.96 * se), 2)) %>% 
   dplyr::select(term, OR, low, up)
-# model summary table -----------------------------------------------------
+# summary table -----------------------------------------------------
 modelsummary::modelsummary(list(" " = mod_hunt),
              # set included values
              statistic = c("Std. Error" = "std.error", "p-value" = "p.value"),
@@ -260,7 +262,7 @@ modelsummary::modelsummary(list(" " = mod_hunt),
   flextable::autofit() %>% 
   flextable::save_as_image(path = "figures/hunt_table.png")
 
-# prediction and coef plots -------------------------------
+# prediction -------------------------------
 
 expand.grid(visit_kill = c(TRUE, FALSE),
             hunt_season = c(TRUE, FALSE),
@@ -303,6 +305,8 @@ expand.grid(visit_kill = c(TRUE, FALSE),
 ggsave("pred_hunt.tif", units = "in", width = 9, height = 6.5, device = "tiff", path = "figures")
 
 
+
+# coef --------------------------------------------------------------------
 # plot coefficient CI
 hunt_coef <- confint(mod_hunt, parm = "beta_", method = "profile")
 hunt_coef %>%
