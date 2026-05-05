@@ -146,7 +146,7 @@ visit_kill_table %>%
   geom_point() +
   geom_errorbar(width = .1) +
   labs(x = "Wolf kill visit",
-       y = "Predicted probability") +
+       y = "P(leave territory)") +
   # custom color/texture scheme
   scale_color_manual(values = c("TRUE" = "#006CD1", "FALSE" = "#DC3220")) +
   # removing legend
@@ -288,7 +288,7 @@ expand.grid(visit_kill = c(TRUE, FALSE),
              labeller = labeller(hunt_season = c("FALSE" = "No Hunting", "TRUE" = "Hunting"))) +
   geom_errorbar(width = .1) +
   labs(x = "Visit wolf kill outside territory",
-       y = "Predicted probability") +
+       y = "P(visit hunting | left territory)") +
   # custom color/texture scheme
   scale_color_manual(values = c("TRUE" = "#006CD1", "FALSE" = "#DC3220")) +
   theme_classic() +
