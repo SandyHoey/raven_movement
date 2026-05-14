@@ -179,10 +179,10 @@ terr_coef %>%
   geom_segment(aes(x = `2.5 %`, xend = `97.5 %`, y = FE, yend = FE), colour = "black") +
   # creating dashed line around 0
   geom_vline(xintercept = 0, lty = "dashed") +
-  # adding model coefficient value to plot
-  geom_text(aes(x = coeff, y = FE, label = round(coeff, 2),
-                vjust = -.6, hjust = ifelse(coeff > 0, 0.2, 1.1)), 
-            size = 3) +
+  # # adding model coefficient value to plot
+  # geom_text(aes(x = coeff, y = FE, label = round(coeff, 2),
+  #               vjust = -.6, hjust = ifelse(coeff > 0, 0.2, 1.1)), 
+  #           size = 3) +
   # changing labels
   labs(y = "",
        x = "\u03b1") +
@@ -194,7 +194,7 @@ terr_coef %>%
                               "study_periodlate", "dist2nentrance", 
                               "rf_avg_terr_kill_density", "hunt_seasonTRUE", 
                               "final_take_bms1", "rf_active_killTRUE", "visit_500TRUE"),
-                   labels = c("visit_500TRUE" = "Visit",
+                   labels = c("visit_500TRUE" = "Visit Kill",
                               "rf_active_killTRUE" = "Available",
                               "final_take_bms1" = "Biomass",
                               "hunt_seasonTRUE" = "Hunt",
@@ -206,7 +206,7 @@ terr_coef %>%
                               "prop_group_left_terr" = "Social")) +
   theme_classic() +
   theme(axis.title = element_text(size = 13, face = "bold"),
-        axis.text.y = element_text(size = 10))
+        axis.text.y = element_text(size = 15))
 ggsave("coef_terr.tif", units = "in", width = 8.5, height = 6.5, device = "tiff", path = "figures")
 
 
@@ -322,10 +322,10 @@ hunt_coef %>%
   geom_segment(aes(x = `2.5 %`, xend = `97.5 %`, y = FE, yend = FE), colour = "black") +
   # creating dashed line around 0
   geom_vline(xintercept = 0, lty = "dashed") +
-  # adding model coefficient value to plot
-  geom_text(aes(x = coeff, y = FE, label = round(coeff, 2),
-                vjust = -.6, hjust = ifelse(coeff > 0, 0.2, 1)), 
-            size = 3) +
+  # # adding model coefficient value to plot
+  # geom_text(aes(x = coeff, y = FE, label = round(coeff, 2),
+  #               vjust = -.6, hjust = ifelse(coeff > 0, 0.2, 1)), 
+  #           size = 3) +
   # changing labels
   labs(y = "",
        x = "\u03b2") + 
@@ -342,9 +342,9 @@ hunt_coef %>%
                               "dist2nentrance" = "Distance", 
                               "hunt_seasonTRUE" = "Hunt", 
                               "final_take_bms1" = "Biomass", 
-                              "visit_killTRUE" = "Visit")) +
+                              "visit_killTRUE" = "Visit Kill")) +
   theme_classic() +
   theme(axis.title = element_text(size = 13, face = "bold"),
-        axis.text.y = element_text(size = 10))
+        axis.text.y = element_text(size = 15))
 ggsave("coef_hunt.tif", units = "in", width = 8.5, height = 6.5, device = "tiff", path = "figures")
 
