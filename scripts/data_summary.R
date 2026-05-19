@@ -129,7 +129,7 @@ ws_model_data %>%
 data %>% 
   filter(hunt_bin == TRUE) %>% 
   summarise(sum(dump)/n()) 
-  
+
 
 # average percent trip to hunting included a trip to the dump
 data %>% 
@@ -266,49 +266,54 @@ hunt_model_data %>%
 # stacked average barplot (all winter) --------------------------------------------
 # table showing raven decisions during winter studies
 (all_winter_bar <- data %>% 
-  group_by(raven_id) %>% 
-  # calculating proportions for indviduals
-  summarize(prop_terr = sum(terr_bin == FALSE)/n(),
-            prop_other = sum(terr_bin == TRUE & hunt_bin == FALSE)/n(),
-            prop_hunt = sum(hunt_bin == TRUE)/n()) %>% 
-  # averaging across individuals
-  summarize(terr = mean(prop_terr),
-            other = mean(prop_other),
-            hunt = mean(prop_hunt)) %>% 
-  # adding name for y axis
-  mutate(y = "All winter") %>% 
-  # switching to long format
-  tidyr::pivot_longer(cols = c(hunt, other, terr),
-                      names_to = "decision") %>%  
-  # setting plotting order
-  mutate(decision = factor(decision, levels = rev(c("terr", "other", "hunt")))) %>% 
-  # setting graphing data
-  ggplot(aes(x = value, y = y, fill = decision)) +
-  # creating proportion stacked barplot
-  geom_bar(position = "fill", stat = "identity",
-                   colour = "black", linewidth = 0.2) +
-  # changing labels of plot
-  labs(title = "  ",
-       x = "Proportion of days",
-       y = "",
-       fill = "Decision") +
-  # custom color/texture scheme
-  scale_fill_manual(values = c(terr = "#E69F00",
-                               other = "#A4D8F4",
-                               hunt = "#0072B2"),
-                    # changing name of legend items
-                    labels = c("Hunting", "Other", "Territory")) +
-  # removing space between axis and barplot
-  scale_x_continuous(expand = c(0, 0)) +
-  # adjusting plot axis to show the extra text
-  coord_cartesian(xlim = c(0, 1.1), clip = "off") +
-  theme_classic() +
-  theme(legend.position = "none",
-        axis.title = element_text(size = 14),
-        axis.text = element_text(size = 11),
-        strip.text = element_text(size = 12),
-        legend.text = element_text(size = 12),
-        legend.title = element_text(size = 14)))
+   group_by(raven_id) %>% 
+   # calculating proportions for indviduals
+   summarize(prop_terr = sum(terr_bin == FALSE)/n(),
+             prop_other = sum(terr_bin == TRUE & hunt_bin == FALSE)/n(),
+             prop_hunt = sum(hunt_bin == TRUE)/n(),
+             n = n()) %>% 
+   # averaging across individuals
+   summarize(terr = mean(prop_terr),
+             other = mean(prop_other),
+             hunt = mean(prop_hunt),
+             total_n = sum(n)) %>% 
+   # adding name for y axis
+   mutate(y = "All winter") %>% 
+   # switching to long format
+   tidyr::pivot_longer(cols = c(hunt, other, terr),
+                       names_to = "decision") %>%  
+   # setting plotting order
+   mutate(decision = factor(decision, levels = rev(c("terr", "other", "hunt")))) %>% 
+   # setting graphing data
+   ggplot(aes(x = value, y = y, fill = decision)) +
+   # creating proportion stacked barplot
+   geom_bar(position = "fill", stat = "identity",
+            colour = "black", linewidth = 0.2) +
+   # changing labels of plot
+   labs(title = "  ",
+        x = "Proportion of days",
+        y = "",
+        fill = "Decision") +
+   # custom color/texture scheme
+   scale_fill_manual(values = c(terr = "#E69F00",
+                                other = "#A4D8F4",
+                                hunt = "#0072B2"),
+                     # changing name of legend items
+                     labels = c("Hunting", "Other", "Territory")) +
+   # removing space between axis and barplot
+   scale_x_continuous(expand = c(0, 0)) +
+   # adding sample size to right axis
+   geom_text(aes(x = 1.01, y = y, label = "4741"),
+             inherit.aes = FALSE, hjust = 0, size = 3) + 
+   # adjusting plot axis to show the extra text
+   coord_cartesian(xlim = c(0, 1.1), clip = "off") +
+   theme_classic() +
+   theme(legend.position = "none",
+         axis.title = element_text(size = 14),
+         axis.text = element_text(size = 11),
+         strip.text = element_text(size = 12),
+         legend.text = element_text(size = 12),
+         legend.title = element_text(size = 14)))
 
 
 # stacked barplot (WS) ----------------------------------------------------
@@ -325,81 +330,81 @@ ws_decision_table <- ws_model_data %>%
 # stacked barplot showing raven decisions including wolf kill presence
 # only during winter study
 (ws_bar <- ws_model_data %>% 
-  group_by(raven_id) %>% 
-  summarize(terr_avail = sum(terr_bin == FALSE & rf_active_kill == TRUE & visit_500 == FALSE),
-            terr_visit = sum(terr_bin == FALSE & visit_500 == TRUE),
-            terr_nokill = sum(terr_bin == FALSE & rf_active_kill == FALSE),
-            other_terr_avail= sum(terr_bin == TRUE & hunt_bin == FALSE & rf_active_kill == TRUE & visit_500 == FALSE),
-            other_terr_visit = sum(terr_bin == TRUE & hunt_bin == FALSE & visit_500 == TRUE),
-            other_visit_outside = sum(terr_bin == TRUE & hunt_bin == FALSE & visit_kill == TRUE & visit_500 == FALSE),
-            other_nokill = sum(terr_bin == TRUE & hunt_bin == FALSE & visit_kill == FALSE & visit_500 == FALSE),
-            hunt_terr_avail = sum(hunt_bin == TRUE & rf_active_kill == TRUE & visit_500 == FALSE) ,
-            hunt_terr_visit = sum(hunt_bin == TRUE & visit_500 == TRUE),
-            hunt_visit_outside = sum(hunt_bin == TRUE & visit_kill == TRUE & visit_500 == FALSE),
-            hunt_nokill = sum(hunt_bin == TRUE & visit_kill == FALSE & visit_500 == FALSE)) %>% 
-  # adding column for total sample size for each raven
-  mutate(n = hunt_terr_avail + hunt_terr_visit + hunt_visit_outside + hunt_nokill + 
-           other_terr_avail + other_terr_visit + other_visit_outside + other_nokill + 
-           terr_avail + terr_visit + terr_nokill) %>% 
-  # switching to long format
-  tidyr::pivot_longer(cols = c(hunt_terr_avail, hunt_terr_visit, hunt_visit_outside, hunt_nokill, 
+    group_by(raven_id) %>% 
+    summarize(terr_avail = sum(terr_bin == FALSE & rf_active_kill == TRUE & visit_500 == FALSE),
+              terr_visit = sum(terr_bin == FALSE & visit_500 == TRUE),
+              terr_nokill = sum(terr_bin == FALSE & rf_active_kill == FALSE),
+              other_terr_avail= sum(terr_bin == TRUE & hunt_bin == FALSE & rf_active_kill == TRUE & visit_500 == FALSE),
+              other_terr_visit = sum(terr_bin == TRUE & hunt_bin == FALSE & visit_500 == TRUE),
+              other_visit_outside = sum(terr_bin == TRUE & hunt_bin == FALSE & visit_kill == TRUE & visit_500 == FALSE),
+              other_nokill = sum(terr_bin == TRUE & hunt_bin == FALSE & visit_kill == FALSE & visit_500 == FALSE),
+              hunt_terr_avail = sum(hunt_bin == TRUE & rf_active_kill == TRUE & visit_500 == FALSE) ,
+              hunt_terr_visit = sum(hunt_bin == TRUE & visit_500 == TRUE),
+              hunt_visit_outside = sum(hunt_bin == TRUE & visit_kill == TRUE & visit_500 == FALSE),
+              hunt_nokill = sum(hunt_bin == TRUE & visit_kill == FALSE & visit_500 == FALSE)) %>% 
+    # adding column for total sample size for each raven
+    mutate(n = hunt_terr_avail + hunt_terr_visit + hunt_visit_outside + hunt_nokill + 
+             other_terr_avail + other_terr_visit + other_visit_outside + other_nokill + 
+             terr_avail + terr_visit + terr_nokill) %>% 
+    # switching to long format
+    tidyr::pivot_longer(cols = c(hunt_terr_avail, hunt_terr_visit, hunt_visit_outside, hunt_nokill, 
                                  other_terr_avail, other_terr_visit, other_visit_outside, other_nokill, 
                                  terr_avail, terr_visit, terr_nokill),
-                      names_to = "decision") %>%  
-  # setting plotting order
-  mutate(decision = factor(decision, levels = rev(c("terr_nokill", "terr_avail", "terr_visit",
-                                                   "other_nokill", "other_terr_avail", "other_terr_visit", "other_visit_outside",
-                                                   "hunt_nokill", "hunt_terr_avail", "hunt_terr_visit", "hunt_visit_outside")))) %>% 
-  # adding column for presence of kill
-  mutate(kill = rep(c("terr_avail", "terr_visit", "visit_outside", "no_kill",
-                      "terr_avail", "terr_visit", "visit_outside", "no_kill",
-                      "terr_avail", "terr_visit", "no_kill"), 18)) %>% 
-  # setting graphing data
-  ggplot(aes(x = value, y = raven_id, fill = decision, pattern = kill)) +
-  # creating proportion stacked barplot
-  geom_bar_pattern(position = "fill", stat = "identity",
-                   colour = "black", linewidth = 0.2,
-                   pattern_fill = "black", pattern_color = "transparent",
-                   pattern_size = 0.02, pattern_spacing = 0.015, pattern_angle = 50) +
-  # changing labels of plot
-  labs(title = "  ",
-       x = "Proportion of days",
-       y = "Raven ID",
-       fill = "Decision") +
-  scale_pattern_manual(values = c("terr_avail" = "stripe", 
-                                  "terr_visit" = "crosshatch",
-                                  "visit_outside" = "circle", 
-                                  "no_kill" = "none"), 
-                       name = "Wolf kill",
-                       breaks = c("terr_avail", "terr_visit", "visit_outside"),
-                       labels = c("Available in territory", "Visit in territory", "Visit out of territory")) +  
-  # custom color/texture scheme
-  scale_fill_manual(values = c(terr_avail = "#E69F00", terr_visit = "#E69F00", terr_nokill = "#E69F00",
-                               other_terr_avail = "#A4D8F4",other_terr_visit = "#A4D8F4", other_visit_outside = "#A4D8F4", other_nokill = "#A4D8F4",
-                               hunt_terr_avail = "#0072B2",hunt_terr_visit = "#0072B2", hunt_visit_outside = "#0072B2", hunt_nokill = "#0072B2"),
-                    # removing repeats in legend
-                    breaks = c("hunt_nokill", "other_nokill", "terr_nokill"),
-                    # changing name of legend items
-                    labels = c("Hunting", "Other", "Territory")) +
-  # removing pattern from fill legend and changing pattern legend background
-  guides(fill = guide_legend(override.aes = list(pattern = "none")),
-         pattern = guide_legend(override.aes = list(fill = "white"))) +
-  # removing space between axis and barplot
-  scale_x_continuous(expand = c(0, 0)) +
-  # adding sample size to right axis
-  geom_text(data = ws_decision_table, aes(x = 1.01, y = raven_id, label = n),
-            inherit.aes = FALSE, hjust = 0, size = 3) + 
-  # adding label for sample size column
-  annotate("text", x = 1, y = Inf, label = "Sample size",
-           hjust = 0.3, vjust = -0.3, size = 4) +
-  # adjusting plot axis to show the extra text
-  coord_cartesian(xlim = c(0, 1.1), clip = "off") +
-  theme_classic() +
-  theme(axis.title = element_text(size = 14),
-        axis.text = element_text(size = 11),
-        strip.text = element_text(size = 12),
-        legend.box.spacing = unit(0.1, "cm"),
-        legend.margin = margin(0, 0, 0, 0)))
+                        names_to = "decision") %>%  
+    # setting plotting order
+    mutate(decision = factor(decision, levels = rev(c("terr_nokill", "terr_avail", "terr_visit",
+                                                      "other_nokill", "other_terr_avail", "other_terr_visit", "other_visit_outside",
+                                                      "hunt_nokill", "hunt_terr_avail", "hunt_terr_visit", "hunt_visit_outside")))) %>% 
+    # adding column for presence of kill
+    mutate(kill = rep(c("terr_avail", "terr_visit", "visit_outside", "no_kill",
+                        "terr_avail", "terr_visit", "visit_outside", "no_kill",
+                        "terr_avail", "terr_visit", "no_kill"), 18)) %>% 
+    # setting graphing data
+    ggplot(aes(x = value, y = raven_id, fill = decision, pattern = kill)) +
+    # creating proportion stacked barplot
+    geom_bar_pattern(position = "fill", stat = "identity",
+                     colour = "black", linewidth = 0.2,
+                     pattern_fill = "black", pattern_color = "transparent",
+                     pattern_size = 0.02, pattern_spacing = 0.015, pattern_angle = 50) +
+    # changing labels of plot
+    labs(title = "  ",
+         x = "Proportion of days",
+         y = "Raven ID",
+         fill = "Decision") +
+    scale_pattern_manual(values = c("terr_avail" = "stripe", 
+                                    "terr_visit" = "crosshatch",
+                                    "visit_outside" = "circle", 
+                                    "no_kill" = "none"), 
+                         name = "Wolf kill",
+                         breaks = c("terr_avail", "terr_visit", "visit_outside"),
+                         labels = c("Available in territory", "Visit in territory", "Visit out of territory")) +  
+    # custom color/texture scheme
+    scale_fill_manual(values = c(terr_avail = "#E69F00", terr_visit = "#E69F00", terr_nokill = "#E69F00",
+                                 other_terr_avail = "#A4D8F4",other_terr_visit = "#A4D8F4", other_visit_outside = "#A4D8F4", other_nokill = "#A4D8F4",
+                                 hunt_terr_avail = "#0072B2",hunt_terr_visit = "#0072B2", hunt_visit_outside = "#0072B2", hunt_nokill = "#0072B2"),
+                      # removing repeats in legend
+                      breaks = c("hunt_nokill", "other_nokill", "terr_nokill"),
+                      # changing name of legend items
+                      labels = c("Hunting", "Other", "Territory")) +
+    # removing pattern from fill legend and changing pattern legend background
+    guides(fill = guide_legend(override.aes = list(pattern = "none")),
+           pattern = guide_legend(override.aes = list(fill = "white"))) +
+    # removing space between axis and barplot
+    scale_x_continuous(expand = c(0, 0)) +
+    # adding sample size to right axis
+    geom_text(data = ws_decision_table, aes(x = 1.01, y = raven_id, label = n),
+              inherit.aes = FALSE, hjust = 0, size = 3) + 
+    # adding label for sample size column
+    annotate("text", x = 1, y = Inf, label = "Sample size",
+             hjust = 0.3, vjust = -0.3, size = 4) +
+    # adjusting plot axis to show the extra text
+    coord_cartesian(xlim = c(0, 1.1), clip = "off") +
+    theme_classic() +
+    theme(axis.title = element_text(size = 14),
+          axis.text = element_text(size = 11),
+          strip.text = element_text(size = 12),
+          legend.box.spacing = unit(0.1, "cm"),
+          legend.margin = margin(0, 0, 0, 0)))
 ggsave("ws_decision_barplot.tif", units = "in", width = 8, height = 5.5, device = "tiff", path = "figures")
 
 # plotting barplots together
@@ -602,9 +607,9 @@ dump_visits <- data %>%
          month != 8) %>% 
   # creating bins of time based on hunting periods
   mutate(hseason_blocks = factor(if_else(hunt_season == F & month %in% 8:10, "Pre-hunt", # all days before MTFWP season
-                                  if_else(hunt_season == F, "Mid-winter", # all other days not during hunting season, which is the mid winter break
-                                          if_else(hunt_season == T & month %in% 10:12, "MTFWP hunt", # all days during MTFWP season
-                                                  if_else(hunt_season == T, "Bison hunt", NA)))),
+                                         if_else(hunt_season == F, "Mid-winter", # all other days not during hunting season, which is the mid winter break
+                                                 if_else(hunt_season == T & month %in% 10:12, "MTFWP hunt", # all days during MTFWP season
+                                                         if_else(hunt_season == T, "Bison hunt", NA)))),
                                  levels = c("Pre-hunt", "MTFWP hunt", "Mid-winter", "Bison hunt"))) %>% # all other hunting season days, wihch is the bison hunt
   # getting monthly proportion by raven
   group_by(raven_id, hseason_blocks) %>% 
