@@ -40,19 +40,20 @@ terr_coef %>%
                               "study_periodlate", "dist2nentrance", 
                               "rf_avg_terr_kill_density", "hunt_seasonTRUE", 
                               "final_take_bms1", "rf_active_killTRUE", "visit_500TRUE"),
-                   labels = c("visit_500TRUE" = "Visit Kill",
+                   labels = c("visit_500TRUE" = "Visit",
                               "rf_active_killTRUE" = "Available",
                               "final_take_bms1" = "Biomass",
-                              "hunt_seasonTRUE" = "Hunt",
-                              "rf_avg_terr_kill_density" = "Density",
+                              "hunt_seasonTRUE" = "Hunting",
+                              "rf_avg_terr_kill_density" = "Productivity",
                               "dist2nentrance" = "Distance",
-                              "study_periodlate" = "Season",
+                              "study_periodlate" = "Breeding",
                               "snow_depth" = "Snow",
                               "temp_max" = "Temp",
                               "prop_group_left_terr" = "Social")) +
   theme_classic() +
   theme(axis.title = element_text(size = 13, face = "bold"),
-        axis.text.y = element_text(size = 15))
+        axis.text.y = element_text(size = 15),
+        axis.text.x = element_text(size = 12))
 ggsave("coef_terr.tif", units = "in", width = 8.5, height = 6.5, device = "tiff", path = "figures")
 
 
@@ -92,12 +93,13 @@ hunt_coef %>%
                               "snow_depth" = "Snow", 
                               "temp_max" = "Temp", 
                               "dist2nentrance" = "Distance", 
-                              "hunt_seasonTRUE" = "Hunt", 
+                              "hunt_seasonTRUE" = "Hunting", 
                               "final_take_bms1" = "Biomass", 
-                              "visit_killTRUE" = "Visit Kill")) +
+                              "visit_killTRUE" = "Kill")) +
   theme_classic() +
   theme(axis.title = element_text(size = 13, face = "bold"),
-        axis.text.y = element_text(size = 15))
+        axis.text.y = element_text(size = 15),
+        axis.text.x = element_text(size = 12))
 ggsave("coef_hunt.tif", units = "in", width = 8.5, height = 6.5, device = "tiff", path = "figures")
 
 
