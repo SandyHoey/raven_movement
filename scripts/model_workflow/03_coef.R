@@ -44,9 +44,9 @@ terr_coef %>%
                               "rf_active_killTRUE" = "Available",
                               "final_take_bms1" = "Biomass",
                               "hunt_seasonTRUE" = "Hunting",
-                              "rf_avg_terr_kill_density" = "Productivity",
+                              "rf_avg_terr_kill_density" = "Density",
                               "dist2nentrance" = "Distance",
-                              "study_periodlate" = "Breeding",
+                              "study_periodlate" = "Late Winter",
                               "snow_depth" = "Snow",
                               "temp_max" = "Temp",
                               "prop_group_left_terr" = "Social")) +
