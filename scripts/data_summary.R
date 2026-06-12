@@ -157,16 +157,15 @@ data %>%
             sd = sd(prop_visit_dump))
 
 
-# wolf kills available on territory
+# wolf kills available on territory (days)
 ws_model_data %>% 
   group_by(raven_id) %>% 
-  summarize(available_kills = sum(rf_active_kill),
-            total_days = n()) %>% 
-  mutate(prop_available = available_kills/total_days) %>% 
-  summarize(mean = mean(prop_available),
-            min = min(prop_available),
-            max = max(prop_available),
-            sd = sd(prop_available))
+  summarize(available_kills = sum(rf_active_kill)) %>% 
+  ungroup %>% 
+  summarize(median = median(available_kills),
+            min = min(available_kills),
+            max = max(available_kills),
+            sd = sd(available_kills))
 
 
 # wolf kills visited outside of territory
